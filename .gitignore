@@ -1,0 +1,9 @@
+# Godot 4+ specific ignores
+.godot/
+/android/
+
+# Batch simulation output
+tests/out/
+
+# MCP plugin distribution source (installed copy lives in addons/)
+godot-mcp-pro-v1.15.0/
