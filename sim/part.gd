@@ -12,6 +12,9 @@ var charge: int = 0
 var stored_pulses: int = 0   # STORE_PULSE 저장량
 var stacks: int = 0          # PERMANENT_STACK_ON_HIT 누적
 var aux_timer: float = 0.0   # SECOND_HEART 타이머
+var slot: String = ""
+var zone: String = ""
+var section: String = ""
 
 func setup(p_id: String, p_type: String, p_graft: String = "") -> bool:
 	var d := Catalog.get_def(p_type, p_graft)

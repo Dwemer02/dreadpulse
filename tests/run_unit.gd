@@ -35,6 +35,7 @@ func _run_all() -> void:
 	_test_builds()
 	_test_battle_end()
 	_test_hull()
+	_test_slot_validation()
 
 func check(cond: bool, label: String) -> void:
 	if cond:
@@ -73,6 +74,11 @@ func _mk_ship(parts: Array, wires: Array, extra: Dictionary = {}):
 	b.merge(extra)
 	var s = Ship.new()
 	s.load_build(b)
+	return s
+
+func _mk_hull_ship(parts: Array, wires: Array):
+	var s = Ship.new()
+	s.load_build({"name": "t", "parts": parts, "wires": wires}, Loader.load_hull())
 	return s
 
 func _test_ship() -> void:
@@ -459,3 +465,44 @@ func _test_hull() -> void:
 	check(ids.has("H") and ids.size() == 13, "unique slot ids incl. H")
 	check(hardpoints == 7, "7 hardpoint slots (D1-D4, B1-B3)")
 	check(Loader.load_hull("nope").is_empty(), "missing hull -> empty")
+
+func _test_slot_validation() -> void:
+	var ok = _mk_hull_ship(
+		[{"id": "heart", "type": "heart", "slot": "H"},
+		 {"id": "b1", "type": "boiler", "slot": "I1"},
+		 {"id": "t1", "type": "main_turret", "slot": "D1"}],
+		[["heart", "b1"], ["b1", "t1"]])
+	check(ok.is_valid(), "valid slotted build: %s" % [ok.load_errors])
+	check(ok.parts.t1.zone == "deck" and ok.parts.b1.section == "bow", "zone/section copied")
+
+	var cases := [
+		[{"id": "heart", "type": "heart", "slot": "H"},
+		 {"id": "b1", "type": "boiler"}],                     # slot 누락
+		[{"id": "heart", "type": "heart", "slot": "H"},
+		 {"id": "b1", "type": "boiler", "slot": "X9"}],       # 미존재 슬롯
+		[{"id": "heart", "type": "heart", "slot": "H"},
+		 {"id": "b1", "type": "boiler", "slot": "I1"},
+		 {"id": "b2", "type": "boiler", "slot": "I1"}],       # 중복 점유
+		[{"id": "heart", "type": "heart", "slot": "H"},
+		 {"id": "t1", "type": "main_turret", "slot": "I1"}],  # hardpoint 부품이 내부에
+		[{"id": "heart", "type": "heart", "slot": "H"},
+		 {"id": "b1", "type": "boiler", "slot": "D1"}],       # internal 부품이 하드포인트에
+		[{"id": "heart", "type": "heart", "slot": "I1"}],     # 심장이 H 밖
+		[{"id": "heart", "type": "heart", "slot": "H"},
+		 {"id": "b1", "type": "boiler", "slot": "H"}],        # H에 타 부품 (중복 점유로도 걸림)
+	]
+	var labels := ["missing slot", "unknown slot", "duplicate slot",
+		"hardpoint on internal", "internal on hardpoint", "heart off H", "non-heart on H"]
+	for i in cases.size():
+		var parts: Array = cases[i]
+		var wires: Array = []
+		for pd in parts:
+			if pd.id != "heart":
+				wires.append(["heart", pd.id])
+		check(not _mk_hull_ship(parts, wires).is_valid(), "rejected: " + labels[i])
+
+	# 헐 미제공 시 슬롯 없어도 통과 (기존 호환)
+	var legacy = _mk_ship(
+		[{"id": "heart", "type": "heart"}, {"id": "b1", "type": "boiler"}],
+		[["heart", "b1"]])
+	check(legacy.is_valid(), "no-hull build skips slot validation")

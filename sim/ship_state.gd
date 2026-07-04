@@ -16,7 +16,7 @@ var adjacency := {}         # id -> Array[String]
 var hits_taken := 0
 var load_errors: Array = []
 
-func load_build(build: Dictionary) -> bool:
+func load_build(build: Dictionary, hull_def: Dictionary = {}) -> bool:
 	name = str(build.get("name", "ship"))
 	hull = int(build.get("ship_hull", 100))
 	start_hull = hull
@@ -30,6 +30,7 @@ func load_build(build: Dictionary) -> bool:
 			load_errors.append("unknown part type or invalid graft: %s (%s+%s)"
 				% [pid, pd.get("type", ""), pd.get("graft", "")])
 			continue
+		part.slot = str(pd.get("slot", ""))
 		parts[pid] = part
 		part_order.append(pid)
 		adjacency[pid] = []
@@ -52,6 +53,8 @@ func load_build(build: Dictionary) -> bool:
 		var e: Dictionary = parts[pid].get_effect(Catalog.Effect.AMMO_RESERVE)
 		if not e.is_empty():
 			resources["ammo"] = int(resources["ammo"]) + int(e.get("amount", 0))
+	if not hull_def.is_empty():
+		_validate_slots(hull_def)
 	return is_valid()
 
 func is_valid() -> bool:
@@ -84,3 +87,37 @@ func effective_required_charge(pid: String) -> int:
 		if not np.is_destroyed() and np.has_effect(Catalog.Effect.ADJACENT_CHARGE_DISCOUNT):
 			rc -= int(np.get_effect(Catalog.Effect.ADJACENT_CHARGE_DISCOUNT).get("amount", 1))
 	return maxi(rc, 1)
+
+func _validate_slots(hull_def: Dictionary) -> void:
+	var slot_map := {}
+	for s in hull_def.get("slots", []):
+		slot_map[str(s.get("id", ""))] = s
+	var occupied := {}
+	for pid in part_order:
+		var part = parts[pid]
+		var sid: String = part.slot
+		if sid == "":
+			load_errors.append("part missing slot: " + pid)
+			continue
+		if not slot_map.has(sid):
+			load_errors.append("unknown slot '%s' for part %s" % [sid, pid])
+			continue
+		if occupied.has(sid):
+			load_errors.append("slot '%s' occupied by %s and %s" % [sid, occupied[sid], pid])
+			continue
+		occupied[sid] = pid
+		var slot: Dictionary = slot_map[sid]
+		part.zone = str(slot.get("zone", ""))
+		part.section = str(slot.get("section", ""))
+		var mount := str(part.def.get("mount", "internal"))
+		if mount == "heart":
+			if sid != "H":
+				load_errors.append("heart must occupy slot H (got '%s')" % sid)
+		elif sid == "H":
+			load_errors.append("slot H is heart-only (occupied by %s)" % pid)
+		elif mount == "hardpoint":
+			if not slot.get("hardpoint", false):
+				load_errors.append("hardpoint part %s cannot mount on internal slot %s" % [pid, sid])
+		else:
+			if slot.get("hardpoint", false):
+				load_errors.append("internal part %s cannot mount on hardpoint slot %s" % [pid, sid])
