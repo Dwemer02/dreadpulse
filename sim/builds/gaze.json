@@ -1,13 +1,13 @@
 {
   "name": "gaze",
   "parts": [
-    {"id": "heart", "type": "heart"},
-    {"id": "ey", "type": "eye"},
-    {"id": "b1", "type": "boiler"},
-    {"id": "b2", "type": "boiler"},
-    {"id": "mag", "type": "magazine"},
-    {"id": "t1", "type": "main_turret"},
-    {"id": "t2", "type": "main_turret"}
+    {"id": "heart", "type": "heart", "slot": "H"},
+    {"id": "ey", "type": "eye", "slot": "D1"},
+    {"id": "b1", "type": "boiler", "slot": "I2"},
+    {"id": "b2", "type": "boiler", "slot": "I3"},
+    {"id": "mag", "type": "magazine", "slot": "I4"},
+    {"id": "t1", "type": "main_turret", "slot": "D2"},
+    {"id": "t2", "type": "main_turret", "slot": "D3"}
   ],
   "wires": [
     ["heart", "b1"], ["heart", "b2"], ["heart", "ey"],

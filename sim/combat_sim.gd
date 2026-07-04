@@ -15,12 +15,13 @@ var ended := false
 var winner := -1        # 0/1, -1 = 무승부/미정
 var end_reason := ""
 
-func setup(build_a: Dictionary, build_b: Dictionary, seed_value: int) -> bool:
+func setup(build_a: Dictionary, build_b: Dictionary, seed_value: int,
+		hull_def: Dictionary = {}) -> bool:
 	rng.seed = seed_value
 	var a = Ship.new()
 	var b = Ship.new()
-	var ok := a.load_build(build_a)
-	ok = b.load_build(build_b) and ok
+	var ok := a.load_build(build_a, hull_def)
+	ok = b.load_build(build_b, hull_def) and ok
 	ships = [a, b]
 	if not ok:
 		push_error("invalid builds: %s / %s" % [a.load_errors, b.load_errors])

@@ -8,8 +8,11 @@ const Loader := preload("res://sim/build_loader.gd")
 const SEEDS := 50
 const OUT_DIR := "res://tests/out"
 
+var _hull: Dictionary = {}
+
 func _init() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT_DIR))
+	_hull = Loader.load_hull()
 	var builds := {}
 	for n in ["pure_steel", "overdrive", "bloodpressure", "gaze", "dummy_tank"]:
 		builds[n] = Loader.load_build("res://sim/builds/%s.json" % n)
@@ -22,7 +25,7 @@ func _init() -> void:
 func _run(a: Dictionary, b: Dictionary, seed_value: int,
 		on_events: Callable = Callable()) -> Dictionary:
 	var sim = Sim.new()
-	sim.setup(a, b, seed_value)
+	sim.setup(a, b, seed_value, _hull)
 	return sim.run_to_end(on_events)
 
 func _win_matrix(builds: Dictionary) -> void:

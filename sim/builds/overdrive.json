@@ -1,13 +1,13 @@
 {
   "name": "overdrive",
   "parts": [
-    {"id": "heart", "type": "heart"},
-    {"id": "b1", "type": "boiler"},
-    {"id": "b2", "type": "boiler"},
-    {"id": "st", "type": "steam_turbine"},
-    {"id": "g1", "type": "ganglion"},
-    {"id": "mag", "type": "magazine"},
-    {"id": "t1", "type": "main_turret", "graft": "nerve"}
+    {"id": "heart", "type": "heart", "slot": "H"},
+    {"id": "b1", "type": "boiler", "slot": "I2"},
+    {"id": "b2", "type": "boiler", "slot": "I3"},
+    {"id": "st", "type": "steam_turbine", "slot": "I4"},
+    {"id": "g1", "type": "ganglion", "slot": "I1"},
+    {"id": "mag", "type": "magazine", "slot": "I5"},
+    {"id": "t1", "type": "main_turret", "graft": "nerve", "slot": "D3"}
   ],
   "wires": [
     ["heart", "b1"], ["heart", "b2"], ["heart", "st"],

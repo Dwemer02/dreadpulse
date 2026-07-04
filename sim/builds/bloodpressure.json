@@ -1,12 +1,12 @@
 {
   "name": "bloodpressure",
   "parts": [
-    {"id": "heart", "type": "heart"},
-    {"id": "bb", "type": "boiler", "graft": "gills"},
-    {"id": "gl", "type": "gills"},
-    {"id": "ar", "type": "armor_bulkhead"},
-    {"id": "t1", "type": "main_turret"},
-    {"id": "tc", "type": "tentacle"}
+    {"id": "heart", "type": "heart", "slot": "H"},
+    {"id": "bb", "type": "boiler", "graft": "gills", "slot": "I2"},
+    {"id": "gl", "type": "gills", "slot": "I3"},
+    {"id": "ar", "type": "armor_bulkhead", "slot": "I1"},
+    {"id": "t1", "type": "main_turret", "slot": "D2"},
+    {"id": "tc", "type": "tentacle", "slot": "B2"}
   ],
   "wires": [
     ["heart", "bb"], ["heart", "gl"], ["heart", "ar"],

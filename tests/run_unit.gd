@@ -421,6 +421,13 @@ func _test_builds() -> void:
 	var r = sim.run_to_end()
 	check(r.ticks > 0 and r.has("winner"), "smoke battle completes (%s)" % [r])
 
+	# 빌드 5종 전부 표준 헐 위에서 유효해야 한다
+	var hull: Dictionary = Loader.load_hull()
+	for p in paths:
+		var bb: Dictionary = Loader.load_build(p)
+		var sh = Ship.new()
+		check(sh.load_build(bb, hull), "build valid on hull: %s %s" % [p, sh.load_errors])
+
 func _test_battle_end() -> void:
 	# 시간초과: hull 비율이 높은 쪽 승리
 	var sim = Sim.new()
