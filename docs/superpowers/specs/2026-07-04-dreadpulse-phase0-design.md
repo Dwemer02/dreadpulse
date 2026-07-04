@@ -160,9 +160,9 @@ res://
 ## 6. 이벤트 스트림 (sim → 소비자 계약)
 
 매 틱 `CombatSim.step()`이 이벤트 배열을 반환. 각 이벤트는 Dictionary:
-`{tick, side, type, ...payload}`. 타입: `pulse_emitted`, `pulse_arrived`, `part_fired`,
-`misfire`, `damage_dealt`, `part_destroyed`, `resource_changed`, `interval_changed`,
-`stack_gained`, `resonance`, `explosion`, `battle_end`.
+`{tick, side, type, ...payload}`. 타입: `pulse_emitted`, `pulse_arrived`, `pulse_stored`,
+`part_fired`, `misfire`, `damage_dealt`, `part_destroyed`, `resource_changed`,
+`interval_changed`, `stack_gained`, `resonance`, `explosion`, `battle_end`.
 
 - 디버그 씬: 이벤트를 그대로 시각 효과/로그 라인으로 변환.
 - 배치 러너: 이벤트를 집계해 통계 산출. 텍스트 전투 로그도 이벤트의 문자열 변환일 뿐.
@@ -222,3 +222,21 @@ res://
 | ammo 생산 부품 없음 → 초기 비축제 | GDD 카탈로그에 생산처 부재. 고갈 압박이 오히려 검증 지표와 부합 |
 | ichor 소비처 없음 (예약) | GDD v0.1에 소비 명세 부재. 축적 기록만 |
 | 펄스 즉시 전파 (지연 없음) | 배선 거리 지연은 GDD §5, Phase 2 항목 |
+
+### 구현 후 추가된 결정 (최종 리뷰 반영, 2026-07-04)
+
+| 결정 | 이유 |
+|---|---|
+| 지표1 판정 = 10초 창별 펄스 수의 peak/first ≥ 1.5 | 스펙 §7의 "단조 증가"는 마지막 부분 창에서 상시 실패하는 취약한 기준 — 구현 계획의 조작적 정의를 채택 |
+| 부품 조준 피격은 ichor/hits_taken 미축적 | 함체 피격만 "피격"으로 계산. 혈압 보일러가 저격으로는 성장하지 않음. Phase 1에서 ichor 소비처 설계 시 재검토 |
+| 아드레날린 과부하는 하한 "도달 후" 다음 적중부터 | 하한 위→감소(클램프, interval_changed 방출), 하한 도달 상태→과부하 자해. 부동소수 오차 대비 0.0001 여유 |
+| 신경절 복제는 전방향 방사 (상류 포함) | §3.3 "새 BFS, 새 visited set" 그대로. 심장 charge 축적은 무해(RC 0), 하류 이중 전달이 곧 25% 증폭의 실체 |
+| EXTRA_PULSE 자원 이벤트는 비용 사전 순회로 일반화 | 다중 자원 비용에 견고, FIRE_PROJECTILE 분기와 일관 |
+
+### Phase 1 이월 항목 (최종 리뷰 발견)
+
+- 불발 재시도 주기: 기아 상태에서 틱마다 misfire 이벤트 방출(20회/초) → 상태 진입 시 1회로 변경. 지표3의 불발률 수치가 틱레이트 아티팩트임에 유의
+- 심장 파괴 시맨틱: 파괴된 심장이 계속 박동함. PART_TARGETING priority가 데이터화되는 즉시 처리 필요
+- 이벤트 스트림 자기서술화(Phase 2 리플레이 대비): stack_gained에 표시명, pulse_arrived에 유효 RC 포함, 뷰의 sim 직접 참조 제거
+- 신경절 다수(4~5개+) 클러스터의 펄스당 복제 예산 상한
+- run_batch에 지표 불합격 시 비-0 종료 코드 (자동화 연동 시)
