@@ -5,6 +5,15 @@ extends SceneTree
 const Catalog := preload("res://sim/parts_catalog.gd")
 const Ship := preload("res://sim/ship_state.gd")
 const Pulse := preload("res://sim/pulse_network.gd")
+const Sim := preload("res://sim/combat_sim.gd")
+
+const B_GUN := {"name": "gun", "parts": [
+	{"id": "heart", "type": "heart"}, {"id": "b1", "type": "boiler"},
+	{"id": "t1", "type": "main_turret"}],
+	"wires": [["heart", "b1"], ["b1", "t1"]]}
+const B_IDLE := {"name": "idle", "parts": [
+	{"id": "heart", "type": "heart"}, {"id": "a1", "type": "armor_bulkhead"}],
+	"wires": [["heart", "a1"]]}
 
 var _pass := 0
 var _fail := 0
@@ -19,6 +28,7 @@ func _run_all() -> void:
 	_test_catalog()
 	_test_ship()
 	_test_pulse()
+	_test_combat_core()
 
 func check(cond: bool, label: String) -> void:
 	if cond:
@@ -132,3 +142,54 @@ func _test_pulse() -> void:
 	for i in 200:
 		Pulse.propagate(g2, "heart", 1, rng_b, [], i, 0)
 	check(g2.parts.t.charge == g.parts.t.charge, "replication deterministic")
+
+func _test_combat_core() -> void:
+	var sim = Sim.new()
+	check(sim.setup(B_GUN, B_IDLE, 42), "setup with valid builds")
+	# 2.1초(42틱): 보일러(rc2)가 최소 1회 발동해 steam 생산
+	var evs: Array = []
+	for i in 42:
+		evs.append_array(sim.step())
+	var produced := false
+	var fired := false
+	for e in evs:
+		if e.type == "part_fired" and e.side == 0 and e.part == "b1":
+			produced = true
+		if e.type == "part_fired" and e.side == 0 and e.part == "t1":
+			fired = true
+	check(produced, "boiler produced steam")
+	# 주포: rc3 = 3펄스 = 3초 시점. 42틱(2.1s)에는 미발동, steam1+ammo1 필요.
+	check(not fired, "turret not yet at 2.1s")
+	# 끝까지: gun이 idle을 격침
+	var r = sim.run_to_end()
+	check(r.winner == 0, "gun defeats idle (winner=%s reason=%s)" % [r.winner, r.reason])
+	check(sim.ships[1].hull <= 0 or r.reason == "timeout", "defender dead or timeout")
+
+	# 불발: 보일러 없는 포탑, steam 없음 → misfire 이벤트, charge 유지
+	var starving := {"name": "starve", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "t1", "type": "main_turret"}],
+		"wires": [["heart", "t1"]]}
+	var sim2 = Sim.new()
+	sim2.setup(starving, B_IDLE, 42)
+	var evs2: Array = []
+	for i in 70:
+		evs2.append_array(sim2.step())
+	var misfired := false
+	for e in evs2:
+		if e.type == "misfire" and e.side == 0:
+			misfired = true
+	check(misfired, "misfire on steam shortage")
+	check(sim2.ships[0].parts.t1.charge >= 3, "misfire keeps charge")
+
+	# 결정론: 같은 시드 = 같은 결과
+	var ra = Sim.new(); ra.setup(B_GUN, B_GUN, 7)
+	var rb = Sim.new(); rb.setup(B_GUN, B_GUN, 7)
+	var res_a = ra.run_to_end()
+	var res_b = rb.run_to_end()
+	check(res_a.ticks == res_b.ticks and res_a.hull_a == res_b.hull_a
+		and res_a.hull_b == res_b.hull_b and res_a.winner == res_b.winner,
+		"determinism: same seed same outcome")
+
+	# ichor: 함체 피격 시 양측 +1
+	check(int(sim.ships[0].resources.ichor) > 0 or int(sim.ships[1].resources.ichor) > 0,
+		"ichor accumulates on hits")
