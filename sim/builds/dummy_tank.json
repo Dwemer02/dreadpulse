@@ -1,0 +1,14 @@
+{
+  "name": "dummy_tank",
+  "ship_hull": 400,
+  "parts": [
+    {"id": "heart", "type": "heart"},
+    {"id": "a1", "type": "armor_bulkhead"},
+    {"id": "a2", "type": "armor_bulkhead"},
+    {"id": "a3", "type": "armor_bulkhead"},
+    {"id": "a4", "type": "armor_bulkhead"}
+  ],
+  "wires": [
+    ["heart", "a1"], ["heart", "a2"], ["heart", "a3"], ["heart", "a4"]
+  ]
+}

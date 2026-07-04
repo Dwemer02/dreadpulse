@@ -6,6 +6,7 @@ const Catalog := preload("res://sim/parts_catalog.gd")
 const Ship := preload("res://sim/ship_state.gd")
 const Pulse := preload("res://sim/pulse_network.gd")
 const Sim := preload("res://sim/combat_sim.gd")
+const Loader := preload("res://sim/build_loader.gd")
 
 const B_GUN := {"name": "gun", "parts": [
 	{"id": "heart", "type": "heart"}, {"id": "b1", "type": "boiler"},
@@ -31,6 +32,7 @@ func _run_all() -> void:
 	_test_combat_core()
 	_test_support_effects()
 	_test_growth_effects()
+	_test_builds()
 
 func check(cond: bool, label: String) -> void:
 	if cond:
@@ -393,3 +395,20 @@ func _test_growth_effects() -> void:
 			if e.type == "pulse_emitted" and e.side == 0 and int(e.power) == 2:
 				power2 = true
 	check(resonance and power2, "ancillary heart resonance (res=%s p2=%s)" % [resonance, power2])
+
+func _test_builds() -> void:
+	var paths: Array = Loader.list_builds()
+	check(paths.size() == 5, "5 build files (got %d)" % paths.size())
+	for p in paths:
+		var b: Dictionary = Loader.load_build(p)
+		check(not b.is_empty(), "build parses: " + str(p))
+		var s = Ship.new()
+		check(s.load_build(b), "build valid: %s %s" % [p, s.load_errors])
+	check(Loader.load_build("res://sim/builds/nope.json").is_empty(), "missing file -> empty")
+	# 대표 매치업 스모크: pure_steel vs overdrive가 300초 안에 끝난다
+	var a: Dictionary = Loader.load_build("res://sim/builds/pure_steel.json")
+	var b2: Dictionary = Loader.load_build("res://sim/builds/overdrive.json")
+	var sim = Sim.new()
+	sim.setup(a, b2, 42)
+	var r = sim.run_to_end()
+	check(r.ticks > 0 and r.has("winner"), "smoke battle completes (%s)" % [r])

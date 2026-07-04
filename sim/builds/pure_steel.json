@@ -1,0 +1,18 @@
+{
+  "name": "pure_steel",
+  "parts": [
+    {"id": "heart", "type": "heart"},
+    {"id": "b1", "type": "boiler"},
+    {"id": "b2", "type": "boiler"},
+    {"id": "al", "type": "autoloader"},
+    {"id": "mag", "type": "magazine"},
+    {"id": "t1", "type": "main_turret"},
+    {"id": "t2", "type": "main_turret"}
+  ],
+  "wires": [
+    ["heart", "b1"], ["heart", "b2"],
+    ["b1", "t1"], ["b2", "t2"],
+    ["mag", "t1"], ["mag", "t2"],
+    ["al", "t1"], ["al", "t2"]
+  ]
+}

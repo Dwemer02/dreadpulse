@@ -1,0 +1,15 @@
+{
+  "name": "bloodpressure",
+  "parts": [
+    {"id": "heart", "type": "heart"},
+    {"id": "bb", "type": "boiler", "graft": "gills"},
+    {"id": "gl", "type": "gills"},
+    {"id": "ar", "type": "armor_bulkhead"},
+    {"id": "t1", "type": "main_turret"},
+    {"id": "tc", "type": "tentacle"}
+  ],
+  "wires": [
+    ["heart", "bb"], ["heart", "gl"], ["heart", "ar"],
+    ["bb", "t1"], ["heart", "tc"]
+  ]
+}
