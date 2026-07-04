@@ -29,6 +29,7 @@ func _run_all() -> void:
 	_test_ship()
 	_test_pulse()
 	_test_combat_core()
+	_test_support_effects()
 
 func check(cond: bool, label: String) -> void:
 	if cond:
@@ -193,3 +194,90 @@ func _test_combat_core() -> void:
 	# ichor: 함체 피격 시 양측 +1
 	check(int(sim.ships[0].resources.ichor) > 0 or int(sim.ships[1].resources.ichor) > 0,
 		"ichor accumulates on hits")
+
+func _test_support_effects() -> void:
+	# 탄약고 버프: 8+2=10 피해
+	var gunner := {"name": "g", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "b1", "type": "boiler"},
+		{"id": "mag", "type": "magazine"}, {"id": "t1", "type": "main_turret"}],
+		"wires": [["heart", "b1"], ["b1", "t1"], ["mag", "t1"]]}
+	var sim = Sim.new()
+	sim.setup(gunner, B_IDLE, 42)
+	var evs: Array = []
+	for i in 200:
+		evs.append_array(sim.step())
+	var buffed := false
+	for e in evs:
+		if e.type == "damage_dealt" and e.side == 0 and int(e.amount) == 10:
+			buffed = true
+	check(buffed, "magazine adjacency buff +2")
+
+	# 눈알 조준: 적 탄약고 저격 → 파괴 → 유폭 explosion(kind=magazine)
+	var sniper := {"name": "s", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "b1", "type": "boiler"},
+		{"id": "ey", "type": "eye"}, {"id": "t1", "type": "main_turret"}],
+		"wires": [["heart", "b1"], ["b1", "t1"], ["heart", "ey"], ["ey", "t1"]]}
+	var victim := {"name": "v", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "mag", "type": "magazine"}],
+		"wires": [["heart", "mag"]]}
+	var sim2 = Sim.new()
+	sim2.setup(sniper, victim, 42)
+	var evs2: Array = []
+	for i in 400:
+		if sim2.ended:
+			break
+		evs2.append_array(sim2.step())
+	var sniped := false
+	var detonated := false
+	for e in evs2:
+		if e.type == "damage_dealt" and e.side == 0 and e.get("target_part", "") == "mag":
+			sniped = true
+		if e.type == "explosion" and e.get("kind", "") == "magazine" and e.side == 1:
+			detonated = true
+	check(sniped, "eye targets enemy magazine")
+	check(detonated, "magazine destruction detonates own ship")
+
+	# 장갑 흡수: 부품 조준 피해 30% 흡수
+	var armored := {"name": "a", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "mag", "type": "magazine"},
+		{"id": "ar", "type": "armor_bulkhead"}],
+		"wires": [["heart", "mag"], ["ar", "mag"]]}
+	var sim3 = Sim.new()
+	sim3.setup(sniper, armored, 42)
+	var evs3: Array = []
+	for i in 200:
+		if sim3.ended:
+			break
+		evs3.append_array(sim3.step())
+	var absorbed := false
+	for e in evs3:
+		if e.type == "damage_dealt" and e.get("absorbed", false):
+			absorbed = true
+	check(absorbed, "armor absorbs part-target damage")
+
+	# 아가미: 함 피격 피해 절반이 steam으로
+	var gilled := {"name": "gl", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "gl", "type": "gills"}],
+		"wires": [["heart", "gl"]]}
+	var sim4 = Sim.new()
+	sim4.setup(gunner, gilled, 42)
+	for i in 200:
+		if sim4.ended:
+			break
+		sim4.step()
+	check(int(sim4.ships[1].resources.steam) > 0, "gills convert damage to steam")
+
+	# 자동장전기: rc3-1=2 → 2펄스(약 2초) 시점에 첫 발사 가능
+	var fastgun := {"name": "f", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "b1", "type": "boiler"},
+		{"id": "al", "type": "autoloader"}, {"id": "t1", "type": "main_turret"}],
+		"wires": [["heart", "b1"], ["b1", "t1"], ["al", "t1"]]}
+	var sim5 = Sim.new()
+	sim5.setup(fastgun, B_IDLE, 42)
+	var first_fire_tick := -1
+	for i in 200:
+		for e in sim5.step():
+			if e.type == "part_fired" and e.side == 0 and e.part == "t1" and first_fire_tick < 0:
+				first_fire_tick = e.tick
+	check(first_fire_tick > 0 and first_fire_tick * Sim.TICK_DT <= 2.5,
+		"autoloader accelerates first shot (%.2fs)" % (first_fire_tick * Sim.TICK_DT))
