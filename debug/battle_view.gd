@@ -216,6 +216,3 @@ func _refresh_res(side: int) -> void:
 func _log(e: Dictionary, msg: String) -> void:
 	var side_tag := "[A]" if int(e.get("side", 0)) == 0 else "[B]"
 	log_view.append_text("[%.1fs]%s %s\n" % [int(e.tick) * Sim.TICK_DT, side_tag, msg])
-
-func _side_name(side: int) -> String:
-	return "A" if side == 0 else "B"

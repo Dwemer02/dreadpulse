@@ -33,6 +33,7 @@ func _run_all() -> void:
 	_test_support_effects()
 	_test_growth_effects()
 	_test_builds()
+	_test_battle_end()
 
 func check(cond: bool, label: String) -> void:
 	if cond:
@@ -412,3 +413,34 @@ func _test_builds() -> void:
 	sim.setup(a, b2, 42)
 	var r = sim.run_to_end()
 	check(r.ticks > 0 and r.has("winner"), "smoke battle completes (%s)" % [r])
+
+func _test_battle_end() -> void:
+	# 시간초과: hull 비율이 높은 쪽 승리
+	var sim = Sim.new()
+	sim.setup(B_IDLE, B_IDLE, 42)
+	sim.ships[0].hull = 50
+	var r = sim.run_to_end()
+	check(r.reason == "timeout", "timeout ends by time limit (reason=%s)" % r.reason)
+	check(r.winner == 1, "timeout winner by higher hull fraction (winner=%s)" % r.winner)
+
+	# 시간초과 무승부: 양측 hull 비율 동일
+	var sim2 = Sim.new()
+	sim2.setup(B_IDLE, B_IDLE, 42)
+	var r2 = sim2.run_to_end()
+	check(r2.reason == "timeout", "timeout draw ends by time limit (reason=%s)" % r2.reason)
+	check(r2.winner == -1, "timeout draw on equal hull fractions (winner=%s)" % r2.winner)
+
+	# 동시 격침: 같은 틱 내 양측 모두 사망 시 무승부
+	var sim3 = Sim.new()
+	sim3.setup(B_GUN, B_GUN, 42)
+	sim3.ships[0].hull = 5
+	sim3.ships[1].hull = 5
+	var r3 = sim3.run_to_end()
+	check(r3.reason == "destruction", "mutual kill ends by destruction (reason=%s)" % r3.reason)
+	check(r3.winner == -1, "mutual kill is a draw (winner=%s)" % r3.winner)
+
+	# 잘못된 빌드: setup 실패 시 좀비 시뮬 방지
+	var s = Sim.new()
+	check(not s.setup({}, {}, 1), "invalid build setup returns false")
+	check(s.ended == true, "invalid build sets ended")
+	check(s.end_reason == "invalid_build", "invalid build sets end_reason")

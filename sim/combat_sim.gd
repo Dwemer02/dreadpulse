@@ -24,6 +24,8 @@ func setup(build_a: Dictionary, build_b: Dictionary, seed_value: int) -> bool:
 	ships = [a, b]
 	if not ok:
 		push_error("invalid builds: %s / %s" % [a.load_errors, b.load_errors])
+		ended = true
+		end_reason = "invalid_build"
 	return ok
 
 func time_now() -> float:
@@ -209,8 +211,8 @@ func _on_successful_hit(side: int, part, events: Array) -> void:
 	if not adr.is_empty():
 		var floor_v := float(adr.get("floor", 0.5))
 		var amount := float(adr.get("amount", 0.05))
-		if ship.pulse_interval - amount >= floor_v:
-			ship.pulse_interval -= amount
+		if ship.pulse_interval > floor_v + 0.0001:
+			ship.pulse_interval = maxf(ship.pulse_interval - amount, floor_v)
 			events.append(_ev(side, "interval_changed", {"interval": ship.pulse_interval}))
 		else:
 			ship.pulse_interval = floor_v
