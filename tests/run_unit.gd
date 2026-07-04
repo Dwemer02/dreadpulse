@@ -34,6 +34,7 @@ func _run_all() -> void:
 	_test_growth_effects()
 	_test_builds()
 	_test_battle_end()
+	_test_hull()
 
 func check(cond: bool, label: String) -> void:
 	if cond:
@@ -444,3 +445,17 @@ func _test_battle_end() -> void:
 	check(not s.setup({}, {}, 1), "invalid build setup returns false")
 	check(s.ended == true, "invalid build sets ended")
 	check(s.end_reason == "invalid_build", "invalid build sets end_reason")
+
+func _test_hull() -> void:
+	var hull: Dictionary = Loader.load_hull()
+	check(not hull.is_empty(), "standard hull loads")
+	check((hull.slots as Array).size() == 13, "13 slots")
+	var ids := {}
+	var hardpoints := 0
+	for s in hull.slots:
+		ids[str(s.id)] = true
+		if s.get("hardpoint", false):
+			hardpoints += 1
+	check(ids.has("H") and ids.size() == 13, "unique slot ids incl. H")
+	check(hardpoints == 7, "7 hardpoint slots (D1-D4, B1-B3)")
+	check(Loader.load_hull("nope").is_empty(), "missing hull -> empty")

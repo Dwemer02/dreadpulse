@@ -1,0 +1,24 @@
+{
+  "name": "standard_hull",
+  "canvas": [400, 240],
+  "waterline_y": 150,
+  "silhouette": [
+    [8, 150], [30, 100], [55, 92], [120, 92], [128, 56], [180, 56], [188, 92],
+    [335, 92], [368, 100], [390, 150], [350, 182], [70, 182], [25, 165]
+  ],
+  "slots": [
+    {"id": "D1", "zone": "deck", "section": "bow", "pos": [70, 78], "hardpoint": true},
+    {"id": "D2", "zone": "deck", "section": "bridge", "pos": [154, 42], "hardpoint": true},
+    {"id": "D3", "zone": "deck", "section": "engine", "pos": [230, 78], "hardpoint": true},
+    {"id": "D4", "zone": "deck", "section": "stern", "pos": [310, 78], "hardpoint": true},
+    {"id": "I1", "zone": "internal", "section": "bow", "pos": [70, 120], "hardpoint": false},
+    {"id": "I2", "zone": "internal", "section": "bridge", "pos": [140, 120], "hardpoint": false},
+    {"id": "H",  "zone": "internal", "section": "engine", "pos": [210, 120], "hardpoint": false},
+    {"id": "I3", "zone": "internal", "section": "engine", "pos": [260, 120], "hardpoint": false},
+    {"id": "I4", "zone": "internal", "section": "stern", "pos": [310, 120], "hardpoint": false},
+    {"id": "I5", "zone": "internal", "section": "stern", "pos": [350, 130], "hardpoint": false},
+    {"id": "B1", "zone": "below", "section": "bow", "pos": [90, 185], "hardpoint": true},
+    {"id": "B2", "zone": "below", "section": "engine", "pos": [210, 185], "hardpoint": true},
+    {"id": "B3", "zone": "below", "section": "stern", "pos": [300, 185], "hardpoint": true}
+  ]
+}
