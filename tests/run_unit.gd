@@ -36,6 +36,7 @@ func _run_all() -> void:
 	_test_battle_end()
 	_test_hull()
 	_test_slot_validation()
+	_test_event_payloads()
 
 func check(cond: bool, label: String) -> void:
 	if cond:
@@ -513,3 +514,35 @@ func _test_slot_validation() -> void:
 		[{"id": "heart", "type": "heart"}, {"id": "b1", "type": "boiler"}],
 		[["heart", "b1"]])
 	check(legacy.is_valid(), "no-hull build skips slot validation")
+
+func _test_event_payloads() -> void:
+	# pulse_arrived.from = 직전 부품
+	var s = _mk_ship(
+		[{"id": "heart", "type": "heart"}, {"id": "a", "type": "boiler"},
+		 {"id": "b", "type": "main_turret"}],
+		[["heart", "a"], ["a", "b"]])
+	var evs: Array = []
+	Pulse.propagate(s, "heart", 1, _rng(1), evs, 1, 0)
+	var from_ok := 0
+	for e in evs:
+		if e.type == "pulse_arrived":
+			if e.part == "a" and e.get("from", "") == "heart":
+				from_ok += 1
+			if e.part == "b" and e.get("from", "") == "a":
+				from_ok += 1
+	check(from_ok == 2, "pulse_arrived carries from (%d/2)" % from_ok)
+
+	# stack_gained.name = 표시명
+	var biter := {"name": "bt", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "tc", "type": "tentacle"}],
+		"wires": [["heart", "tc"]]}
+	var sim = Sim.new()
+	sim.setup(biter, B_IDLE, 42)
+	var got_name := ""
+	for i in 200:
+		if sim.ended:
+			break
+		for e in sim.step():
+			if e.type == "stack_gained" and got_name == "":
+				got_name = str(e.get("name", ""))
+	check(got_name == "촉수", "stack_gained carries display name (got '%s')" % got_name)

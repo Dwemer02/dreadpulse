@@ -207,7 +207,8 @@ func _on_successful_hit(side: int, part, events: Array) -> void:
 	var stack_e: Dictionary = part.get_effect(Catalog.Effect.PERMANENT_STACK_ON_HIT)
 	if not stack_e.is_empty():
 		part.stacks += int(stack_e.get("amount", 1))
-		events.append(_ev(side, "stack_gained", {"part": part.id, "stacks": part.stacks}))
+		events.append(_ev(side, "stack_gained",
+			{"part": part.id, "stacks": part.stacks, "name": part.display_name()}))
 	var adr: Dictionary = part.get_effect(Catalog.Effect.INTERVAL_REDUCE_ON_HIT)
 	if not adr.is_empty():
 		var floor_v := float(adr.get("floor", 0.5))

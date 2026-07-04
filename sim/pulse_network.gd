@@ -30,7 +30,7 @@ static func propagate(ship, origin: String, power: int, rng: RandomNumberGenerat
 					continue  # 낭포는 하류 차단
 				part.charge += power
 				events.append({"tick": tick, "side": side, "type": "pulse_arrived",
-					"part": nb, "charge": part.charge})
+					"part": nb, "charge": part.charge, "from": cur})
 				var rep: Dictionary = part.get_effect(Catalog.Effect.PULSE_REPLICATE)
 				if not rep.is_empty() and rng.randf() < float(rep.get("chance", 0.25)):
 					propagate(ship, nb, power, rng, events, tick, side, depth + 1)
