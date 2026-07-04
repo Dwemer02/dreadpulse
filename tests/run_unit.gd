@@ -3,6 +3,7 @@ extends SceneTree
 # 실행: & $godot --headless --path . --script res://tests/run_unit.gd
 
 const Catalog := preload("res://sim/parts_catalog.gd")
+const Ship := preload("res://sim/ship_state.gd")
 
 var _pass := 0
 var _fail := 0
@@ -15,6 +16,7 @@ func _init() -> void:
 func _run_all() -> void:
 	_test_harness()
 	_test_catalog()
+	_test_ship()
 
 func check(cond: bool, label: String) -> void:
 	if cond:
@@ -42,3 +44,35 @@ func _test_catalog() -> void:
 	for t in Catalog.PARTS:
 		var d: Dictionary = Catalog.PARTS[t]
 		check(d.has("kind") and d.has("hull") and d.has("effects"), "part %s complete" % t)
+
+func _mk_ship(parts: Array, wires: Array, extra: Dictionary = {}):
+	var b := {"name": "test", "parts": parts, "wires": wires}
+	b.merge(extra)
+	var s = Ship.new()
+	s.load_build(b)
+	return s
+
+func _test_ship() -> void:
+	var s = _mk_ship(
+		[{"id": "heart", "type": "heart"}, {"id": "mag", "type": "magazine"},
+		 {"id": "t1", "type": "main_turret"}, {"id": "al", "type": "autoloader"}],
+		[["heart", "t1"], ["mag", "t1"], ["al", "t1"]])
+	check(s.is_valid(), "valid build loads: %s" % [s.load_errors])
+	check(int(s.resources.ammo) == 35, "ammo = 20 base + 15 reserve")
+	check(s.heart_id() == "heart", "heart_id")
+	check(s.effective_required_charge("t1") == 2, "autoloader discount 3->2")
+	check(s.try_spend({"ammo": 30}) and int(s.resources.ammo) == 5, "spend ok")
+	check(not s.try_spend({"steam": 1}), "spend fails on shortage")
+
+	var bad = _mk_ship([{"id": "a", "type": "boiler"}], [])
+	check(not bad.is_valid(), "missing heart rejected")
+	var orphan = _mk_ship(
+		[{"id": "heart", "type": "heart"}, {"id": "b", "type": "boiler"}], [])
+	check(not orphan.is_valid(), "orphan part rejected")
+	var dup = _mk_ship(
+		[{"id": "heart", "type": "heart"}, {"id": "heart", "type": "boiler"}], [])
+	check(not dup.is_valid(), "duplicate id rejected")
+	var badgraft = _mk_ship(
+		[{"id": "heart", "type": "heart"},
+		 {"id": "x", "type": "autoloader", "graft": "nerve"}], [["heart", "x"]])
+	check(not badgraft.is_valid(), "invalid graft rejected")
