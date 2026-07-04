@@ -4,6 +4,7 @@ extends SceneTree
 
 const Catalog := preload("res://sim/parts_catalog.gd")
 const Ship := preload("res://sim/ship_state.gd")
+const Pulse := preload("res://sim/pulse_network.gd")
 
 var _pass := 0
 var _fail := 0
@@ -17,6 +18,7 @@ func _run_all() -> void:
 	_test_harness()
 	_test_catalog()
 	_test_ship()
+	_test_pulse()
 
 func check(cond: bool, label: String) -> void:
 	if cond:
@@ -44,6 +46,11 @@ func _test_catalog() -> void:
 	for t in Catalog.PARTS:
 		var d: Dictionary = Catalog.PARTS[t]
 		check(d.has("kind") and d.has("hull") and d.has("effects"), "part %s complete" % t)
+
+func _rng(seed_value: int) -> RandomNumberGenerator:
+	var r := RandomNumberGenerator.new()
+	r.seed = seed_value
+	return r
 
 func _mk_ship(parts: Array, wires: Array, extra: Dictionary = {}):
 	var b := {"name": "test", "parts": parts, "wires": wires}
@@ -76,3 +83,52 @@ func _test_ship() -> void:
 		[{"id": "heart", "type": "heart"},
 		 {"id": "x", "type": "autoloader", "graft": "nerve"}], [["heart", "x"]])
 	check(not badgraft.is_valid(), "invalid graft rejected")
+
+func _test_pulse() -> void:
+	# 체인 전파: heart-a-b 모두 charge 1
+	var s = _mk_ship(
+		[{"id": "heart", "type": "heart"}, {"id": "a", "type": "boiler"},
+		 {"id": "b", "type": "main_turret"}],
+		[["heart", "a"], ["a", "b"]])
+	var evs: Array = []
+	Pulse.propagate(s, "heart", 1, _rng(1), evs, 1, 0)
+	check(s.parts.a.charge == 1 and s.parts.b.charge == 1, "chain propagation")
+	check(s.parts.heart.charge == 0, "origin gets no charge")
+
+	# 낭포: 흡수하고 하류 차단
+	var c = _mk_ship(
+		[{"id": "heart", "type": "heart"}, {"id": "cy", "type": "cyst"},
+		 {"id": "t", "type": "main_turret"}],
+		[["heart", "cy"], ["cy", "t"]])
+	Pulse.propagate(c, "heart", 1, _rng(1), [], 1, 0)
+	check(c.parts.cy.stored_pulses == 1 and c.parts.cy.charge == 0, "cyst stores")
+	check(c.parts.t.charge == 0, "cyst blocks downstream")
+
+	# 파괴 부품은 전도하지 않음
+	var d = _mk_ship(
+		[{"id": "heart", "type": "heart"}, {"id": "m", "type": "boiler"},
+		 {"id": "t", "type": "main_turret"}],
+		[["heart", "m"], ["m", "t"]])
+	d.parts.m.hull = 0
+	Pulse.propagate(d, "heart", 1, _rng(1), [], 1, 0)
+	check(d.parts.t.charge == 0, "destroyed part does not conduct")
+
+	# 신경절: 결정론적 복제, 200회에서 25% 근방
+	var g = _mk_ship(
+		[{"id": "heart", "type": "heart"}, {"id": "g1", "type": "ganglion"},
+		 {"id": "t", "type": "main_turret"}],
+		[["heart", "g1"], ["g1", "t"]])
+	var rng_a := _rng(7)
+	for i in 200:
+		Pulse.propagate(g, "heart", 1, rng_a, [], i, 0)
+	var extra: int = g.parts.t.charge - 200
+	check(extra >= 25 and extra <= 80, "ganglion ~25%% replication (got +%d)" % extra)
+	# 같은 시드로 재실행 = 같은 결과
+	var g2 = _mk_ship(
+		[{"id": "heart", "type": "heart"}, {"id": "g1", "type": "ganglion"},
+		 {"id": "t", "type": "main_turret"}],
+		[["heart", "g1"], ["g1", "t"]])
+	var rng_b := _rng(7)
+	for i in 200:
+		Pulse.propagate(g2, "heart", 1, rng_b, [], i, 0)
+	check(g2.parts.t.charge == g.parts.t.charge, "replication deterministic")
