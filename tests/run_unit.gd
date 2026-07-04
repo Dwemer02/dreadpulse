@@ -30,6 +30,7 @@ func _run_all() -> void:
 	_test_pulse()
 	_test_combat_core()
 	_test_support_effects()
+	_test_growth_effects()
 
 func check(cond: bool, label: String) -> void:
 	if cond:
@@ -281,3 +282,114 @@ func _test_support_effects() -> void:
 				first_fire_tick = e.tick
 	check(first_fire_tick > 0 and first_fire_tick * Sim.TICK_DT <= 2.5,
 		"autoloader accelerates first shot (%.2fs)" % (first_fire_tick * Sim.TICK_DT))
+
+func _test_growth_effects() -> void:
+	# 촉수: 스택으로 피해 증가 (3, 4, 5, ...)
+	var biter := {"name": "bt", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "tc", "type": "tentacle"}],
+		"wires": [["heart", "tc"]]}
+	var sim = Sim.new()
+	sim.setup(biter, B_IDLE, 42)
+	var dmgs: Array = []
+	for i in 200:
+		if sim.ended:
+			break
+		for e in sim.step():
+			if e.type == "damage_dealt" and e.side == 0:
+				dmgs.append(int(e.amount))
+	check(dmgs.size() >= 3 and dmgs[0] == 3 and dmgs[1] == 4 and dmgs[2] == 5,
+		"tentacle permanent stacks (%s)" % [dmgs.slice(0, 3)])
+
+	# 아드레날린 포: interval 감소, 하한 0.5, 하한 이후 과부하 자해
+	var adren := {"name": "ad", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "b1", "type": "boiler"},
+		{"id": "b2", "type": "boiler"}, {"id": "mag", "type": "magazine"},
+		{"id": "t1", "type": "main_turret", "graft": "nerve"}],
+		"wires": [["heart", "b1"], ["heart", "b2"], ["b1", "t1"], ["mag", "t1"]]}
+	var big_idle := {"name": "bi", "ship_hull": 3000, "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "a1", "type": "armor_bulkhead"}],
+		"wires": [["heart", "a1"]]}
+	var sim2 = Sim.new()
+	sim2.setup(adren, big_idle, 42)
+	var overloaded := false
+	var min_interval := 1.0
+	for i in 6000:
+		if sim2.ended:
+			break
+		for e in sim2.step():
+			if e.type == "interval_changed":
+				min_interval = minf(min_interval, float(e.interval))
+			if e.type == "explosion" and e.get("kind", "") == "overload":
+				overloaded = true
+	check(min_interval <= 0.55, "adrenaline reduces interval (min %.2f)" % min_interval)
+	check(sim2.ships[0].pulse_interval >= 0.5, "interval floor respected")
+	check(overloaded, "overload self-damage past floor")
+
+	# 증기터빈: steam 3 소모 → 추가 펄스 (pulse_emitted origin=heart 증가)
+	var turbo := {"name": "tb", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "b1", "type": "boiler"},
+		{"id": "b2", "type": "boiler"}, {"id": "b3", "type": "boiler"},
+		{"id": "st", "type": "steam_turbine"}],
+		"wires": [["heart", "b1"], ["heart", "b2"], ["heart", "b3"], ["heart", "st"]]}
+	var sim3 = Sim.new()
+	sim3.setup(turbo, B_IDLE, 42)
+	var turbine_fired := false
+	for i in 600:
+		if sim3.ended:
+			break
+		for e in sim3.step():
+			if e.type == "part_fired" and e.side == 0 and e.part == "st":
+				turbine_fired = true
+	check(turbine_fired, "steam turbine fires extra pulse")
+
+	# 낭포: threshold 10 도달 시 폭발 → 적 hull 30 감소 (10*3)
+	var cystic := {"name": "cy", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "cy", "type": "cyst"}],
+		"wires": [["heart", "cy"]]}
+	var sim4 = Sim.new()
+	sim4.setup(cystic, B_IDLE, 42)
+	var cyst_boom := false
+	for i in 300:
+		if sim4.ended:
+			break
+		for e in sim4.step():
+			if e.type == "explosion" and e.get("kind", "") == "cyst" and int(e.amount) == 30:
+				cyst_boom = true
+	check(cyst_boom, "cyst explodes at threshold for stored*3")
+
+	# 유폭 심장(magazine+cyst): 임계 6 도달 시 연결 포탑 강제 일제사격
+	var alpha := {"name": "al", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "b1", "type": "boiler"},
+		{"id": "b2", "type": "boiler"},
+		{"id": "dh", "type": "magazine", "graft": "cyst"},
+		{"id": "t1", "type": "main_turret"}],
+		"wires": [["heart", "b1"], ["heart", "b2"], ["heart", "dh"], ["dh", "t1"]]}
+	var sim5 = Sim.new()
+	sim5.setup(alpha, B_IDLE, 42)
+	var all_fire := false
+	for i in 600:
+		if sim5.ended:
+			break
+		for e in sim5.step():
+			if e.type == "explosion" and e.get("kind", "") == "all_fire":
+				all_fire = true
+	check(all_fire, "detonation heart triggers all-fire")
+
+	# 부심장 공명: resonance 이벤트 + power 2 pulse_emitted
+	var twin := {"name": "tw", "parts": [
+		{"id": "heart", "type": "heart"}, {"id": "ah", "type": "ancillary_heart"},
+		{"id": "b1", "type": "boiler"}],
+		"wires": [["heart", "ah"], ["heart", "b1"]]}
+	var sim6 = Sim.new()
+	sim6.setup(twin, B_IDLE, 42)
+	var resonance := false
+	var power2 := false
+	for i in 1200:
+		if sim6.ended:
+			break
+		for e in sim6.step():
+			if e.type == "resonance" and e.side == 0:
+				resonance = true
+			if e.type == "pulse_emitted" and e.side == 0 and int(e.power) == 2:
+				power2 = true
+	check(resonance and power2, "ancillary heart resonance (res=%s p2=%s)" % [resonance, power2])
