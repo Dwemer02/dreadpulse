@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 27
+const EXPECTED_CHECKS := 35
 
 const K = preload("res://sim/sim_const.gd")
 const Catalog = preload("res://sim/catalog.gd")
@@ -17,6 +17,7 @@ func run(t: RefCounted) -> void:
 	_test_merge_plain(t)
 	_test_merge_augment(t)
 	_test_schema_errors(t)
+	_test_frame_schema_errors(t)
 	t.done()
 
 func _test_load(t: RefCounted) -> void:
@@ -36,6 +37,18 @@ func _test_merge_plain(t: RefCounted) -> void:
 	t.eq(m["augment_id"], "", "augment 없음")
 	t.eq(m["triggers"].size(), 0, "ACTIVE 트리거 없음")
 	t.eq(m["keywords"].size(), 2, "키워드 2종")
+
+	# fire_limit을 명시하지 않은 파츠는 무제한이다.
+	# -1(무제한)과 0(발동 불가)은 의미가 정반대이므로 리터럴 대조까지 한다.
+	var plain: Dictionary = c.merge("fx_gun", "")
+	t.eq(plain["fire_limit"], K.UNLIMITED, "fire_limit 미지정이면 무제한")
+	t.eq(plain["fire_limit"], -1, "무제한 센티넬은 -1이다 (0이면 발동 불가라는 정반대 의미가 된다)")
+
+	# roles도 다른 필드와 마찬가지로 원본과 공유하지 않는다
+	plain["roles"].append("core")
+	var fresh: Dictionary = c.merge("fx_gun", "")
+	t.eq(fresh["roles"].size(), 1, "roles를 바꿔도 카탈로그 원본이 오염되지 않는다")
+	t.check(not fresh["roles"].has("core"), "오염된 역할이 새 병합에 새지 않는다")
 
 func _test_merge_augment(t: RefCounted) -> void:
 	# 병합의 세 가지 연산
@@ -93,3 +106,17 @@ func _test_schema_errors(t: RefCounted) -> void:
 		  "active": { "cooldown": 0.0 } }
 	], "inline")
 	t.eq(c2.errors.size(), 4, "스키마 위반 4건이 전부 잡힌다: %s" % str(c2.errors))
+
+func _test_frame_schema_errors(t: RefCounted) -> void:
+	# 파츠에는 스키마 검증이 있는데 Frame에는 없으면, 망가진 Frame이 조용히 로드된다
+	var missing: RefCounted = Catalog.new()
+	missing.load_frame("res://sim/data/frames/nope.json")
+	t.check(not missing.ok(), "없는 Frame 파일은 에러다")
+	t.eq(missing.frames.size(), 0, "실패한 로드는 frames에 아무것도 넣지 않는다")
+
+	# 필수 키(hull, thresholds)가 빠진 Frame은 거부된다. 고정 픽스처를 쓴다 —
+	# 임시 파일 생성/삭제보다 결정론적이고 읽기 쉽다.
+	var broken: RefCounted = Catalog.new()
+	broken.load_frame("res://sim/data/frames/broken_frame.json")
+	t.check(not broken.ok(), "hull과 thresholds가 빠진 Frame은 거부된다")
+	t.eq(broken.frames.size(), 0, "거부된 Frame은 등록되지 않는다")
