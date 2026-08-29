@@ -1,6 +1,6 @@
 extends RefCounted
 
-const EXPECTED_CHECKS := 43
+const EXPECTED_CHECKS := 46
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -84,6 +84,27 @@ func _test_slowest(t: RefCounted) -> void:
 	rng2.seed = 1
 	t.eq(_slots(Targeting.resolve("slowest_own", _ctx(s2, s2.get_part("core"), rng2))), ["core"],
 		"전부 동점이면 첫 슬롯")
+
+	# 모든 파츠가 발동 준비된 상태(잔여 쿨타임 전부 0)에서도 대상을 고른다.
+	# best_remaining 초기값이 0이면 여기서 빈 배열이 나오고,
+	# slowest_own을 쓰는 파츠가 전투 내내 아무것도 하지 못한다.
+	var ready: RefCounted = _ship()
+	for p: RefCounted in ready.parts:
+		p.progress_units = p.cooldown_units
+	var rng3 := RandomNumberGenerator.new()
+	rng3.seed = 1
+	var picked: Array = Targeting.resolve("slowest_own", _ctx(ready, ready.get_part("core"), rng3))
+	t.eq(picked.size(), 1, "전부 준비된 상태에서도 대상을 고른다")
+	t.eq(_slots(picked), ["core"], "전부 동점이면 첫 슬롯")
+
+	# 진행도가 쿨타임을 넘긴 상태(초과분 이월 전)에서도 고른다 — 잔여가 음수다
+	var over: RefCounted = _ship()
+	for p: RefCounted in over.parts:
+		p.progress_units = p.cooldown_units + 10
+	var rng4 := RandomNumberGenerator.new()
+	rng4.seed = 1
+	t.eq(_slots(Targeting.resolve("slowest_own", _ctx(over, over.get_part("core"), rng4))), ["core"],
+		"잔여 쿨타임이 음수여도 대상을 고른다")
 
 func _test_linked(t: RefCounted) -> void:
 	var s: RefCounted = _ship()

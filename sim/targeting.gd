@@ -55,12 +55,19 @@ static func _pick_one(pool: Array, rng: RandomNumberGenerator) -> Array:
 	return [pool[rng.randi_range(0, pool.size() - 1)]]
 
 ## 남은 쿨타임이 가장 큰 파츠. 동점이면 슬롯 순서가 이긴다 (결정론).
+## 첫 후보를 무조건 채택한 뒤 비교한다 — 고정 센티넬(-1 등)을 쓰면 잔여 쿨타임이
+## 그 센티넬보다 작은 상태(예: 진행도가 쿨타임을 넘겨 잔여가 음수인 경우)에서
+## 어떤 파츠도 선택되지 못하는 결함이 생긴다.
 static func _slowest(ship: RefCounted) -> Array:
-	var best: RefCounted = null
-	var best_remaining: int = -1
-	for p: RefCounted in ship.alive_parts():
+	var candidates: Array = ship.alive_parts()
+	if candidates.is_empty():
+		return []
+	var best: RefCounted = candidates[0]
+	var best_remaining: int = best.cooldown_units - best.progress_units
+	for i: int in range(1, candidates.size()):
+		var p: RefCounted = candidates[i]
 		var remaining: int = p.cooldown_units - p.progress_units
 		if remaining > best_remaining:
 			best_remaining = remaining
 			best = p
-	return [best] if best != null else []
+	return [best]
