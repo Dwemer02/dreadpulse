@@ -17,9 +17,12 @@ func _init() -> void:
 	var all_failures: Array[String] = []
 
 	for path: String in MODULES:
+		# 파싱 에러가 난 스크립트는 null이 아니라 인스턴스화 불가능한 GDScript로 돌아온다.
+		# null만 걸러내면 아래 script.new()가 _init() 안에서 에러를 내고,
+		# 그러면 quit()에 도달하지 못해 헤드리스 프로세스가 멈춘 채 남는다.
 		var script: GDScript = load(path)
-		if script == null:
-			all_failures.append("%s :: 모듈을 로드할 수 없음" % path)
+		if script == null or not script.can_instantiate():
+			all_failures.append("%s :: 모듈을 로드할 수 없음 — 파싱 에러 (stderr 확인)" % path.get_file())
 			continue
 		var module: RefCounted = script.new()
 		var t: RefCounted = helpers_script.new()
