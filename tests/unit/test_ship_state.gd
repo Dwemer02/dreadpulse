@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 57
+const EXPECTED_CHECKS := 67
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -99,6 +99,12 @@ func _test_material(t: RefCounted) -> void:
 	t.eq(s.material, 6, "자재 차감")
 	t.check(s.can_afford({}), "비용이 없으면 항상 지불 가능")
 
+	# 잔액을 넘겨 지출하면 있는 만큼만 나가고 음수가 되지 않는다
+	t.eq(s.spend_material(100), 6, "잔액 6에서 100을 요구하면 6만 지출된다")
+	t.eq(s.material, 0, "자재는 음수가 되지 않는다")
+	t.eq(s.spend_material(5), 0, "빈 상태에서 지출하면 0")
+	t.eq(s.material, 0, "여전히 0")
+
 func _test_resonance(t: RefCounted) -> void:
 	# 발동 누적 8회마다 +1, 감소하지 않는다
 	var s: RefCounted = _make_ship()
@@ -151,6 +157,16 @@ func _test_regen_overheat(t: RefCounted) -> void:
 	var zero_dur_heal: int = int(z.advance_effects(K.PERIOD_TICKS)["regen"])
 	t.eq(zero_dur_heal, 0, "0틱 지속 재생은 회복을 주지 않는다")
 
+	# 틱 0에서는 아무것도 적용되지 않는다 — 전투 시작 즉시 재생·과열이 터지면 안 된다
+	var zero: RefCounted = _make_ship()
+	zero.take_damage(50)
+	zero.add_regen(5, K.secs_to_ticks(5.0))
+	zero.add_overheat(3)
+	var at_zero: Dictionary = zero.advance_effects(0)
+	t.eq(int(at_zero["regen"]), 0, "틱 0에서는 재생이 적용되지 않는다")
+	t.eq(int(at_zero["overheat"]), 0, "틱 0에서는 과열이 적용되지 않는다")
+	t.eq(zero.overheat_stacks, 3, "틱 0에서는 과열 스택도 줄지 않는다")
+
 func _test_part_lookup(t: RefCounted) -> void:
 	var s: RefCounted = _make_ship()
 	var core: RefCounted = _add_part(s, "core", "core")
@@ -179,6 +195,25 @@ func _test_part_lookup(t: RefCounted) -> void:
 	gun.fires_remaining = 3
 	t.eq(s.limited_parts().size(), 1, "발동 제한이 걸린 파츠는 1개 (gun)")
 	t.check(s.limited_parts().has(gun), "제한 파츠 목록에 gun이 있다")
+
+	# Core의 면제는 예외 분기가 아니라 키워드로 표현된다 —
+	# 나중에 조건 평가기가 source_keyword로 이걸 읽는다
+	t.check(core.has_keyword("indestructible"), "Core는 indestructible 키워드를 갖는다")
+	t.check(not gun.has_keyword("indestructible"), "일반 파츠는 갖지 않는다")
+
+	# 같은 파츠를 두 번 add_part해도 키워드가 중복되지 않는다
+	var dup_core: RefCounted = Part.new()
+	dup_core.slot_id = "core_2"
+	dup_core.role = "core"
+	dup_core.part_id = "fx_core_2"
+	dup_core.cooldown_units = K.cooldown_to_units(1.0)
+	s.add_part(dup_core)
+	s.add_part(dup_core)
+	var kw_count: int = 0
+	for kw: String in dup_core.keywords:
+		if kw == "indestructible":
+			kw_count += 1
+	t.eq(kw_count, 1, "add_part를 두 번 해도 키워드가 중복되지 않는다")
 
 func _test_shield_and_ratio(t: RefCounted) -> void:
 	var s: RefCounted = _make_ship(200)
