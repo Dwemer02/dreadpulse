@@ -1,0 +1,79 @@
+{
+  "parts": [
+    {
+      "id": "fx_gun",
+      "name": "픽스처 포",
+      "faction": "reclaimer",
+      "roles": ["weapon"],
+      "keywords": ["damage"],
+      "active": {
+        "cooldown": 2.0,
+        "on_fire": [ { "op": "deal_damage", "amount": 10 } ]
+      },
+      "augment": {
+        "add_keywords": ["damage"],
+        "triggers": [
+          { "on": "part_fired", "where": { "is_host": true },
+            "do": [ { "op": "deal_damage", "amount": 6 } ] }
+        ]
+      }
+    },
+    {
+      "id": "fx_turbine",
+      "name": "픽스처 터빈",
+      "faction": "reclaimer",
+      "roles": ["utility", "flexible"],
+      "keywords": ["accelerate", "fire_limit"],
+      "active": {
+        "cooldown": 5.0,
+        "fire_limit": 6,
+        "on_fire": [ { "op": "accelerate", "target": "self", "duration": 3.0 } ]
+      },
+      "augment": {
+        "add_keywords": ["accelerate", "fire_limit"],
+        "modify": { "cooldown_mult": 0.5 },
+        "triggers": [
+          { "on": "part_fired", "where": { "is_host": true },
+            "do": [
+              { "op": "accelerate",  "target": "host", "duration": 2.0 },
+              { "op": "drain_fires", "target": "host", "amount": 1 }
+            ] }
+        ]
+      }
+    },
+    {
+      "id": "fx_medic",
+      "name": "픽스처 재생낭",
+      "faction": "viridia",
+      "roles": ["defense"],
+      "keywords": ["repair"],
+      "active": {
+        "cooldown": 4.0,
+        "cost": { "material": 3 },
+        "on_fire": [ { "op": "repair", "amount": 10 } ]
+      },
+      "augment": {
+        "add_keywords": ["regen"],
+        "triggers": [
+          { "on": "material_spent", "where": { "is_host": true },
+            "do": [ { "op": "apply_regen", "amount": 2, "duration": 5.0 } ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "fx_core",
+      "name": "픽스처 코어",
+      "faction": "aeonic",
+      "roles": ["core"],
+      "keywords": ["resonance"],
+      "active": {
+        "cooldown": 10.0,
+        "on_fire": [ { "op": "gain_resonance", "amount": 1 } ],
+        "triggers": [
+          { "on": "combat_start", "do": [ { "op": "gain_material", "amount": 5 } ] }
+        ]
+      }
+    }
+  ]
+}

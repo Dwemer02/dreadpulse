@@ -1,0 +1,16 @@
+{
+  "id": "standard_frame",
+  "name": "표준 Frame",
+  "hull": 200,
+  "relic_slots": 1,
+  "thresholds": [0.75, 0.50, 0.25],
+  "slots": [
+    { "id": "core",      "role": "core"     },
+    { "id": "weapon_1",  "role": "weapon"   },
+    { "id": "weapon_2",  "role": "weapon"   },
+    { "id": "defense_1", "role": "defense"  },
+    { "id": "utility_1", "role": "utility"  },
+    { "id": "utility_2", "role": "utility"  },
+    { "id": "flex_1",    "role": "flexible" }
+  ]
+}
