@@ -8,6 +8,7 @@ const HELPERS_PATH := "res://tests/test_helpers.gd"
 const MODULES: Array[String] = [
 	"res://tests/unit/test_harness.gd",
 	"res://tests/unit/test_sim_const.gd",
+	"res://tests/unit/test_part_timing.gd",
 ]
 
 func _init() -> void:
