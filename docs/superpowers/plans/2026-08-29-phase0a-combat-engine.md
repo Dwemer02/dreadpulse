@@ -1941,17 +1941,23 @@ func _base_build() -> Dictionary:
 	}
 
 ## 빌드를 한 군데만 망가뜨려 검증이 잡아내는지 본다.
-func _expect_error(t: RefCounted, mutate: Callable, label: String) -> void:
+## 거부되기만 하면 통과시키면 안 된다 — 다른 버그 때문에 거부돼도 통과하기 때문이다.
+## 그래서 기대 문구까지 대조한다.
+func _expect_error(t: RefCounted, mutate: Callable, label: String, expect_text: String) -> void:
 	var b: Dictionary = _base_build()
 	mutate.call(b)
 	var loader: RefCounted = BuildLoader.new()
 	var ship: RefCounted = loader.assemble(b, _catalog(), "player")
 	t.check(ship == null, "%s — 조립이 거부되어야 한다" % label)
-	t.check(not loader.errors.is_empty(), "%s — 에러 메시지가 남아야 한다" % label)
+	var joined: String = "\n".join(loader.errors)
+	t.check(joined.contains(expect_text),
+		"%s — 에러에 \"%s\"가 있어야 한다. 실제: %s" % [label, expect_text, joined])
 
 func run(t: RefCounted) -> void:
 	_test_happy_path(t)
 	_test_validation(t)
+	_test_missing_augment_block(t)
+	_test_relic_modifiers(t)
 	_test_file_load(t)
 	t.done()
 
@@ -2002,33 +2008,59 @@ func _test_happy_path(t: RefCounted) -> void:
 	t.eq(ship2.links["utility_1"], ["weapon_1"], "정방향 연결")
 	t.eq(ship2.links["weapon_1"], ["utility_1"], "연결은 방향이 없다")
 
+	# role이 슬롯 정의에서 제대로 전달되는지. 이게 틀리면 ship.add_part()가
+	# Core에 영구 파괴 불가를 부여하지 못해 Core가 전투 중 파괴선에 죽는다.
+	var core: RefCounted = ship.get_part("core")
+	t.eq(core.role, "core", "Core 슬롯의 파츠는 core 역할을 갖는다")
+	t.check(core.is_indestructible(), "조립된 Core는 영구 파괴 불가다")
+	t.check(core.has_keyword("indestructible"), "Core는 indestructible 키워드를 갖는다")
+	t.eq(w1.role, "weapon", "weapon 슬롯의 파츠는 weapon 역할을 갖는다")
+	t.check(not w1.is_indestructible(), "일반 파츠는 파괴 불가가 아니다")
+
+	# cost가 전달되는지. 이게 비면 자재 게이팅이 통째로 사라진다.
+	var d1: RefCounted = ship.get_part("defense_1")
+	t.eq(int(d1.cost.get("material", 0)), 3, "fx_medic의 자재 비용 3이 전달된다")
+	t.eq(int(w1.cost.get("material", 0)), 0, "비용 없는 파츠는 0")
+
+	# 키워드도 전달된다
+	t.check(w1.has_keyword("damage"), "숙주 키워드가 전달된다")
+	t.check(w1.has_keyword("accelerate"), "AUGMENT 키워드도 전달된다")
+
 func _test_validation(t: RefCounted) -> void:
-	# 스펙 §5.3의 검증 8종
-	_expect_error(t, func(b: Dictionary) -> void:
-		b["slots"]["weapon_1"] = {"part": "fx_medic"}, "역할 불일치 (defense 파츠를 weapon 슬롯에)")
+	# 스펙 §5.3의 검증 9종.
+	# 람다 본문은 반드시 한 줄이어야 한다 — 여러 줄로 쓰면 GDScript가 문장과
+	# 뒤따르는 인자를 한 표현식으로 읽어 파싱에 실패한다.
+	_expect_error(t,
+		func(b: Dictionary) -> void: b["slots"]["weapon_1"] = {"part": "fx_medic"},
+		"역할 불일치 (defense 파츠를 weapon 슬롯에)", "역할 불일치")
 
-	_expect_error(t, func(b: Dictionary) -> void:
-		b["slots"]["weapon_1"] = {"part": "nonexistent"}, "존재하지 않는 파츠 id")
+	_expect_error(t,
+		func(b: Dictionary) -> void: b["slots"]["weapon_1"] = {"part": "nonexistent"},
+		"존재하지 않는 파츠 id", "존재하지 않는 파츠")
 
-	_expect_error(t, func(b: Dictionary) -> void:
-		b["frame"] = "nonexistent_frame", "존재하지 않는 Frame id")
+	_expect_error(t,
+		func(b: Dictionary) -> void: b["frame"] = "nonexistent_frame",
+		"존재하지 않는 Frame id", "존재하지 않는 Frame")
 
-	_expect_error(t, func(b: Dictionary) -> void:
-		b["relic"] = "nonexistent_relic", "존재하지 않는 Relic id")
+	_expect_error(t,
+		func(b: Dictionary) -> void: b["relic"] = "nonexistent_relic",
+		"존재하지 않는 Relic id", "존재하지 않는 Relic")
 
-	_expect_error(t, func(b: Dictionary) -> void:
-		b["slots"].erase("core"), "Core 슬롯이 비어 있음")
+	_expect_error(t,
+		func(b: Dictionary) -> void: b["slots"].erase("core"),
+		"Core 슬롯이 비어 있음", "Core 슬롯")
 
-	_expect_error(t, func(b: Dictionary) -> void:
-		b["slots"]["weapon_1"] = {"part": "fx_gun", "augment": "fx_core"},
-		"Core 파츠를 Augment로 사용")
+	_expect_error(t,
+		func(b: Dictionary) -> void: b["slots"]["weapon_1"] = {"part": "fx_gun", "augment": "fx_core"},
+		"Core 파츠를 Augment로 사용", "Core 파츠")
 
-	_expect_error(t, func(b: Dictionary) -> void:
-		b["links"] = [["utility_1", "nonexistent_slot"]], "존재하지 않는 슬롯을 links에 지정")
+	_expect_error(t,
+		func(b: Dictionary) -> void: b["links"] = [["utility_1", "nonexistent_slot"]],
+		"존재하지 않는 슬롯을 links에 지정", "links: 존재하지 않는 슬롯")
 
-	_expect_error(t, func(b: Dictionary) -> void:
-		b["slots"]["weapon_1"] = {"part": "fx_gun", "augment": "fx_gun2"},
-		"augment 블록이 없는 파츠를 Augment로 사용")
+	_expect_error(t,
+		func(b: Dictionary) -> void: b["relic"] = ["a", "b"],
+		"Relic을 relic_slots보다 많이 지정", "relic_slots")
 
 	# flexible 슬롯은 아무 역할이나 받는다
 	var loader: RefCounted = BuildLoader.new()
@@ -2036,6 +2068,77 @@ func _test_validation(t: RefCounted) -> void:
 	b2["slots"]["flex_1"] = {"part": "fx_medic"}
 	t.check(loader.assemble(b2, _catalog(), "player") != null,
 		"flexible 슬롯은 아무 역할이나 받는다: %s" % str(loader.errors))
+
+	# Core만 필수다. 나머지 슬롯은 비어 있어도 조립된다.
+	var loader3: RefCounted = BuildLoader.new()
+	var b3: Dictionary = _base_build()
+	b3["slots"].erase("utility_2")
+	b3["slots"].erase("flex_1")
+	var sparse: RefCounted = loader3.assemble(b3, _catalog(), "player")
+	t.check(sparse != null, "빈 슬롯이 있어도 조립된다: %s" % str(loader3.errors))
+	t.eq(sparse.parts.size(), 5, "채운 슬롯 수만큼만 파츠가 생긴다")
+	t.eq(sparse.get_part("utility_2"), null, "비운 슬롯은 조회되지 않는다")
+	t.eq(sparse.parts[0].slot_id, "core", "빈 슬롯이 있어도 순서는 Frame 정의 순서다")
+
+## "augment 블록이 없는 파츠를 Augment로" 케이스는 fx_core로는 시험할 수 없다 —
+## fx_core는 Core 역할이기도 해서 앞선 검사에 먼저 걸리기 때문이다.
+## Core가 아니면서 augment 블록도 없는 파츠를 인라인으로 주입해서 두 검사를 구분한다.
+func _test_missing_augment_block(t: RefCounted) -> void:
+	var c: RefCounted = _catalog()
+	c.ingest_parts([
+		{ "id": "fx_plain", "name": "블록 없는 픽스처", "faction": "reclaimer",
+		  "roles": ["weapon"], "active": { "cooldown": 3.0 } }
+	], "inline")
+
+	var b: Dictionary = _base_build()
+	b["slots"]["weapon_1"] = {"part": "fx_gun", "augment": "fx_plain"}
+	var loader: RefCounted = BuildLoader.new()
+	t.check(loader.assemble(b, c, "player") == null, "augment 블록이 없으면 거부된다")
+	var joined: String = "\n".join(loader.errors)
+	t.check(joined.contains("augment 블록이 없다"), "그 이유로 거부된다: %s" % joined)
+	t.check(not joined.contains("Core 파츠"), "Core 검사가 아니라 블록 검사에 걸린 것이다")
+
+func _test_relic_modifiers(t: RefCounted) -> void:
+	# Relic은 파츠가 아니라 함선 수준 modifier다.
+	# relic 픽스처 파일이 없으므로 인라인 주입으로 덮는다 — 이 경로는
+	# 덮지 않으면 실제 Relic이 들어오는 Phase 0b까지 한 번도 실행되지 않는다.
+	var c: RefCounted = _catalog()
+	c.relics["fx_relay"] = {
+		"id": "fx_relay",
+		"name": "픽스처 중계기",
+		"triggers": [
+			{ "on": "resonance_gained",
+			  "do": [ { "op": "accelerate", "target": "all_own_active", "duration": 2.0 } ] }
+		],
+		"modifiers": { "resonance_discount": 1, "convergence_gap_seconds": 2.0 }
+	}
+
+	var b: Dictionary = _base_build()
+	b["relic"] = "fx_relay"
+	var loader: RefCounted = BuildLoader.new()
+	var ship: RefCounted = loader.assemble(b, c, "player")
+	t.check(ship != null, "Relic이 있는 빌드가 조립된다: %s" % str(loader.errors))
+	if ship == null:
+		return
+
+	t.eq(ship.relic_ids, ["fx_relay"], "Relic id가 기록된다")
+	t.eq(ship.relic_triggers.size(), 1, "Relic 트리거가 함선에 붙는다")
+	t.eq(ship.relic_trigger_fires.size(), 1, "트리거별 발동 카운터가 함께 만들어진다")
+	t.eq(ship.relic_trigger_fires[0], 0, "카운터는 0에서 시작한다")
+	t.eq(ship.resonance_discount, 1, "resonance_discount가 적용된다")
+	t.eq(ship.convergence_gap_ticks, K.secs_to_ticks(2.0), "convergence_gap이 틱으로 변환된다")
+
+	var plain: RefCounted = BuildLoader.new().assemble(_base_build(), c, "player")
+	t.eq(plain.resonance_discount, 0, "Relic이 없으면 할인도 없다")
+	t.eq(plain.convergence_gap_ticks, 0, "Relic이 없으면 간격도 없다")
+	t.eq(plain.relic_triggers.size(), 0, "Relic이 없으면 트리거도 없다")
+
+	# 정확히 relic_slots 개수(1)는 허용된다 — 초과 검사의 경계
+	var exact: RefCounted = BuildLoader.new()
+	var b2: Dictionary = _base_build()
+	b2["relic"] = ["fx_relay"]
+	t.check(exact.assemble(b2, c, "player") != null,
+		"relic_slots와 같은 개수는 허용된다: %s" % str(exact.errors))
 
 func _test_file_load(t: RefCounted) -> void:
 	var loader: RefCounted = BuildLoader.new()
