@@ -22,6 +22,8 @@ func _init() -> void:
 		var module: RefCounted = script.new()
 		var t: RefCounted = helpers_script.new()
 		module.run(t)
+		if not t.completed:
+			all_failures.append("%s :: 모듈이 끝까지 실행되지 않았다 — run()이 중간에 중단됐다 (stderr 확인)" % path.get_file())
 		total_checks += t.checks
 		for failure: String in t.failures:
 			all_failures.append("%s :: %s" % [path.get_file(), failure])

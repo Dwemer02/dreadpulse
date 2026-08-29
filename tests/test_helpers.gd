@@ -5,6 +5,14 @@ extends RefCounted
 var failures: Array[String] = []
 var checks: int = 0
 
+## 모듈이 끝까지 실행됐음을 표시한다. 모듈의 run() 마지막 줄에서 호출한다.
+## GDScript에는 예외가 없어서, 런타임 에러로 중단된 모듈은 이 플래그가 서지 않는다 —
+## 러너가 그것을 크래시로 판정하는 유일한 방법이다.
+var completed: bool = false
+
+func done() -> void:
+	completed = true
+
 func check(condition: bool, message: String) -> void:
 	checks += 1
 	if not condition:
