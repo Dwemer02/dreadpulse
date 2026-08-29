@@ -45,6 +45,12 @@
 
 `N`은 러너를 한 번 돌려 출력되는 모듈별 개수를 그대로 넣으면 된다. 어서션을 추가·삭제할 때마다 갱신해야 하고, 잊으면 러너가 정확히 그 불일치를 실패로 보고한다 — 의도된 마찰이다.
 
+### 러너는 `bash tests/run.sh`로 돌린다
+
+Godot을 직접 부르지 마라. GDScript 런타임 에러는 서브테스트를 중단시키지 않고 **stderr로만** 흘러가므로, 잘못된 코드가 우연히 기대값과 같은 결과를 내면 `ALL PASS` / exit 0이 나온다. 실제로 그런 사각지대가 발견됐다 — 존재 검사를 지운 코드가 매 호출마다 `SCRIPT ERROR`를 찍는데도 스위트가 통과했다.
+
+래퍼는 두 조건을 모두 요구한다: **어서션 실패 0건, 그리고 SCRIPT ERROR 0건.** 타임아웃도 함께 처리한다.
+
 ---
 
 ## 각 태스크의 필수 자기검토 — 돌연변이 점검
@@ -216,7 +222,7 @@ func run(t: RefCounted) -> void:
 
 Run:
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 Expected: `checks: 3, failures: 1` / `FAIL  test_harness.gd :: 의도된 실패 ...` / `EXIT=1`
 
@@ -328,7 +334,7 @@ const MODULES: Array[String] = [
 
 Run:
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 Expected: `sim/sim_const.gd` 로드 실패로 파싱 에러 또는 `모듈을 로드할 수 없음`, `EXIT=1`
 
@@ -604,7 +610,7 @@ func _test_fire_limit(t: RefCounted) -> void:
 
 Run:
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 Expected: `sim/part.gd` 없음으로 파싱 에러, `EXIT=1`
 
@@ -936,7 +942,7 @@ func _test_defense_edge_cases(t: RefCounted) -> void:
 
 Run:
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 Expected: `try_break`, `make_indestructible`, `restore`, `drain_fires`, `restore_fires` 미정의로 실패, `EXIT=1`
 
@@ -1277,7 +1283,7 @@ func _test_frame_schema_errors(t: RefCounted) -> void:
 
 Run:
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 Expected: `sim/catalog.gd` 없음으로 파싱 에러, `EXIT=1`
 
@@ -1648,7 +1654,7 @@ func _test_part_lookup(t: RefCounted) -> void:
 
 Run:
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 Expected: `sim/ship_state.gd` 없음으로 파싱 에러, `EXIT=1`
 
@@ -2157,7 +2163,7 @@ func _test_file_load(t: RefCounted) -> void:
 
 Run:
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 Expected: `sim/build_loader.gd` 없음으로 파싱 에러, `EXIT=1`
 
@@ -2446,6 +2452,39 @@ func _test_slowest(t: RefCounted) -> void:
 	t.eq(_slots(Targeting.resolve("slowest_own", _ctx(s2, s2.get_part("core"), rng2))), ["core"],
 		"전부 동점이면 첫 슬롯")
 
+	# 모든 파츠가 발동 준비된 상태(잔여 쿨타임 전부 0)에서도 대상을 고른다.
+	# best_remaining 초기값이 0이면 여기서 빈 배열이 나오고,
+	# slowest_own을 쓰는 파츠가 전투 내내 아무것도 하지 못한다.
+	var ready: RefCounted = _ship()
+	for p: RefCounted in ready.parts:
+		p.progress_units = p.cooldown_units
+	var rng3 := RandomNumberGenerator.new()
+	rng3.seed = 1
+	var picked: Array = Targeting.resolve("slowest_own", _ctx(ready, ready.get_part("core"), rng3))
+	t.eq(picked.size(), 1, "전부 준비된 상태에서도 대상을 고른다")
+	t.eq(_slots(picked), ["core"], "전부 동점이면 첫 슬롯")
+
+	# 진행도가 쿨타임을 넘긴 상태에서도 고른다 — 잔여가 음수다
+	var over: RefCounted = _ship()
+	for p: RefCounted in over.parts:
+		p.progress_units = p.cooldown_units + 10
+	var rng4 := RandomNumberGenerator.new()
+	rng4.seed = 1
+	t.eq(_slots(Targeting.resolve("slowest_own", _ctx(over, over.get_part("core"), rng4))), ["core"],
+		"잔여 쿨타임이 음수여도 대상을 고른다")
+
+	# 가장 느린 파츠가 파손이면 그다음으로 느린 살아있는 파츠를 고른다
+	var with_broken: RefCounted = _ship()
+	with_broken.get_part("core").progress_units = 70
+	with_broken.get_part("weapon_1").progress_units = 10
+	with_broken.get_part("weapon_2").progress_units = 50
+	with_broken.get_part("utility_1").progress_units = 30
+	with_broken.get_part("weapon_1").broken = true
+	var rng5 := RandomNumberGenerator.new()
+	rng5.seed = 1
+	t.eq(_slots(Targeting.resolve("slowest_own", _ctx(with_broken, with_broken.get_part("core"), rng5))),
+		["utility_1"], "가장 느린 파츠가 파손이면 그다음으로 느린 살아있는 파츠")
+
 func _test_linked(t: RefCounted) -> void:
 	var s: RefCounted = _ship()
 	s.links["weapon_1"] = ["utility_1", "weapon_2"]
@@ -2501,7 +2540,7 @@ func _test_unknown(t: RefCounted) -> void:
 
 Run:
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 Expected: `sim/targeting.gd` 없음으로 파싱 에러, `EXIT=1`
 
@@ -2567,15 +2606,22 @@ static func _pick_one(pool: Array, rng: RandomNumberGenerator) -> Array:
 	return [pool[rng.randi_range(0, pool.size() - 1)]]
 
 ## 남은 쿨타임이 가장 큰 파츠. 동점이면 슬롯 순서가 이긴다 (결정론).
+## 첫 후보를 무조건 채택한 뒤 비교한다 — 고정 센티넬(-1 등)을 쓰면 잔여 쿨타임이
+## 그 센티넬보다 작은 상태에서 어떤 파츠도 선택되지 못한다. 진행도가 쿨타임을
+## 넘겨 잔여가 음수인 상태는 흔하다(체인 강제 발동, 가속 초과분 이월).
 static func _slowest(ship: RefCounted) -> Array:
-	var best: RefCounted = null
-	var best_remaining: int = -1
-	for p: RefCounted in ship.alive_parts():
+	var candidates: Array = ship.alive_parts()
+	if candidates.is_empty():
+		return []
+	var best: RefCounted = candidates[0]
+	var best_remaining: int = best.cooldown_units - best.progress_units
+	for i: int in range(1, candidates.size()):
+		var p: RefCounted = candidates[i]
 		var remaining: int = p.cooldown_units - p.progress_units
 		if remaining > best_remaining:
 			best_remaining = remaining
 			best = p
-	return [best] if best != null else []
+	return [best]
 ```
 
 - [ ] **Step 4: 실행해서 통과하는지 확인**
@@ -2774,7 +2820,7 @@ func _test_unknown(t: RefCounted) -> void:
 
 Run:
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 Expected: `sim/conditions.gd` 없음으로 파싱 에러, `EXIT=1`
 
@@ -3282,7 +3328,7 @@ func _test_op_vocabulary(t: RefCounted) -> void:
 
 Run:
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 Expected: `sim/actions.gd` 없음으로 파싱 에러, `EXIT=1`
 
@@ -3869,7 +3915,7 @@ var chain_depth: int = 0
 
 Run:
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 Expected: `sim/trigger_engine.gd` 없음으로 파싱 에러, `EXIT=1`
 
@@ -4215,7 +4261,7 @@ func _test_determinism(t: RefCounted) -> void:
 
 Run:
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 Expected: `sim/combat_sim.gd` 없음으로 파싱 에러, `EXIT=1`
 
@@ -4509,7 +4555,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 전체 단위 테스트가 통과하면 0a는 끝이다.
 
 ```bash
-"C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_win64_console.exe" --headless --path . --script res://tests/run_unit.gd; echo "EXIT=$?"
+bash tests/run.sh; echo "EXIT=$?"
 ```
 
 스펙 §12가 요구한 단위 검증 항목이 전부 덮였는지 대조한다:
