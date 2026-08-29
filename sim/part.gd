@@ -137,3 +137,60 @@ func take_empower() -> float:
 
 func has_keyword(kw: String) -> bool:
 	return keywords.has(kw)
+
+# --- 방어와 파손 ---
+
+func is_indestructible() -> bool:
+	return indestructible_ticks == K.PERMANENT or indestructible_ticks > 0
+
+func make_indestructible(ticks: int) -> void:
+	if ticks == K.PERMANENT:
+		indestructible_ticks = K.PERMANENT
+	elif indestructible_ticks != K.PERMANENT:
+		indestructible_ticks = maxi(indestructible_ticks, ticks)
+
+## 파손을 시도한다. 방어 우선순위: 파괴 불가 → 보강 → 파손.
+## 반환값이 그대로 이벤트의 사유가 된다: "indestructible" / "reinforce" / "broken" / "already_broken"
+func try_break() -> String:
+	if broken:
+		return "already_broken"
+	if is_indestructible():
+		return "indestructible"
+	if reinforce_stacks > 0:
+		reinforce_stacks -= 1
+		return "reinforce"
+	broken = true
+	return "broken"
+
+## 파손 해제 + 쿨타임 0 재시작 + 남은 횟수 초기화
+func restore() -> void:
+	broken = false
+	progress_units = 0
+	fires_remaining = fire_limit
+
+# --- 발동 횟수 ---
+
+## 남은 횟수를 깎고 실제로 깎인 양을 돌려준다.
+## 무제한 파츠는 이 순간 DEFAULT_FIRE_LIMIT로 수명이 확정된다.
+func drain_fires(amount: int) -> int:
+	if amount <= 0:
+		return 0
+	if fires_remaining == K.UNLIMITED:
+		fire_limit = K.DEFAULT_FIRE_LIMIT
+		fires_remaining = K.DEFAULT_FIRE_LIMIT
+	var actual: int = mini(amount, fires_remaining)
+	fires_remaining -= actual
+	return actual
+
+## 남은 횟수를 회복하고 실제 회복량을 돌려준다. 초기값을 넘지 않는다.
+## 무제한 파츠는 회복 대상이 아니다.
+func restore_fires(amount: int) -> int:
+	if amount <= 0 or fires_remaining == K.UNLIMITED:
+		return 0
+	var actual: int = mini(amount, fire_limit - fires_remaining)
+	fires_remaining += actual
+	return actual
+
+## 발동 제한이 걸린 파츠인가 (셀렉터용)
+func is_limited() -> bool:
+	return fires_remaining != K.UNLIMITED
