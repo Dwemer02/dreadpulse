@@ -3410,6 +3410,10 @@ static func run_action(action: Dictionary, ctx: Dictionary, resolved: Dictionary
 		return
 	apply(action, ctx, resolved)
 
+## resolved는 항상 완전해야 한다 — run_block이 블록 전체의 셀렉터를 미리 수집하므로
+## 정상 경로에서는 폴백이 도달하지 않는다. Actions.apply()를 run_block을 거치지 않고
+## 직접 부르는 곳(combat_sim의 delay 예약 재개)은 저장해 둔 resolved를 그대로 넘겨야
+## 한다. 불완전한 resolved를 넘기면 "블록당 1회 해석" 계약이 조용히 깨진다.
 static func _targets(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> Array:
 	var selector: String = str(action.get("target", ""))
 	if selector == "":
@@ -3602,8 +3606,16 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 			var block: Array = action.get("do", [])
 			if block.is_empty() and owner != null:
 				block = owner.on_fire
+			# on_fire 안에 do 없는 multi_fire가 다시 들어있으면 owner.on_fire를 계속
+			# 되짚어 무한 재귀가 된다. JSON으로 충분히 쓸 수 있는 형태이므로 막는다.
+			# 깊이를 ctx의 복사본에만 실어 형제 액션에 새지 않게 한다.
+			var depth: int = int(ctx.get("_multi_fire_depth", 0))
+			if depth >= K.MAX_CHAIN_DEPTH:
+				return
+			var inner_ctx: Dictionary = ctx.duplicate()
+			inner_ctx["_multi_fire_depth"] = depth + 1
 			for i: int in times:
-				run_block(block, ctx)
+				run_block(block, inner_ctx)
 ```
 
 - [ ] **Step 5: 스펙에 `break_prevented` 이벤트를 추가한다**
