@@ -15,6 +15,12 @@ func run(t: RefCounted) -> void:
 	t.eq(K.SPEED_ACCEL, K.SPEED_NORMAL * 2, "가속은 보통의 2배")
 	t.eq(K.SPEED_SLOW, 1, "둔화는 보통의 절반")
 
+	# 나머지 계약 상수 — 이 값들이 조용히 바뀌면 결정론과 전투 길이가 달라진다
+	t.eq(K.MAX_COMBAT_TICKS, 2400, "전투 시간 상한 120초 = 2400틱")
+	t.eq(K.PERIOD_TICKS, 20, "재생·과열 주기 1초 = 20틱")
+	t.eq(K.UNLIMITED, -1, "무제한 발동 횟수 센티넬")
+	t.eq(K.PERMANENT, -1, "영구 지속시간 센티넬")
+
 	# 초 → 틱 변환
 	t.eq(K.secs_to_ticks(3.0), 60, "3초 = 60틱")
 	t.eq(K.secs_to_ticks(0.2), 4, "0.2초 = 4틱")
