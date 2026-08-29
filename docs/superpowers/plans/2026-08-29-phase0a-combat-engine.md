@@ -1545,6 +1545,14 @@ func _test_material(t: RefCounted) -> void:
 	t.eq(s.material, 6, "자재 차감")
 	t.check(s.can_afford({}), "비용이 없으면 항상 지불 가능")
 
+	# 잔액을 넘겨 지출하면 있는 만큼만 나가고 음수가 되지 않는다.
+	# 상한이 없으면 자재가 음수가 되고, can_afford가 계속 거짓이 되어
+	# 비용 있는 파츠가 전투 내내 불발한다.
+	t.eq(s.spend_material(100), 6, "잔액 6에서 100을 요구하면 6만 지출된다")
+	t.eq(s.material, 0, "자재는 음수가 되지 않는다")
+	t.eq(s.spend_material(5), 0, "빈 상태에서 지출하면 0")
+	t.eq(s.material, 0, "여전히 0")
+
 func _test_resonance(t: RefCounted) -> void:
 	# 스펙 §7.2 — 발동 누적 8회마다 +1, 감소하지 않는다
 	var s: RefCounted = _make_ship()
@@ -1580,6 +1588,33 @@ func _test_regen_overheat(t: RefCounted) -> void:
 	t.eq(q.hull, 194, "선체 감소")
 	t.eq(q.overheat_stacks, 0, "과열 소진")
 
+	# 틱 0에서는 아무것도 적용되지 않는다 — 전투 시작 즉시 재생·과열이 터지면 안 된다
+	var zero: RefCounted = _make_ship()
+	zero.take_damage(50)
+	zero.add_regen(5, K.secs_to_ticks(5.0))
+	zero.add_overheat(3)
+	var at_zero: Dictionary = zero.advance_effects(0)
+	t.eq(int(at_zero["regen"]), 0, "틱 0에서는 재생이 적용되지 않는다")
+	t.eq(int(at_zero["overheat"]), 0, "틱 0에서는 과열이 적용되지 않는다")
+	t.eq(zero.overheat_stacks, 3, "틱 0에서는 과열 스택도 줄지 않는다")
+
+	# 지속시간 0인 재생은 아무것도 회복하지 않는다 (적용 가드가 막는 유일한 경로다 —
+	# 순서를 고친 뒤로는 목록에 남은 항목이 항상 ticks_left > 0 또는 PERMANENT다)
+	var instant: RefCounted = _make_ship()
+	instant.take_damage(50)
+	instant.add_regen(5, 0)
+	t.eq(int(instant.advance_effects(K.PERIOD_TICKS)["regen"]), 0, "지속시간 0 재생은 회복하지 않는다")
+
+	# 영구 재생은 만료되지 않는다
+	var forever: RefCounted = _make_ship()
+	forever.take_damage(100)
+	forever.add_regen(1, K.PERMANENT)
+	var forever_healed: int = 0
+	for tick: int in range(1, 201):
+		forever_healed += int(forever.advance_effects(tick)["regen"])
+	t.eq(forever_healed, 10, "영구 재생은 10초 동안 10회 적용된다")
+	t.eq(forever.regen_entries.size(), 1, "영구 재생 항목은 제거되지 않는다")
+
 func _test_part_lookup(t: RefCounted) -> void:
 	var s: RefCounted = _make_ship()
 	var core: RefCounted = _add_part(s, "core", "core")
@@ -1602,6 +1637,11 @@ func _test_part_lookup(t: RefCounted) -> void:
 
 	t.eq(s.alive_parts().size(), 2, "살아있는 파츠 2개")
 	t.eq(s.broken_parts().size(), 1, "파손 파츠 1개")
+
+	# Core의 면제는 예외 분기가 아니라 키워드로 표현된다 —
+	# Phase 0b의 조건 평가기가 source_keyword로 이걸 읽는다
+	t.check(core.has_keyword("indestructible"), "Core는 indestructible 키워드를 갖는다")
+	t.check(not gun.has_keyword("indestructible"), "일반 파츠는 갖지 않는다")
 ```
 
 - [ ] **Step 2: 러너에 `"res://tests/unit/test_ship_state.gd",`를 추가하고 실행해서 실패를 확인**
@@ -1783,12 +1823,13 @@ func add_overheat(stacks: int) -> void:
 
 ## 한 틱 진행. PERIOD_TICKS(1초)마다 재생과 과열이 적용된다.
 ## 반환: {"regen": 회복량, "overheat": 과열 피해량}
+##
+## 순서가 중요하다: 적용 → 감소 → 필터.
+## 감소를 먼저 하면 5초짜리 재생의 마지막 회차가 누락된다 —
+## 틱 100에서 ticks_left가 이미 0이 되어 적용 가드를 통과하지 못하기 때문이다.
+## (초안이 이 순서로 되어 있어 총 10 대신 8만 회복했다.)
 func advance_effects(tick: int) -> Dictionary:
 	var result: Dictionary = {"regen": 0, "overheat": 0}
-
-	for entry: Dictionary in regen_entries:
-		if int(entry["ticks_left"]) != K.PERMANENT:
-			entry["ticks_left"] = int(entry["ticks_left"]) - 1
 
 	if tick > 0 and tick % K.PERIOD_TICKS == 0:
 		var total: int = 0
@@ -1801,6 +1842,11 @@ func advance_effects(tick: int) -> Dictionary:
 		if overheat_stacks > 0:
 			result["overheat"] = damage_hull_direct(overheat_stacks)
 			overheat_stacks -= 1
+
+	for entry: Dictionary in regen_entries:
+		var left: int = int(entry["ticks_left"])
+		if left > 0:
+			entry["ticks_left"] = left - 1
 
 	var kept: Array = []
 	for entry: Dictionary in regen_entries:
