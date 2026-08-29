@@ -81,6 +81,14 @@ extends RefCounted
 var failures: Array[String] = []
 var checks: int = 0
 
+## 모듈이 끝까지 실행됐음을 표시한다. 모듈의 run() 마지막 줄에서 호출한다.
+## GDScript에는 예외가 없어서, 런타임 에러로 중단된 모듈은 이 플래그가 서지 않는다 —
+## 러너가 그것을 크래시로 판정하는 유일한 방법이다.
+var completed: bool = false
+
+func done() -> void:
+	completed = true
+
 func check(condition: bool, message: String) -> void:
 	checks += 1
 	if not condition:
@@ -126,6 +134,9 @@ func _init() -> void:
 		var module: RefCounted = script.new()
 		var t: RefCounted = helpers_script.new()
 		module.run(t)
+		if not t.completed:
+			all_failures.append("%s :: 모듈이 끝까지 실행되지 않았다 — run()이 중간에 중단됐다 (stderr 확인)"
+				% path.get_file())
 		total_checks += t.checks
 		for failure: String in t.failures:
 			all_failures.append("%s :: %s" % [path.get_file(), failure])
@@ -164,16 +175,36 @@ Expected: `checks: 3, failures: 1` / `FAIL  test_harness.gd :: 의도된 실패 
 
 - [ ] **Step 5: 의도된 실패를 제거하고 통과시킨다**
 
-`tests/unit/test_harness.gd`의 마지막 줄을 다음으로 교체:
+`tests/unit/test_harness.gd`의 마지막 줄을 다음 세 줄로 교체:
 
 ```gdscript
 	t.eq("intentional", "intentional", "러너가 통과 시 exit 0")
+	t.near(1.0, 1.00001, "sanity: near — 기본 허용오차 안")
+	t.done()
 ```
 
 - [ ] **Step 6: 실행해서 통과하는지 확인**
 
 Run: 위와 동일
-Expected: `checks: 3, failures: 0` / `ALL PASS` / `EXIT=0`
+Expected: `checks: 4, failures: 0` / `ALL PASS` / `EXIT=0`
+
+- [ ] **Step 6b: 완료 센티넬이 실제로 크래시를 잡는지 증명한다**
+
+`run()` 중간에 일부러 런타임 에러를 내는 두 줄을 임시로 넣고 러너를 돌린다:
+
+```gdscript
+	var nothing: RefCounted = null
+	nothing.some_method()
+```
+
+Expected: stderr에 `SCRIPT ERROR`가 찍히고, 러너가
+`FAIL  test_harness.gd :: 모듈이 끝까지 실행되지 않았다` / `EXIT=1`을 낸다.
+확인 후 두 줄을 지우고 `git status`가 깨끗한지 확인한다.
+
+**이 검증이 이 태스크의 전부다.** GDScript에는 예외가 없어서, 모듈의 `run()`이 런타임
+에러로 중단되면 그 호출만 중단되고 러너의 루프는 계속 돈다. 크래시는 `t.failures`에
+아무것도 남기지 않으므로, 센티넬이 없으면 크래시한 모듈이 `ALL PASS` / exit 0으로
+보고된다. 앞으로 11개 모듈이 이 위에 올라간다.
 
 - [ ] **Step 7: 커밋**
 
@@ -225,6 +256,7 @@ func run(t: RefCounted) -> void:
 
 	# 틱 → 초 (이벤트의 t 필드용)
 	t.near(K.ticks_to_secs(60), 3.0, "60틱 = 3.0초")
+	t.done()
 ```
 
 - [ ] **Step 2: 러너에 모듈을 등록한다**
@@ -349,6 +381,7 @@ func run(t: RefCounted) -> void:
 	_test_accel_slow(t)
 	_test_rate_cap(t)
 	_test_fire_limit(t)
+	t.done()
 
 func _test_cooldown(t: RefCounted) -> void:
 	var p: RefCounted = _make(1.0)  # 20틱 = 40유닛
@@ -628,6 +661,7 @@ func run(t: RefCounted) -> void:
 	_test_reinforce(t)
 	_test_break_and_restore(t)
 	_test_fires_drain_restore(t)
+	t.done()
 
 func _test_indestructible(t: RefCounted) -> void:
 	# 스펙 §8 — 기간제 면제. 보강보다 먼저 적용되고 보강 스택을 소모하지 않는다.
@@ -949,6 +983,7 @@ func run(t: RefCounted) -> void:
 	_test_merge_plain(t)
 	_test_merge_augment(t)
 	_test_schema_errors(t)
+	t.done()
 
 func _test_load(t: RefCounted) -> void:
 	var c: RefCounted = _loaded()
@@ -1233,6 +1268,7 @@ func run(t: RefCounted) -> void:
 	_test_resonance(t)
 	_test_regen_overheat(t)
 	_test_part_lookup(t)
+	t.done()
 
 func _test_damage(t: RefCounted) -> void:
 	var s: RefCounted = _make_ship()
@@ -1647,6 +1683,7 @@ func run(t: RefCounted) -> void:
 	_test_happy_path(t)
 	_test_validation(t)
 	_test_file_load(t)
+	t.done()
 
 func _test_happy_path(t: RefCounted) -> void:
 	var loader: RefCounted = BuildLoader.new()
@@ -1999,6 +2036,7 @@ func run(t: RefCounted) -> void:
 	_test_broken_and_limited(t)
 	_test_determinism(t)
 	_test_unknown(t)
+	t.done()
 
 func _test_basic(t: RefCounted) -> void:
 	var s: RefCounted = _ship()
@@ -2236,6 +2274,7 @@ func run(t: RefCounted) -> void:
 	_test_event_shape(t)
 	_test_part_state(t)
 	_test_unknown(t)
+	t.done()
 
 func _test_empty_and_and(t: RefCounted) -> void:
 	var s: RefCounted = _ship()
@@ -2596,6 +2635,7 @@ func run(t: RefCounted) -> void:
 	_test_delay(t)
 	_test_multi_fire(t)
 	_test_op_vocabulary(t)
+	t.done()
 
 func _test_damage_and_heal(t: RefCounted) -> void:
 	var ctx: Dictionary = _reset()
@@ -3307,6 +3347,7 @@ func run(t: RefCounted) -> void:
 	_test_chain_depth(t)
 	_test_broken_parts_silent(t)
 	_test_relic_triggers(t)
+	t.done()
 
 func _test_basic_match(t: RefCounted) -> void:
 	_setup()
@@ -3649,6 +3690,7 @@ func run(t: RefCounted) -> void:
 	_test_cost_blocking(t)
 	_test_scheduled_actions(t)
 	_test_determinism(t)
+	t.done()
 
 func _test_runs_to_completion(t: RefCounted) -> void:
 	var sim: RefCounted = _sim("fx_basic", "fx_slow", 1)
