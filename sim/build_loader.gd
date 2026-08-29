@@ -124,6 +124,7 @@ func assemble(build: Dictionary, catalog: RefCounted, side: String) -> RefCounte
 		for tr: Variant in relic.get("triggers", []):
 			ship.relic_triggers.append((tr as Dictionary).duplicate(true))
 			ship.relic_trigger_fires.append(0)
+			ship.relic_trigger_accum.append(0)
 		var mods: Dictionary = relic.get("modifiers", {})
 		ship.resonance_discount += int(mods.get("resonance_discount", 0))
 		if mods.has("convergence_gap_seconds"):

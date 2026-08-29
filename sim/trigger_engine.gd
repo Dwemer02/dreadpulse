@@ -15,10 +15,8 @@ static func dispatch(event: Dictionary, ships: Array, sim: RefCounted) -> void:
 		var ship: RefCounted = ships[i]
 		var foe: RefCounted = ships[1 - i] if ships.size() == 2 else null
 
-		# Relic 트리거 — 슬롯을 차지하지 않는 함선 수준 보유자. every_nth_accumulated용
-		# 누적 저장소(relic_trigger_accum)가 ship_state 계약에 없으므로 accums에 null을
-		# 넘긴다 — relic 트리거는 이 조건을 쓸 수 없다(기존 계약의 한계, 여기서 고치지 않는다).
-		_run_list(ship.relic_triggers, ship.relic_trigger_fires, null,
+		# Relic 트리거 — 슬롯을 차지하지 않는 함선 수준 보유자.
+		_run_list(ship.relic_triggers, ship.relic_trigger_fires, ship.relic_trigger_accum,
 			null, ship, foe, event, depth, sim)
 
 		for part: RefCounted in ship.parts:
@@ -63,10 +61,19 @@ static func _run_list(triggers: Array, fires: Array, accums: Variant,
 			# 이후 무엇이 오든 다시는 발동할 수 없으므로 누적을 계속할 이유가 없다.)
 			accums[index] = accum
 
+		# source_part는 이벤트가 난 함선에서 찾아야 한다.
+		# 양쪽 함선이 같은 Frame을 쓰면 슬롯 이름이 동일하므로(core, weapon_1, ...),
+		# 트리거 소유자의 함선(ship)에서 찾으면 적함 이벤트에 대해 조용히 엉뚱한
+		# 파츠를 집는다 — 크래시도 null도 아니라서 발견하기 어렵다.
+		var event_ship: RefCounted = ship if str(event.get("ship", "")) == ship.side else foe
+		var source_part: RefCounted = null
+		if event_ship != null and event.has("slot"):
+			source_part = event_ship.get_part(str(event["slot"]))
+
 		var ctx: Dictionary = {
 			"sim": sim, "own_ship": ship, "enemy_ship": foe, "part": owner,
 			"event": event, "tick": sim.tick, "rng": sim.rng,
-			"source_part": ship.get_part(str(event.get("slot", ""))),
+			"source_part": source_part,
 			"accum": accum, "accum_prev": accum_prev,
 			"damage_mult": 1.0,
 		}

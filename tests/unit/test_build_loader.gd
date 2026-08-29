@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신할 것
-const EXPECTED_CHECKS := 69
+const EXPECTED_CHECKS := 71
 
 const K = preload("res://sim/sim_const.gd")
 const Catalog = preload("res://sim/catalog.gd")
@@ -238,6 +238,8 @@ func _test_relic_modifiers(t: RefCounted) -> void:
 	t.eq(ship.relic_triggers.size(), 1, "Relic 트리거가 함선에 붙는다")
 	t.eq(ship.relic_trigger_fires.size(), 1, "트리거별 발동 카운터가 함께 만들어진다")
 	t.eq(ship.relic_trigger_fires[0], 0, "카운터는 0에서 시작한다")
+	t.eq(ship.relic_trigger_accum.size(), 1, "트리거별 누적 저장소도 함께 만들어진다")
+	t.eq(ship.relic_trigger_accum[0], 0, "누적은 0에서 시작한다")
 	t.eq(ship.resonance_discount, 1, "resonance_discount가 적용된다")
 	t.eq(ship.convergence_gap_ticks, K.secs_to_ticks(2.0), "convergence_gap이 틱으로 변환된다")
 

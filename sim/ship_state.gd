@@ -31,6 +31,8 @@ var overheat_stacks: int = 0
 var relic_ids: Array[String] = []
 var relic_triggers: Array = []
 var relic_trigger_fires: Array[int] = []
+## relic_triggers와 같은 길이. every_nth_accumulated 조건이 쓰는 트리거별 누적값.
+var relic_trigger_accum: Array[int] = []
 ## prime_oscillator: resonance_at_least 요구치를 이만큼 낮춰 평가한다
 var resonance_discount: int = 0
 ## convergence_engine: 0이면 없음. 그 외에는 재발동 최소 간격(틱)

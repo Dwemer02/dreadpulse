@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 57
+const EXPECTED_CHECKS := 64
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -72,6 +72,7 @@ func _add_trigger(part: RefCounted, trig: Dictionary) -> void:
 func _add_relic_trigger(ship: RefCounted, trig: Dictionary) -> void:
 	ship.relic_triggers.append(trig)
 	ship.relic_trigger_fires.append(0)
+	ship.relic_trigger_accum.append(0)
 
 func _trig(on: String, do: Array, where: Variant = null, max_fires: int = -1) -> Dictionary:
 	var d: Dictionary = {"on": on, "do": do}
@@ -103,8 +104,10 @@ func run(t: RefCounted) -> void:
 	_test_chain_depth_recursive_cap(t)
 	_test_broken_part_stops_triggers(t)
 	_test_relic_trigger(t)
+	_test_relic_every_nth_accumulated(t)
 	_test_traversal_order(t)
 	_test_source_part(t)
+	_test_source_part_comes_from_event_ship(t)
 	_test_where_non_dict_fail_closed(t)
 	t.done()
 
@@ -302,6 +305,23 @@ func _test_relic_trigger(t: RefCounted) -> void:
 	t.eq(player.relic_trigger_fires[0], 1, "relic_trigger_fires가 함께 세어진다")
 	t.eq(player.material, 3, "슬롯 없이도 함선 수준에서 효과가 적용된다")
 
+## Relic 트리거도 파츠 트리거와 같은 능력을 가져야 한다 — ship_state.gd에
+## relic_trigger_accum이 없던 시절에는 이 조건이 구조적으로 항상 거짓이었다.
+func _test_relic_every_nth_accumulated(t: RefCounted) -> void:
+	var player: RefCounted = _ship("player")
+	var enemy: RefCounted = _ship("enemy")
+	_add_relic_trigger(player, _trig("resource_tick", _gain_material_do(1),
+		{"every_nth_accumulated": {"field": "amount", "n": 10}}))
+	var sim: RefCounted = FakeSim.new()
+
+	TriggerEngine.dispatch(_event("resource_tick", "player", {"amount": 6}), [player, enemy], sim)
+	t.eq(player.relic_trigger_accum[0], 6, "Relic 트리거도 누적 저장소를 갖는다")
+	t.eq(player.relic_trigger_fires[0], 0, "6은 아직 10을 넘지 않는다")
+
+	TriggerEngine.dispatch(_event("resource_tick", "player", {"amount": 6}), [player, enemy], sim)
+	t.eq(player.relic_trigger_accum[0], 12, "누적 12")
+	t.eq(player.relic_trigger_fires[0], 1, "6->12는 10을 새로 넘어 발동한다")
+
 func _test_traversal_order(t: RefCounted) -> void:
 	var player: RefCounted = _ship("player")
 	var enemy: RefCounted = _ship("enemy")
@@ -334,10 +354,11 @@ func _test_traversal_order(t: RefCounted) -> void:
 	t.eq(str(mg[3]["slot"]), "slot_c", "그 다음 슬롯")
 	t.eq(str(mg[4]["slot"]), "enemy_slot", "ships 배열 순서상 enemy는 player 다음이다")
 
-## 주의: conditions.gd의 source_faction은 event.get("faction")을 직접 읽는다 —
-## source_keyword처럼 ctx.source_part를 거치지 않는다(기존 계약, 여기서 고치지 않는다).
-## 그래서 source_faction 검증은 event에 faction 필드를 직접 실어 확인하고,
-## source_part 배선 자체는 event.slot으로 source_part를 찾아야 하는 source_keyword로 검증한다.
+## source_faction은 source_keyword와 같은 곳(ctx.source_part)을 본다. source_part를
+## 못 찾을 때만 event.faction 필드로 물러선다(part_fired처럼 이벤트가 faction을
+## 직접 실어 보내는 경우를 위한 대비). 이 테스트는 두 조건이 같은 source_part를
+## 보고 있음을 event.faction과 source_part.faction이 일치하는 상황으로 확인한다 —
+## 서로 다른 함선에서 값을 읽어오는 회귀는 _test_source_part_comes_from_event_ship이 잡는다.
 func _test_source_part(t: RefCounted) -> void:
 	var player: RefCounted = _ship("player")
 	var enemy: RefCounted = _ship("enemy")
@@ -356,15 +377,62 @@ func _test_source_part(t: RefCounted) -> void:
 	TriggerEngine.dispatch(
 		_event("damage_dealt", "player", {"slot": "weapon_1", "faction": "reclaimer"}),
 		[player, enemy], sim)
-	t.eq(reactor.trigger_fires[0], 1, "source_faction은 event.faction 필드를 직접 본다")
+	t.eq(reactor.trigger_fires[0], 1, "source_faction이 source_part의 팩션과 일치해 발동한다")
 	t.eq(reactor.trigger_fires[1], 1,
 		"source_keyword는 event.slot으로 찾은 source_part(ctx.source_part)의 키워드를 본다")
 
 	TriggerEngine.dispatch(
 		_event("damage_dealt", "player", {"slot": "weapon_2", "faction": "viridia"}),
 		[player, enemy], sim)
-	t.eq(reactor.trigger_fires[0], 1, "event.faction이 다르면 발동하지 않는다")
+	t.eq(reactor.trigger_fires[0], 1, "source_part(weapon_2)의 팩션이 다르면 발동하지 않는다")
 	t.eq(reactor.trigger_fires[1], 1, "source_part(weapon_2)에 키워드가 없으면 발동하지 않는다")
+
+## 리뷰에서 발견된 버그의 회귀 테스트: source_part는 "이벤트가 난 함선"에서 찾아야
+## 한다. 양쪽 함선이 같은 Frame을 쓰면 슬롯 이름이 같으므로(weapon_1 등), 트리거
+## 소유자의 함선에서 찾으면 적함 이벤트에 대해 조용히 자기 함선의 엉뚱한 파츠를 집는다.
+func _test_source_part_comes_from_event_ship(t: RefCounted) -> void:
+	# 자함 weapon_1에는 damage 키워드/reclaimer 팩션을, 적함 weapon_1에는
+	# repair 키워드/viridia 팩션을 준다 — 같은 슬롯 이름, 다른 내용물.
+	var player: RefCounted = _ship("player")
+	var enemy: RefCounted = _ship("enemy")
+	player.add_part(_part("weapon_1", "reclaimer", ["damage"]))
+	enemy.add_part(_part("weapon_1", "viridia", ["repair"]))
+
+	var reactor: RefCounted = _part("utility_1")
+	_add_trigger(reactor, _trig("part_fired", _gain_material_do(7),
+		{"enemy_ship": true, "source_keyword": "repair"}))
+	player.add_part(reactor)
+
+	var sim: RefCounted = FakeSim.new()
+	TriggerEngine.dispatch(_event("part_fired", "enemy", {"slot": "weapon_1"}), [player, enemy], sim)
+	t.eq(player.material, 7, "적함 이벤트의 source_part는 적함에서 찾는다")
+
+	# 반대로 자함 키워드(damage)를 요구하면 반응하지 않아야 한다 — 자기 함선에서
+	# 같은 슬롯을 찾고 있었다면 여기서 잘못 발동한다
+	var player2: RefCounted = _ship("player")
+	var enemy2: RefCounted = _ship("enemy")
+	player2.add_part(_part("weapon_1", "reclaimer", ["damage"]))
+	enemy2.add_part(_part("weapon_1", "viridia", ["repair"]))
+	var reactor2: RefCounted = _part("utility_1")
+	_add_trigger(reactor2, _trig("part_fired", _gain_material_do(7),
+		{"enemy_ship": true, "source_keyword": "damage"}))
+	player2.add_part(reactor2)
+	var sim2: RefCounted = FakeSim.new()
+	TriggerEngine.dispatch(_event("part_fired", "enemy", {"slot": "weapon_1"}), [player2, enemy2], sim2)
+	t.eq(player2.material, 0, "자기 함선의 같은 슬롯 파츠를 잘못 집지 않는다")
+
+	# source_faction도 같은 곳(source_part)을 본다
+	var player3: RefCounted = _ship("player")
+	var enemy3: RefCounted = _ship("enemy")
+	player3.add_part(_part("weapon_1", "reclaimer", []))
+	enemy3.add_part(_part("weapon_1", "viridia", []))
+	var reactor3: RefCounted = _part("utility_1")
+	_add_trigger(reactor3, _trig("part_fired", _gain_material_do(5),
+		{"enemy_ship": true, "source_faction": "viridia"}))
+	player3.add_part(reactor3)
+	var sim3: RefCounted = FakeSim.new()
+	TriggerEngine.dispatch(_event("part_fired", "enemy", {"slot": "weapon_1"}), [player3, enemy3], sim3)
+	t.eq(player3.material, 5, "source_faction도 이벤트가 난 함선의 파츠를 본다")
 
 ## 계획서에 없던 방어 — where가 Dictionary도 null도 아닌 저작 실수여도 SCRIPT ERROR 없이
 ## 조용히 발동하지 않아야 한다 (conditions.gd의 fail-closed 정책과 같은 계약).

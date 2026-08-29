@@ -89,6 +89,11 @@ static func _one(key: String, value: Variant, ctx: Dictionary) -> bool:
 				return false
 			return event[field] == spec2.get("equals", null)
 		"source_faction":
+			# source_keyword와 같은 곳(ctx.source_part)을 본다. source_part가 없으면
+			# 이벤트가 faction 필드를 직접 실어 보내는 경우(예: part_fired)로 물러선다.
+			var src: RefCounted = ctx.get("source_part", null)
+			if src != null:
+				return src.faction == str(value)
 			return str(event.get("faction", "")) == str(value)
 		"source_keyword":
 			var source: RefCounted = ctx.get("source_part", null)
