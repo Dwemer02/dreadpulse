@@ -11,6 +11,7 @@ const MODULES: Array[String] = [
 	"res://tests/unit/test_part_timing.gd",
 	"res://tests/unit/test_part_destruction.gd",
 	"res://tests/unit/test_catalog.gd",
+	"res://tests/unit/test_ship_state.gd",
 ]
 
 func _init() -> void:
