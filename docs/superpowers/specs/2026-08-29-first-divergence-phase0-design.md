@@ -58,7 +58,7 @@ res://
 sim/
   combat_sim.gd      전투 1판: 틱 루프, 양측 갱신, 파괴선 검사, 승패 판정
   ship_state.gd      함선: Frame 슬롯 + Active 파츠 + Relic + HP/보호막/자재/공명
-  part.gd            파츠 런타임: 쿨타임, 속도배율, 과부하, 보강, 파손, 발동 이력
+  part.gd            파츠 런타임: 쿨타임, 가속·둔화 잔여시간, 남은 발동 횟수, 보강, 파괴 불가, 파손
   trigger_engine.gd  이벤트 큐 → 트리거 매칭 → 조건 평가 → 액션 실행 → 새 이벤트
   actions.gd         원자 액션 op 테이블
   conditions.gd      where 조건 평가기
@@ -154,24 +154,45 @@ debug/
 
 1. **쿨타임 진행** — 모든 살아있는 파츠의 `cooldown_progress` 증가
 2. **지속 효과 만료** — 가속/둔화/재생 지속시간 감소, 만료분 제거
-3. **발동** — 준비된 파츠를 슬롯 순서로 발동. 비용(자재) 부족 시 `part_fire_blocked`.
-   과부하 스택이 임계 이상인 파츠는 발동 직후 자기 자신이 파괴된다.
+3. **발동** — 준비된 파츠를 슬롯 순서로 발동. 비용(자재)이 부족하거나 남은 발동 횟수가
+   0이면 발동하지 않고 `part_fire_blocked`. 이 발동으로 남은 횟수가 0이 된 파츠는
+   효과를 정상 실행한 뒤 파손된다.
 4. **체인 소진** — 3단계가 낳은 이벤트를 트리거 큐에 넣고 비워질 때까지 처리
 5. **지속 피해/회복** — 과열 tick, 재생 tick
 6. **파괴선 검사** — HP가 임계를 처음 통과했으면 파츠 파괴
 7. **승패 판정** — HP 0 이하 또는 시간 초과
 
-### 4.5 과부하 → 파괴
+### 4.5 발동 제한
 
-기획서 §21은 "과부하 상태의 파츠가 작동하면 자기 자신이 손상된다"고만 하고 파츠 HP를
-정의하지 않는다. Phase 0은 **과부하 스택 자체를 손상 진행도로** 삼는다:
+기획서 §21의 `발동 제한` 키워드다. 파츠의 **수명**을 나타내는, 파츠 단위의 유일한 카운터다.
 
-- 파츠는 과부하 스택을 누적한다.
-- 발동 시점에 스택 `>= OVERLOAD_BREAK (= 3)`이면, 효과는 정상 실행하되 **발동 직후
-  자기 자신이 파괴**된다 (`part_destroyed{cause: "overload"}`).
-- 보강 스택이 있으면 소모하고 파괴를 막는다.
+- 파츠 런타임은 `fires_remaining` (int)을 갖는다. `-1`이면 무제한.
+- 카탈로그에 `active.fire_limit`이 있으면 그 값이 초기값, 없으면 `-1`.
+- 발동할 때마다 유한이면 1 감소. `0`이면 발동하지 못한다
+  (`part_fire_blocked{reason: "fire_limit"}`).
+- 남은 횟수가 `0` 이하가 되면 즉시 파손된다
+  (`part_destroyed{cause: "fires_exhausted"}`).
+  **발동으로 0이 된 경우 그 발동의 효과는 정상 실행된 뒤 파손된다** — 마지막 한 발은 나간다.
+- `restore_part`는 파손을 풀면서 `fires_remaining`을 초기값으로 되돌린다.
+- 보강 스택이 있으면 소모하고 파손을 막는다. 단 남은 횟수는 0인 채이므로 여전히 발동하지
+  못한다 — 다시 쓰려면 `restore_fires`로 횟수를 회복시켜야 한다.
 
-이것이 §25 Reclaimer 대표 루프 "과부하 → 파츠 손상 → 파괴 → 대량 자재"의 실체다.
+**적용 범위: 기본은 무제한이다.** `fire_limit`을 명시한 파츠(주로 Reclaimer)와,
+`drain_fires`를 맞아 제한이 걸린 파츠만 유한해진다. 모든 파츠에 제한을 걸지 않는 이유는
+두 가지다 — 장기전에서 양측 보드가 전부 멈춰 무승부가 폭증하는 것을 피하고,
+`drain_fires`가 "이 파츠는 이제 수명이 정해졌다"는 **명확한 상태 변화**로 읽히게 하기 위함이다.
+
+무제한 파츠가 `drain_fires`를 맞으면 그 순간 `fires_remaining`이
+`DEFAULT_FIRE_LIMIT = 5`로 확정된 뒤 깎인다.
+
+**이 축이 세 팩션이 갈라지는 지점이다** (§7.3). Reclaimer는 소진시켜 자재로 바꾸고,
+Viridia는 회복시키고, Aeonic은 미리 당겨 쓴다. 같은 카운터에 서로 다른 문법을 얹는
+것이 기획서 §60이 요구한 "팩션 전용 키워드 최소화"다.
+
+> **용어 주의**: `과부하`는 이 메커니즘의 **Reclaimer 팩션 표현**일 뿐이다
+> (Viridia는 `고갈`, Aeonic은 `위상 붕괴`). 코드 식별자와 키워드는 `fire_limit` 하나다.
+> 스펙 어디에서도 `과부하`는 메커니즘 이름으로 쓰이지 않는다 — 팩션 표현임을 설명하는
+> 자리에만 등장한다.
 
 ### 4.6 연쇄 안전장치
 
@@ -191,26 +212,26 @@ debug/
   "name": "과급 터빈",
   "faction": "reclaimer",
   "roles": ["utility", "flexible"],
-  "keywords": ["accelerate", "overload"],
+  "keywords": ["accelerate", "fire_limit"],
 
   "active": {
     "cooldown": 5.0,
+    "fire_limit": 6,
     "cost": { "material": 0 },
     "on_fire": [
-      { "op": "accelerate",     "target": "self", "mult": 0.30, "duration": 3.0 },
-      { "op": "apply_overload", "target": "self", "stacks": 1 }
+      { "op": "accelerate", "target": "self", "duration": 3.0 }
     ],
     "triggers": []
   },
 
   "augment": {
-    "add_keywords": ["accelerate", "overload"],
+    "add_keywords": ["accelerate", "fire_limit"],
     "modify": { "cooldown_mult": 1.0 },
     "triggers": [
       { "on": "part_fired", "where": { "is_host": true },
         "do": [
-          { "op": "accelerate",     "target": "host", "mult": 0.15, "duration": 2.0 },
-          { "op": "apply_overload", "target": "host", "stacks": 1 }
+          { "op": "accelerate",  "target": "host", "duration": 2.0 },
+          { "op": "drain_fires", "target": "host", "amount": 1 }
         ] }
     ]
   }
@@ -269,7 +290,7 @@ Relic은 역할 슬롯을 차지하지 않는 별도 1칸이다.
     "weapon_2":  { "part": "rivet_railgun" },
     "defense_1": { "part": "weld_plating" },
     "utility_1": { "part": "breaker" },
-    "utility_2": { "part": "overload_vent" },
+    "utility_2": { "part": "venting_manifold" },
     "flex_1":    { "part": "breaker" }
   },
   "links": []
@@ -305,19 +326,20 @@ Core 파츠를 Augment로 사용 / `augment` 블록이 없는 파츠를 Augment�
 |---|---|
 | `combat_start` | `player_build`, `enemy_build`, `seed` |
 | `part_fired` | `slot`, `part_id`, `part_name`, `faction`, `chain_depth`, `cause` |
-| `part_fire_blocked` | `slot`, `part_id`, `reason` (`rate_cap`/`broken`/`no_material`) |
+| `part_fire_blocked` | `slot`, `part_id`, `reason` (`rate_cap`/`broken`/`no_material`/`fire_limit`) |
 | `damage_dealt` | `target_ship`, `amount`, `absorbed`, `source_slot` |
 | `hull_changed` | `from`, `to`, `ratio` |
 | `shield_gained` / `shield_absorbed` | `amount` |
 | `repaired` / `regen_applied` / `regen_ticked` | `amount`, `duration` |
 | `overheat_applied` / `overheat_ticked` | `stacks`, `damage` |
-| `speed_changed` | `slot`, `mult`, `duration` |
-| `overload_applied` | `slot`, `stacks`, `total` |
-| `part_destroyed` | `slot`, `part_id`, `cause` (`threshold`/`overload`/`effect`) |
+| `speed_changed` | `slot`, `state` (`accelerated`/`slowed`/`normal`), `duration` |
+| `fires_changed` | `slot`, `delta`, `remaining`, `cause` (`fired`/`drained`/`restored`) |
+| `part_destroyed` | `slot`, `part_id`, `cause` (`threshold`/`fires_exhausted`/`effect`) |
 | `part_restored` | `slot`, `part_id` |
 | `reinforce_gained` / `reinforce_consumed` | `slot`, `stacks` |
+| `indestructible_applied` | `slot`, `duration` (`-1` = 영구) |
 | `threshold_crossed` | `threshold`, `destroyed_slot` |
-| `material_gained` / `material_spent` | `amount`, `total`, `source`/`sink` |
+| `material_gained` / `material_spent` | `slot`, `amount`, `total`, `source`/`sink` |
 | `resonance_gained` | `amount`, `total`, `source` |
 | `chain_capped` | `slot`, `part_id`, `depth` |
 | `combat_end` | `winner`, `elapsed`, `reason` |
@@ -328,11 +350,15 @@ Core 파츠를 Augment로 사용 / `augment` 블록이 없는 파츠를 Augment�
 ### 6.2 트리거
 
 ```
-{ "on": <이벤트 타입>, "where": <조건>, "once": <bool>, "do": [ <액션>... ] }
+{ "on": <이벤트 타입>, "where": <조건>, "max_fires": <int>, "do": [ <액션>... ] }
 ```
 
-`where`와 `once`는 생략 가능. 여러 조건을 함께 쓰면 AND로 평가한다.
-`once: true`면 **전투당 한 번만** 발동한다 (예: "숙주가 파괴되면 즉시 복구 — 전투당 1회").
+`where`와 `max_fires`는 생략 가능. 여러 조건을 함께 쓰면 AND로 평가한다.
+`max_fires: n`이면 이 트리거는 **전투당 n회까지만** 발동한다
+(예: "숙주가 파괴되면 즉시 복구 — 전투당 2회"는 `max_fires: 2`).
+
+> **이름 구분**: 파츠의 발동 횟수 제한은 `active.fire_limit`(§4.5),
+> 트리거의 발동 횟수 제한은 `max_fires`다. 서로 다른 계층의 카운터다.
 
 조건 목록:
 
@@ -344,10 +370,11 @@ Core 파츠를 Augment로 사용 / `augment` 블록이 없는 파츠를 Augment�
 | `every_nth_fire` | 이 파츠의 n번째 발동마다 |
 | `every_nth_accumulated` | `{field, n}` — 이벤트의 해당 필드를 누적해 n의 배수를 넘을 때마다 |
 | `is_host` | (augment 문맥) 이벤트 주체가 숙주 파츠인가 |
+| `event_field` | `{field, equals}` — 이벤트의 임의 필드를 값과 비교 (예: `part_destroyed`의 `cause`, `part_fire_blocked`의 `reason`) |
 | `source_faction` | 이벤트를 일으킨 파츠의 팩션 |
 | `source_keyword` | 이벤트를 일으킨 파츠가 해당 키워드 보유 |
 | `hull_below_ratio` | 자함 HP 비율 < r |
-| `overload_at_least` | 대상 파츠 과부하 스택 ≥ n |
+| `fires_remaining_at_most` | 대상 파츠의 남은 발동 횟수 ≤ n (무제한 파츠는 거짓) |
 | `has_broken_own` | 자함에 파손 파츠가 존재하는가 |
 | `own_ship` / `enemy_ship` | 이벤트가 발생한 함선 |
 
@@ -362,9 +389,10 @@ Core 파츠를 Augment로 사용 / `augment` 블록이 없는 파츠를 Augment�
 | `repair` | `amount` |
 | `apply_regen` | `amount`, `duration` |
 | `apply_overheat` | `stacks` |
-| `accelerate` / `slow` | `target`, `mult`, `duration` |
-| `apply_overload` | `target`, `stacks` |
-| `clear_overload` | `target`, `material_per_stack` — 과부하를 전부 제거하고 제거량에 비례해 자재 획득 |
+| `accelerate` / `slow` | `target`, `duration` — 배율은 고정(§6.5) |
+| `drain_fires` | `target`, `amount`, `material_per_part`(선택) — 남은 발동 횟수를 깎고, 실제로 깎인 파츠 수에 비례해 자재 획득 |
+| `restore_fires` | `target`, `amount` — 남은 발동 횟수 회복 (초기값 초과 불가) |
+| `make_indestructible` | `target`, `duration` (`-1` = 영구) |
 | `reduce_cooldown` | `target`, `ratio` |
 | `destroy_part` / `restore_part` | `target` |
 | `reinforce` | `target`, `stacks` |
@@ -372,7 +400,7 @@ Core 파츠를 Augment로 사용 / `augment` 블록이 없는 파츠를 Augment�
 | `gain_material` / `spend_material` | `amount` |
 | `gain_resonance` | `amount` |
 | `fire_part` | `target` (발동 상한·체인 깊이 적용) |
-| `multi_fire` | `times`, `do: [...]` — 감싼 액션들을 같은 발동 안에서 n회 실행 (발동 상한 미적용) |
+| `multi_fire` | `times`, `do`(선택) — 감싼 액션들을 같은 발동 안에서 n회 실행. `do`를 생략하면 **숙주(augment 문맥) 또는 자신의 `on_fire` 블록 전체**를 n회 반복한다. 발동 상한·발동 횟수를 소모하지 않는다 |
 
 **공통 규칙:**
 
@@ -384,13 +412,53 @@ Core 파츠를 Augment로 사용 / `augment` 블록이 없는 파츠를 Augment�
 ### 6.4 대상 셀렉터
 
 `self` / `host` / `linked` / `enemy_ship` / `own_ship` / `random_own_active` /
-`slowest_own` (남은 쿨타임 최대) / `random_broken_own` / `all_own_active`
+`slowest_own` (남은 쿨타임 최대) / `random_broken_own` / `all_own_active` /
+`all_own_limited` (발동 제한이 걸린 아군 파츠 전부) / `random_own_limited`
 
 무작위 셀렉터는 전부 주입된 시드 RNG를 쓴다.
 
+**셀렉터는 `do` 블록 시작 시점에 한 번만 해석하고 결과를 블록 전체가 공유한다.**
+액션마다 다시 평가하지 않는다. 이 규칙이 없으면
+`[fire_part{slowest_own}, drain_fires{slowest_own}]`이 서로 다른 파츠를 건드리고,
+`[restore_part{random_broken_own}, drain_fires{random_broken_own}]`은 첫 액션이 대상을
+파손 상태에서 빼버려 두 번째가 빈손이 된다. 둘 다 실제 파츠(`future_debtor`, `phase_shifter`)의
+동작이므로 계약으로 고정한다.
+
+### 6.5 가속과 둔화 — 배율 고정, 시간만 다름
+
+기획서 §21의 정의를 따른다. **증감폭은 항상 같고 효과마다 다른 것은 지속시간뿐이다.**
+
+- `accelerate {target, duration}` — 지속시간 동안 쿨타임 진행 **×2**
+- `slow {target, duration}` — 지속시간 동안 쿨타임 진행 **×0.5**
+- 배율 파라미터는 없다. 파츠가 지정하는 것은 `duration` 하나다.
+- **중첩**: 같은 종류가 겹치면 남은 지속시간을 **합산**한다.
+- **상쇄**: 가속과 둔화가 동시에 걸리면 남은 시간끼리 상쇄한다 —
+  짧은 쪽이 사라지고 긴 쪽에 차이만큼만 남는다.
+- `speed_mult`는 저장하는 값이 아니라 파생값이다:
+  가속만 `2.0` / 둔화만 `0.5` / 둘 다 없거나 상쇄되면 `1.0`.
+
+이 결정의 부수 효과: 가속 상한이 ×2로 고정되므로 **쿨타임 0.4초 이상인 파츠는 자연 발동만으로
+§4.2의 초당 5회 상한에 걸릴 수 없다.** Phase 0의 파츠는 전부 쿨타임 4초 이상이므로,
+초당 5회 상한은 사실상 `fire_part` 강제 발동 전용 안전장치로 작동한다.
+
 ---
 
-## 7. 자원
+## 7. 자원 — 세 개의 축
+
+전투 중 플레이어가 읽는 숫자는 세 종류뿐이고, 셋은 범위·방향·성격이 전부 다르다.
+
+| 축 | 범위 | 방향 | 성격 |
+|---|---|---|---|
+| 자재 | 함선 | 벌고 쓴다 | 유동성 — 지금 무엇에 투자할까 |
+| 공명 | 함선 | 오르기만 | 패턴 안정도 — 파츠들을 잇는 게이트 |
+| 발동 횟수 | **파츠** | 소진되기만 | 수명 — 팩션별로 문법이 갈리는 축 |
+
+**결정 기록 — 공명을 파츠별로 내리지 않는다.** 검토했으나 기각했다. 개별화하면 팩션 색깔과
+파츠 단위 서사를 얻지만, 읽을 숫자가 슬롯 수만큼 늘고(§60 "지나친 툴팁 복잡성"),
+무엇보다 **파츠 사이를 잇는 게이트가 사라져** §3.1("파츠 하나의 성능보다 파츠 사이의
+연쇄작동")과 §28("별도의 혼종 전용 자원이 필요 없다")이 무너진다. 로어(§5·§24)와
+최종 보스 기믹(§47 Synchronization)도 함선 단일 공명을 전제한다.
+팩션별 차이는 세 번째 축(발동 횟수)에서 낸다.
 
 ### 7.1 자재 / MATERIAL (§23)
 
@@ -407,18 +475,44 @@ Core 파츠를 Augment로 사용 / `augment` 블록이 없는 파츠를 Augment�
 
 파츠가 직접 공명을 생성하는 효과는 희귀하게 유지한다 (18종 중 2종 + Relic 1종).
 
+### 7.3 발동 횟수 — 팩션이 갈라지는 축
+
+파츠 단위 카운터다. 정의와 규칙은 §4.5에 있다. 세 팩션은 **같은 카운터를 서로 다른
+문법으로** 다룬다 (§60 "팩션 전용 키워드를 최소화하고 같은 것을 다른 문법으로 사용한다"):
+
+| 팩션 | 문법 | 표현 |
+|---|---|---|
+| Reclaimer | 소진시켜 자재로 바꾼다 (`drain_fires` + `material_per_part`) | 과부하 |
+| Viridia | 회복시킨다 (`restore_fires`) | 고갈 |
+| Aeonic | 미래분을 당겨 쓴다 (`fire_part` + `drain_fires`) | 위상 붕괴 |
+
+§45 Divergent Resonance의 "한 시스템의 결함이 다른 시스템의 자원이 된다"가 이 축 위에서
+실제로 돌아간다 — Aeonic이 당겨 쓴 횟수를 Reclaimer가 파손으로 회수해 자재로 만들고,
+Viridia가 복구해 카운터를 되돌린다.
+
 ---
 
 ## 8. 구조 파괴 시스템 (§18~20, §32~33)
 
+파손에 이르는 경로는 세 가지다: **파괴선 통과**, **발동 횟수 소진**(§4.5),
+**`destroy_part` 액션**. 방어 수단은 두 가지고 성격이 다르다.
+
 - **파괴선**: 최대 HP의 75% / 50% / 25%. **처음** 그 아래로 내려갈 때만 작동.
   한 번의 피해가 두 선을 통과하면 파츠 2개가 파괴된다. 수리해도 재활성화되지 않는다.
-- **대상**: 파괴 가능한 Active 파츠 중 시드 RNG로 1개. **Core는 면제**(§14).
-  이미 파손된 파츠는 후보에서 제외. 후보가 없으면 아무 일도 일어나지 않는다.
-- **보강**: 대상 파츠에 보강 스택이 있으면 1 소모하고 파괴를 막는다.
+- **대상**: 파괴 가능한 Active 파츠 중 시드 RNG로 1개.
+  이미 파손된 파츠와 `indestructible` 파츠는 후보에서 제외.
+  후보가 없으면 아무 일도 일어나지 않는다.
+- **보강** — 횟수제 방어. 대상 파츠에 보강 스택이 있으면 1 소모하고 파손을 막는다.
+- **파괴 불가**(`indestructible`) — 기간제 면제. 파괴선 대상 선정 / 발동 횟수 소진 /
+  `destroy_part` **전부**에서 면제된다. **보강보다 먼저 적용되며 보강 스택을 소모하지 않는다.**
+  `make_indestructible {duration: -1}`이면 영구.
+  **Core는 영구 `indestructible`을 기본 보유한다**(§14) — 별도의 예외 코드 경로가 아니다.
+  남은 발동 횟수가 0인 채로 파괴 불가인 파츠는 파손이 **유예**되지만 발동하지 못하고,
+  파괴 불가가 끝나는 순간 파손된다.
 - **파손 상태**(§19): 효과 정지, 쿨타임 정지, **슬롯 유지**. 지속 효과도 정지.
   붙어 있던 Augment 효과도 함께 정지한다.
-- **복구**(§21): 파손 파츠를 다시 활성화. 쿨타임은 0에서 재시작.
+- **복구**(§21): 파손 파츠를 다시 활성화. 쿨타임은 0에서 재시작하고
+  `fires_remaining`은 초기값으로 되돌아간다.
 
 ---
 
@@ -430,44 +524,53 @@ Core 파츠를 Augment로 사용 / `augment` 블록이 없는 파츠를 Augment�
 파츠를 넣고 싶어지면, 파츠를 위해 코드를 고치기 전에 §6에 원자 연산을 추가할지부터 판단한다.
 어휘를 늘리는 쪽이 옳은 경우는 그 연산이 최소 2종 이상의 파츠에서 재사용될 때뿐이다.
 
+표기: `쿨 5초` = `active.cooldown`, `제한 6회` = `active.fire_limit`(없으면 무제한),
+`가속 3초` = `accelerate {duration: 3.0}`(배율은 항상 ×2).
+
 ### 9.1 Reclaimer — Break & Rebuild (§25)
+
+발동 횟수를 **소진시켜 자재로 바꾸는** 팩션. 제한이 걸린 파츠가 가장 많다.
 
 | id | 이름 | 역할 | ACTIVE | AUGMENT |
 |---|---|---|---|---|
-| `supercharged_turbine` | 과급 터빈 | utility | 5초: 자신 가속 +30%(3초), 자신 과부하 +1 | 숙주 발동 시 숙주 가속 +15%(2초), 과부하 +1 |
-| `breaker` | 분해기 | utility | 8초: 파손 파츠 1개 분해 → 자재 +6 (없으면 +2) | 아군 파츠가 파괴될 때 자재 +4 |
-| `rivet_railgun` | 리벳 레일건 | weapon | 6초: 피해 18, 자신 과부하 +1 | 숙주 발동 시 피해 6 추가, 숙주 과부하 +1 |
-| `weld_plating` | 용접 장갑 | defense | 7초: 보강 +1, 선체 수리 8 | 숙주가 파괴되면 즉시 복구 (전투당 1회) |
-| `overload_vent` | 과부하 방출기 | utility | 10초: 자함 전체 과부하 제거, 제거 스택당 자재 +2 | 숙주가 과부하로 파괴될 때 자재 +6 |
-| `scrap_reactor` | 폐선 재활용로 | **core** | 시작 시 자재 +5. 자재를 누적 10 획득할 때마다 무작위 아군 파츠 가속 +25%(4초) | — |
+| `supercharged_turbine` | 과급 터빈 | utility | 쿨 5초, 제한 6회: 자신 가속 3초 | 숙주 가속 2초, 숙주 횟수 −1 |
+| `breaker` | 분해기 | utility | 쿨 8초: 자재 +2, 자함에 파손 파츠가 있으면 자재 +4 추가 | 아군 파츠가 파손될 때 자재 +4 |
+| `rivet_railgun` | 리벳 레일건 | weapon | 쿨 6초, 제한 8회: 피해 18 | 숙주 발동 시 피해 6 추가, 숙주 횟수 −1 |
+| `weld_plating` | 용접 장갑 | defense | 쿨 7초: 무작위 아군 파츠에 보강 +1, 선체 수리 8 | 숙주가 파손되면 즉시 복구 (`max_fires: 2`) |
+| `venting_manifold` | 방출 다기관 | utility | 쿨 10초: 제한이 걸린 아군 파츠 전부의 남은 횟수 −1, 깎인 파츠 수 × 4 자재 | 숙주가 횟수 소진으로 파손될 때 자재 +6 |
+| `scrap_reactor` | 폐선 재활용로 | **core** | 쿨 6초: 자재 +2. 시작 시 자재 +5. 자재를 누적 10 획득할 때마다 무작위 아군 파츠 가속 4초 | — |
 
 ### 9.2 Viridia — Grow & Connect (§26)
 
+발동 횟수를 **회복시키는** 팩션. 자기 파츠에는 제한을 걸지 않는다.
+
 | id | 이름 | 역할 | ACTIVE | AUGMENT |
 |---|---|---|---|---|
-| `regen_sac` | 재생낭 | defense | 4초: 자재 3 소비 → 선체 수리 10 | 숙주가 자재를 소비할 때 재생 2(5초) |
-| `bio_nerve_cord` | 생체 신경삭 | utility | 7초: 연결된 파츠 하나를 가속 +40%(4초) | 숙주에 `link` 부여. 공명 3 이상에서 숙주가 발동하면 연결된 파츠도 발동 |
-| `proliferation_organ` | 증식 기관 | utility | 6초: 자재 +3 (공명 4 이상이면 +6) | 숙주가 3회 발동할 때마다 공명 +1 |
-| `coral_spore` | 산호 포자탄 | weapon | 5초: 피해 12 + 적 과열 3 | 숙주 발동 시 적 과열 2 |
-| `symbiotic_carapace` | 공생 갑각 | defense | 8초: 보호막 20 (공명 3 이상이면 보강 +1) | 공명이 오를 때마다 보호막 4 |
-| `colony_heartcore` | 군체 심핵 | **core** | 시작 시 최대 HP +30. 10초마다 재생 3. 공명 5 이상이면 모든 아군 파츠 가속 +15% (영구) | — |
+| `regen_sac` | 재생낭 | defense | 쿨 4초: 자재 3 소비 → 선체 수리 10 | 숙주가 자재를 소비할 때 재생 2(5초) |
+| `bio_nerve_cord` | 생체 신경삭 | utility | 쿨 7초: 연결된 파츠를 가속 4초 | 숙주에 `link` 부여. 공명 3 이상에서 숙주가 발동하면 연결된 파츠도 발동 |
+| `proliferation_organ` | 증식 기관 | utility | 쿨 6초: 자재 +3 (공명 4 이상이면 +6) | 숙주가 3회 발동할 때마다 공명 +1 |
+| `coral_spore` | 산호 포자탄 | weapon | 쿨 5초: 피해 12 + 적 과열 3 | 숙주 발동 시 적 과열 2 |
+| `symbiotic_carapace` | 공생 갑각 | defense | 쿨 8초: 보호막 20 (공명 3 이상이면 보강 +1) | 공명이 오를 때마다 보호막 4 |
+| `colony_heartcore` | 군체 심핵 | **core** | 쿨 10초: 재생 3, 제한이 걸린 아군 파츠 1개의 남은 횟수 +1, 공명 5 이상이면 모든 아군 파츠 가속 3초. 시작 시 보호막 30 | — |
 
 ### 9.3 Aeonic Covenant — Borrow & Foretell (§27)
 
+발동 횟수를 **미리 당겨 쓰는** 팩션. 강제 발동과 짝지어 대가로 횟수를 깎는다.
+
 | id | 이름 | 역할 | ACTIVE | AUGMENT |
 |---|---|---|---|---|
-| `future_debtor` | 미래 차입기 | utility | 6초: 남은 쿨타임이 가장 긴 아군 파츠를 즉시 발동시키고 그 파츠에 과부하 +1 | 숙주 발동 시 숙주 쿨타임 40% 즉시 감소, 과부하 +1 |
-| `foresight_lens` | 예견 렌즈 | weapon | 4초: 피해 10. 세 번째 발동마다 다중 발동 3 | 숙주의 세 번째 발동마다 효과 2회 실행 |
-| `temporal_anchor` | 시간 고정장 | defense | 9초: 보강 +2, 보호막 15 | 전투 시작 후 15초 이전에 숙주가 파괴되면 즉시 복구 |
-| `phase_shifter` | 위상 전환기 | utility | 7초: 파손 아군 파츠 1개 복구, 그 파츠에 과부하 +2 | 숙주가 파괴되면 8초 후 자동 복구 |
-| `precognitive_sight` | 선행 조준기 | weapon | 5초: 피해 14 (30초 이전이면 +50%) | 공명이 오를 때마다 숙주의 다음 발동 피해 +30% |
-| `convergence_core` | 수렴 코어 | **core** | 시작 후 10초 동안 모든 아군 파츠 가속 +20%. 10초마다 공명 +1 | — |
+| `future_debtor` | 미래 차입기 | utility | 쿨 6초: 남은 쿨타임이 가장 긴 아군 파츠를 즉시 발동시키고 그 파츠의 남은 횟수 −1 | 숙주 발동 시 숙주 쿨타임 40% 즉시 감소, 숙주 횟수 −1 |
+| `foresight_lens` | 예견 렌즈 | weapon | 쿨 4초: 피해 10. 세 번째 발동마다 다중 발동 3 | 숙주의 세 번째 발동마다 숙주 효과를 2회 더 실행 (`multi_fire{times:2}`, `do` 생략) |
+| `temporal_anchor` | 시간 고정장 | defense | 쿨 9초: 보강 +2, 보호막 15 | 전투 시작 시 숙주에 파괴 불가 15초 |
+| `phase_shifter` | 위상 전환기 | utility | 쿨 7초: 파손 아군 파츠 1개 복구, 그 파츠의 남은 횟수 −2 | 숙주가 파손되면 8초 후 자동 복구 |
+| `precognitive_sight` | 선행 조준기 | weapon | 쿨 5초: 피해 14 (30초 이전이면 +50%) | 공명이 오를 때마다 숙주의 다음 발동 피해 +30% |
+| `convergence_core` | 수렴 코어 | **core** | 쿨 10초: 공명 +1. 시작 시 모든 아군 파츠 가속 10초 | — |
 
 ### 9.4 First Relic 3종 (§54)
 
 | id | 이름 | 효과 |
 |---|---|---|
-| `resonance_relay` | Resonance Relay | 공명이 증가할 때 모든 아군 파츠를 2초간 가속 +25% |
+| `resonance_relay` | Resonance Relay | 공명이 증가할 때 모든 아군 파츠를 가속 2초 |
 | `prime_oscillator` | Prime Oscillator | 공명 조건이 있는 모든 효과의 요구 공명을 1 낮게 취급 |
 | `convergence_engine` | Convergence Engine | 서로 다른 팩션의 파츠가 연속으로 발동하면 공명 +1 (최소 2초 간격) |
 
@@ -515,9 +618,15 @@ Relic은 룰브레이커다. `prime_oscillator`는 조건 평가기에, `converg
 
 ### C. 파괴선이 재밌는가 (§61.C)
 
-- 전투당 평균 파괴 파츠 수(양측 합) **1.5~3.5**
-- **"파괴 직후 5초 내 패배" 비율 ≤ 20%** — 파괴가 즉사여서는 안 된다 (§60 파괴 RNG 스트레스)
+- 전투당 평균 파손 파츠 수(양측 합) **1.5~3.5**.
+  원인별로 나눠 집계한다: `threshold` / `fires_exhausted` / `effect`
+- **"파손 직후 5초 내 패배" 비율 ≤ 20%** — 파괴가 즉사여서는 안 된다 (§60 파괴 RNG 스트레스)
 - 복구/보강으로 되돌린 비율이 30% 이상인 빌드가 최소 1종 존재 — 대응책이 실제로 작동함을 증명
+- **발동 제한 소진율** — 제한이 걸린 파츠가 죽을 때까지 초기 횟수의 **50% 이상**을
+  실제로 소진해야 한다. 너무 낮으면 제한이 아니라 사고사(다른 원인으로 먼저 죽음)이고,
+  100%에 붙어 있으면 제한이 밸런스에 관여하지 않는다는 뜻이다.
+- **파괴 불가 유예 발생률** — `indestructible` 때문에 파손이 유예된 사례 수.
+  0이면 그 키워드가 실제로 작동하는지 검증되지 않은 것이다.
 
 ### D. 세 팩션의 사고방식이 다른가 (§61.D)
 
@@ -549,7 +658,7 @@ Relic은 룰브레이커다. `prime_oscillator`는 조건 평가기에, `converg
 │  [def1 ] [utl1] [utl2]       │            └→ Accelerated  │
 │  [flex1]                     │                            │
 │   각 칸: 이름 / 쿨타임 바 /   │  13.10  Regen Sac          │
-│   과부하·보강 뱃지 / 파손 X   │    └→ Repair 10            │
+│   남은횟수·보강 뱃지 / 파손 X │    └→ Repair 10            │
 │   Augment는 하단 작은 칩      │                            │
 ├──────────────────────────────┤                            │
 │  ENEMY (동일 레이아웃)        │                            │
@@ -572,7 +681,8 @@ Relic은 룰브레이커다. `prime_oscillator`는 조건 평가기에, `converg
 ```
 
 - **단위 테스트**가 검증하는 것: 파츠 개별 효과, 트리거 매칭, 조건 평가, 대상 셀렉터,
-  발동 상한 0.2초, 과부하 파괴, 파괴선 통과(1선/2선 동시), 보강 소모, 파손·복구,
+  발동 상한 0.2초, 발동 횟수 소진 파손, 파괴 불가 유예, 가속·둔화 상쇄,
+  파괴선 통과(1선/2선 동시), 보강 소모, 파손·복구,
   자재 부족 시 불발, 공명 누적 규칙, 빌드 검증 실패 케이스, **결정론**(같은 시드 2회 → 동일 스트림).
 - **배치 러너**: §10의 배치 구성을 돌려 지표 5종을 리포트하고,
   통과하지 못한 지표를 실패 사례 목록과 함께 출력한다.
@@ -597,8 +707,15 @@ Relic은 룰브레이커다. `prime_oscillator`는 조건 평가기에, `converg
 슬롯 역할(`weapon`/`defense`/`utility`)과 어울리고, Godot의 노드/컴포넌트 개념과 혼동되지 않는다.
 
 전투 키워드(§21) 식별자 — JSON의 `keywords` / `add_keywords`에는 이 영문 식별자를 쓴다:
-`damage` `shield` `repair` `regen` `accelerate` `slow` `overheat` `overload`
-`destroy` `reinforce` `restore` `link` `multi_fire` `crit`
+`damage` `shield` `repair` `regen` `accelerate` `slow` `overheat` `fire_limit`
+`destroy` `indestructible` `reinforce` `restore` `link` `multi_fire` `crit`
+
+**결정 기록 — `과부하`는 코드 식별자가 아니다.** 초안에는 `overload` 키워드가 있었으나
+삭제했다. 과부하는 같은 메커니즘의 **Reclaimer 팩션 표현**일 뿐이고(Viridia는 `고갈`,
+Aeonic은 `위상 붕괴`), 실제 메커니즘은 발동 횟수 제한 하나다. GDD §33이 `보강`을
+"팩션별 표현은 다르되 키워드는 동일하게 보강"으로 처리한 것과 같은 구조다.
+GDD §21도 `발동 제한`으로 개정했다. 코드·키워드 목록·액션명·이벤트명 어디에도
+`overload`를 쓰지 않는다.
 
 팩션 식별자: `reclaimer` `viridia` `aeonic` `first`
 
@@ -612,3 +729,20 @@ Relic은 룰브레이커다. `prime_oscillator`는 조건 평가기에, `converg
 - Core 파츠도 Augment로 쓸 수 있게 할 것인가 (현재는 금지)
 - `연결`을 플레이어가 전투 전에 직접 배선하게 할 것인가, 인접 슬롯 자동으로 할 것인가
 - 전투 시간 상한 120초가 §30의 "20초 이내 승리" 목표와 맞는 스케일인가
+- `DEFAULT_FIRE_LIMIT = 5`가 적절한가 — 배치 지표 C의 소진율이 판정한다
+- GDD §19의 "Reclaimer가 파손 파츠를 **완전히 분해**해 자재로 바꾼다"(슬롯에서 영구 제거)를
+  넣을 것인가. Phase 0은 `breaker`를 "파손 파츠가 있으면 자재를 더 얻는다"로 축약했다 —
+  영구 제거는 복구 계열 파츠(`phase_shifter`, `weld_plating`, `temporal_anchor`)와 정면으로
+  충돌하고 슬롯 생애주기 관리를 새로 만들어야 하는데, Phase 0의 검증 지표 어느 것도
+  그것을 요구하지 않는다.
+
+## 결정 기록 (재논의 방지)
+
+| 결정 | 근거 |
+|---|---|
+| 공명은 함선 공용. 파츠별로 쪼개지 않는다 | §7 도입부 |
+| `과부하`는 코드 식별자가 아니라 Reclaimer 팩션 표현 | §13 |
+| 가속/둔화는 배율 고정, 지속시간만 다름 | §6.5 |
+| 발동 횟수 제한은 기본 무제한 | §4.5 |
+| 효과는 파츠별 콜백이 아니라 선언적 데이터 | §3.1 |
+| Core는 ACTIVE 전용, 영구 `indestructible` | §5.1, §8 |

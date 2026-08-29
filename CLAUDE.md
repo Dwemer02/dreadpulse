@@ -163,13 +163,18 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 
 - 구조: `iteration`(Run) · `build`/`pattern`(빌드) · `frame`(함선) · `part`(파츠) ·
   `active` / `augment` · `slot` · `role` · `link` · `relic`
-- 자원: `material` · `resonance`
+- 자원: `material` · `resonance` · `fire_limit`(파츠 발동 횟수)
 - 전투 키워드: `damage` `shield` `repair` `regen` `accelerate` `slow` `overheat`
-  `overload` `destroy` `reinforce` `restore` `multi_fire` `crit`
+  `fire_limit` `destroy` `indestructible` `reinforce` `restore` `link` `multi_fire` `crit`
 - 팩션: `reclaimer` · `viridia` · `aeonic` · `first`
 
 **파츠는 코드에서 `part`다.** `component`는 UI 표시 문자열 전용이다 (GDD §41의 UI 용어는
 게임 내 The First 인터페이스 문구이지 코드 식별자가 아니다).
+
+**`과부하`는 코드 식별자가 아니다.** 발동 횟수 제한의 **Reclaimer 팩션 표현**일 뿐이다
+(Viridia는 `고갈`, Aeonic은 `위상 붕괴`). 메커니즘은 `fire_limit` 하나이며,
+액션명·이벤트명·키워드 어디에도 `overload`를 쓰지 않는다. GDD §33이 `보강`을 다룬 것과
+같은 구조다.
 
 새 용어가 필요하면 GDD §21 또는 §41에 먼저 추가한 뒤 사용한다.
 
@@ -194,9 +199,17 @@ Always start by running `--help` to discover available commands. Use the CLI whe
   발동 불가. 가속 누적과 체인 강제 발동 모두에 적용된다. `multi_fire`는 한 발동 안의
   반복이므로 상한 대상이 아니다.
 - 체인 깊이 상한 `MAX_CHAIN_DEPTH = 12`. 초과 시 `chain_capped` 이벤트.
-- 공명은 감소하지 않는다. 기본 획득은 `행동 누적 → 공명`(발동 8회마다 +1)이며,
-  공명을 직접 생성하는 효과는 희귀하게 유지한다.
-- 파괴선 75/50/25%는 처음 통과할 때만 작동하고, Core는 파괴 대상에서 면제된다.
+- **가속/둔화는 배율이 고정이다** — 가속은 쿨타임 진행 ×2, 둔화는 ×0.5.
+  효과마다 다른 것은 지속시간뿐이며 배율 파라미터는 존재하지 않는다.
+  같은 종류는 시간 합산, 가속과 둔화가 겹치면 남은 시간끼리 상쇄한다.
+- **발동 횟수는 기본 무제한이다.** `active.fire_limit`을 명시한 파츠와 `drain_fires`를
+  맞은 파츠만 유한해지며, 무제한 파츠가 처음 `drain_fires`를 맞으면 그 순간
+  `DEFAULT_FIRE_LIMIT = 5`로 확정된다. 0이 되면 파손(`cause: "fires_exhausted"`).
+- 공명은 감소하지 않으며 **함선 공용**이다. 파츠별로 쪼개지 않는다(검토 후 기각 —
+  파츠 사이를 잇는 게이트가 사라져 GDD §3.1·§28이 무너진다). 기본 획득은
+  `행동 누적 → 공명`(발동 8회마다 +1)이며, 공명을 직접 생성하는 효과는 희귀하게 유지한다.
+- 파괴선 75/50/25%는 처음 통과할 때만 작동한다. `indestructible` 파츠는 파괴선·발동 횟수
+  소진·파괴 효과 전부에서 면제되며, Core는 영구 `indestructible`을 기본 보유한다.
 
 ## 검증
 
