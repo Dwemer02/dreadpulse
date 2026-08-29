@@ -1,6 +1,6 @@
 extends RefCounted
 
-const EXPECTED_CHECKS := 97
+const EXPECTED_CHECKS := 106
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -233,6 +233,22 @@ func _test_unknown(t: RefCounted) -> void:
 		"카탈로그 검증이 쓸 수 있게 알 수 없는 키를 열거한다")
 	t.eq(Cond.unknown_keys({}), [], "빈 where는 알 수 없는 키가 없다")
 	t.eq(Cond.unknown_keys(null), [], "null where도 알 수 없는 키가 없다")
+
+	# 로드 시점 검증자와 전투 시점 평가자가 같은 판단을 해야 한다.
+	# evaluate()가 거짓으로 닫는 입력을 unknown_keys()가 통과시키면,
+	# 파츠가 전투 내내 침묵하는데 카탈로그는 아무 말도 하지 않는다.
+	t.eq(Cond.unknown_keys(null).size(), 0, "null은 조건 없음이므로 정상")
+	t.eq(Cond.unknown_keys({}).size(), 0, "빈 조건도 정상")
+	t.check(Cond.unknown_keys("메모").size() > 0, "문자열 where는 로드 시점에 신고된다")
+	t.check(Cond.unknown_keys([1, 2]).size() > 0, "배열 where도 신고된다")
+	t.check(Cond.unknown_keys(42).size() > 0, "정수 where도 신고된다")
+
+	# 두 함수의 판단이 일치하는지 직접 대조한다
+	for bad: Variant in ["메모", [1, 2], 42, true]:
+		var closed: bool = not Cond.evaluate(bad, _ctx(s, {}))
+		var reported: bool = Cond.unknown_keys(bad).size() > 0
+		t.check(closed == reported,
+			"evaluate가 닫는 입력은 unknown_keys도 신고해야 한다: %s" % str(bad))
 
 func _test_non_dict_where(t: RefCounted) -> void:
 	# where가 Dictionary도 null도 아니면(저작 실수) fail closed — 조용히 항상 참이 되면 안 된다

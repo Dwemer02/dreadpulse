@@ -20,6 +20,7 @@ const CONDITIONS: Array[String] = [
 ]
 
 ## ctx: {own_ship, enemy_ship, part, event, tick, source_part, accum, accum_prev}
+## tick이 ctx에 없으면 0(전투 시작)으로 평가된다.
 static func evaluate(where: Variant, ctx: Dictionary) -> bool:
 	if where == null:
 		return true
@@ -33,10 +34,16 @@ static func evaluate(where: Variant, ctx: Dictionary) -> bool:
 			return false
 	return true
 
-## 카탈로그 검증용 — 알 수 없는 조건 키를 열거한다.
+## 카탈로그 검증용 — 문제가 있는 키를 열거한다. 빈 배열이면 이상 없음.
+## null은 "조건 없음"이므로 정상이지만, Dictionary도 null도 아닌 값은
+## 작성 실수다 — evaluate()가 전투 시점에 거짓으로 닫아 파츠가 조용히
+## 죽으므로, 로드 시점에 반드시 잡아야 한다.
 static func unknown_keys(where: Variant) -> Array[String]:
 	var out: Array[String] = []
-	if where == null or not (where is Dictionary):
+	if where == null:
+		return out
+	if not (where is Dictionary):
+		out.append("<where가 Dictionary가 아니다: %s>" % type_string(typeof(where)))
 		return out
 	for key: String in (where as Dictionary):
 		if not CONDITIONS.has(key):
