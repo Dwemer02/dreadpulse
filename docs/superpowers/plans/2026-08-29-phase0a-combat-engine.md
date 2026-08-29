@@ -2814,6 +2814,18 @@ func _test_unknown(t: RefCounted) -> void:
 		"알 수 없는 조건은 거짓")
 	t.eq(Cond.unknown_keys({"resonance_at_least": 1, "typo_here": 2}), ["typo_here"],
 		"카탈로그 검증이 쓸 수 있게 알 수 없는 키를 열거한다")
+
+	# 로드 시점 검증자와 전투 시점 평가자가 같은 판단을 해야 한다.
+	t.eq(Cond.unknown_keys(null).size(), 0, "null은 조건 없음이므로 정상")
+	t.eq(Cond.unknown_keys({}).size(), 0, "빈 조건도 정상")
+	t.check(not Cond.evaluate("메모", _ctx(s, {})), "문자열 where는 거짓으로 닫는다")
+	t.check(not Cond.evaluate([1, 2], _ctx(s, {})), "배열 where도 거짓으로 닫는다")
+	t.check(not Cond.evaluate(42, _ctx(s, {})), "정수 where도 거짓으로 닫는다")
+	for bad: Variant in ["메모", [1, 2], 42, true]:
+		var closed: bool = not Cond.evaluate(bad, _ctx(s, {}))
+		var reported: bool = Cond.unknown_keys(bad).size() > 0
+		t.check(closed == reported,
+			"evaluate가 닫는 입력은 unknown_keys도 신고해야 한다: %s" % str(bad))
 ```
 
 - [ ] **Step 2: 러너에 `"res://tests/unit/test_conditions.gd",`를 추가하고 실행해서 실패를 확인**
@@ -2849,19 +2861,35 @@ const CONDITIONS: Array[String] = [
 ]
 
 ## ctx: {own_ship, enemy_ship, part, event, tick, source_part, accum, accum_prev}
+## tick이 없으면 0(전투 시작)으로 평가된다 — 트리거 엔진이 반드시 채워야 한다.
+## accum/accum_prev도 트리거 엔진이 채운다 (every_nth_accumulated용).
+##
+## null과 {}는 "조건 없음"이라 참이다. 그러나 Dictionary도 null도 아닌 값
+## (문자열·배열·정수 등)은 작성 실수이므로 거짓으로 닫는다 — 참으로 열어두면
+## 그 파츠가 매 이벤트마다 발동하는데 아무도 눈치채지 못한다.
 static func evaluate(where: Variant, ctx: Dictionary) -> bool:
-	if where == null or not (where is Dictionary):
+	if where == null:
 		return true
+	if not (where is Dictionary):
+		return false
 	var conditions: Dictionary = where
 	for key: String in conditions:
 		if not _one(key, conditions[key], ctx):
 			return false
 	return true
 
-## 카탈로그 검증용 — 알 수 없는 조건 키를 열거한다.
+## 카탈로그 검증용 — 문제가 있는 키를 열거한다. 빈 배열이면 이상 없음.
+##
+## evaluate()가 거짓으로 닫는 입력은 여기서도 반드시 신고해야 한다.
+## 신고하지 않으면 작성 실수가 카탈로그를 통과한 뒤 전투에서 파츠를 조용히
+## 죽인다 — fail-closed가 눈에 띄게 하려던 결함이 가장 눈에 띄어야 할
+## 지점(로드 시점)에서 침묵하는 셈이다.
 static func unknown_keys(where: Variant) -> Array[String]:
 	var out: Array[String] = []
-	if where == null or not (where is Dictionary):
+	if where == null:
+		return out
+	if not (where is Dictionary):
+		out.append("<where가 Dictionary가 아니다>")
 		return out
 	for key: String in (where as Dictionary):
 		if not CONDITIONS.has(key):
