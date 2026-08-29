@@ -10,8 +10,8 @@ config_version=5
 
 [application]
 
-config/name="Dreadpulse"
-config/features=PackedStringArray("4.6", "Forward Plus")
+config/name="The First Divergence"
+config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"
 
 [autoload]

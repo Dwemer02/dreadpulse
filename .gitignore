@@ -7,3 +7,6 @@ tests/out/
 
 # MCP plugin distribution source (installed copy lives in addons/)
 godot-mcp-pro-v1.15.0/
+
+# SDD progress ledger (scratch)
+.superpowers/
