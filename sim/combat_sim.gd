@@ -144,9 +144,16 @@ func _fire(part: RefCounted, ship: RefCounted, cause: String) -> void:
 	if reason == "" and not ship.can_afford(part.cost):
 		reason = "no_material"
 	if reason != "":
-		emit("part_fire_blocked", ship.side,
-			{"slot": part.slot_id, "part_id": part.part_id, "reason": reason})
+		# 같은 사유가 이어지는 동안은 한 번만 보고한다. 쿨타임이 찬 파츠는 매 틱
+		# 재시도하므로, 매번 방출하면 자재가 마른 파츠 하나가 이벤트 스트림의
+		# 대부분을 채운다(실측 83%). 이벤트 스트림이 곧 계측 장비이므로 그 노이즈가
+		# 배치 지표를 왜곡하고 Trigger Chain 로그를 읽을 수 없게 만든다.
+		if reason != part.last_block_reason:
+			part.last_block_reason = reason
+			emit("part_fire_blocked", ship.side,
+				{"slot": part.slot_id, "part_id": part.part_id, "reason": reason})
 		return
+	part.last_block_reason = ""
 
 	var cost: int = int(part.cost.get("material", 0))
 	if cost > 0:

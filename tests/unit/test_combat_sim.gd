@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신할 것
-const EXPECTED_CHECKS := 67
+const EXPECTED_CHECKS := 70
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -308,6 +308,30 @@ func _test_material_shortage_and_spend(t: RefCounted) -> void:
 	t.check(blocked.size() > 0, "자재 부족으로 발동이 막힌 흔적이 있다")
 	if blocked.size() > 0:
 		t.eq(str(blocked[0]["reason"]), "no_material", "차단 이유는 no_material")
+
+	# 같은 사유가 이어지는 동안은 한 번만 보고한다. 쿨타임이 찬 파츠는 매 틱 재시도하므로,
+	# 매번 방출하면 자재가 마른 파츠 하나가 이벤트 스트림의 대부분을 채운다(실측 83%).
+	# 이벤트 스트림이 곧 계측 장비이므로 그 노이즈가 배치 지표를 왜곡한다.
+	t.eq(blocked.size(), 1, "같은 사유가 반복되는 동안은 한 번만 보고한다")
+	for i: int in 200:
+		sim.step()
+	var still: Array = []
+	for ev: Dictionary in sim.log:
+		if str(ev.get("ship", "")) == "player" and str(ev.get("slot", "")) == "defense_1" \
+				and str(ev["type"]) == "part_fire_blocked":
+			still.append(ev)
+	t.eq(still.size(), 1, "200틱을 더 돌려도 같은 사유는 다시 보고하지 않는다")
+
+	# 발동에 성공하면 사유가 비워져, 다시 막히면 새 사건으로 보고된다
+	sim.player.material = 3
+	for i: int in 100:
+		sim.step()
+	var after: Array = []
+	for ev: Dictionary in sim.log:
+		if str(ev.get("ship", "")) == "player" and str(ev.get("slot", "")) == "defense_1" \
+				and str(ev["type"]) == "part_fire_blocked":
+			after.append(ev)
+	t.check(after.size() > 1, "한 번 발동한 뒤 다시 막히면 새 사건으로 보고한다")
 
 # --- 파괴선 ---
 

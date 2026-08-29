@@ -37,6 +37,9 @@ var indestructible_ticks: int = 0
 ## empower 스택. 각 원소가 damage_mult 하나. 발동 시 앞에서부터 소모한다.
 var empower_stacks: Array[float] = []
 var broken: bool = false
+## 마지막으로 방출한 불발 사유. 같은 사유가 매 틱 반복될 때 이벤트 스팸을 막는다.
+## 발동에 성공하거나 복구되면 비운다 — 다시 막히면 새 사건으로 보고해야 하기 때문이다.
+var last_block_reason: String = ""
 
 # --- 쿨타임 ---
 
@@ -167,6 +170,7 @@ func restore() -> void:
 	broken = false
 	progress_units = 0
 	fires_remaining = fire_limit
+	last_block_reason = ""
 
 # --- 발동 횟수 ---
 
