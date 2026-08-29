@@ -1696,6 +1696,9 @@ var overheat_stacks: int = 0
 var relic_ids: Array[String] = []
 var relic_triggers: Array = []
 var relic_trigger_fires: Array[int] = []
+## relic_triggers와 같은 길이. every_nth_accumulated 조건이 쓰는 트리거별 누적값.
+## 파츠 트리거와 Relic 트리거의 능력이 이유 없이 달라지지 않게 한다.
+var relic_trigger_accum: Array[int] = []
 ## prime_oscillator: resonance_at_least 요구치를 이만큼 낮춰 평가한다
 var resonance_discount: int = 0
 ## convergence_engine: 0이면 없음. 그 외에는 재발동 최소 간격(틱)
@@ -2298,6 +2301,7 @@ func assemble(build: Dictionary, catalog: RefCounted, side: String) -> RefCounte
 		for tr: Variant in relic.get("triggers", []):
 			ship.relic_triggers.append((tr as Dictionary).duplicate(true))
 			ship.relic_trigger_fires.append(0)
+			ship.relic_trigger_accum.append(0)
 		var mods: Dictionary = relic.get("modifiers", {})
 		ship.resonance_discount += int(mods.get("resonance_discount", 0))
 		if mods.has("convergence_gap_seconds"):
@@ -2935,6 +2939,12 @@ static func _one(key: String, value: Variant, ctx: Dictionary) -> bool:
 				return false
 			return event[field] == spec2.get("equals", null)
 		"source_faction":
+			# source_keyword와 같은 곳(source_part)을 본다. 같은 접두사를 가진 두 조건이
+			# 서로 다른 곳을 보면 함정이 된다. 이벤트가 faction을 직접 실어 보내면
+			# 그것도 받아들인다 (part_fired가 그렇다).
+			var src: RefCounted = ctx.get("source_part", null)
+			if src != null:
+				return src.faction == str(value)
 			return str(event.get("faction", "")) == str(value)
 		"source_keyword":
 			var source: RefCounted = ctx.get("source_part", null)
@@ -3982,7 +3992,7 @@ static func dispatch(event: Dictionary, ships: Array, sim: RefCounted) -> void:
 		var foe: RefCounted = ships[1 - i] if ships.size() == 2 else null
 
 		# Relic 트리거 — 슬롯을 차지하지 않는 함선 수준 보유자 (스펙 §9.4)
-		_run_list(ship.relic_triggers, ship.relic_trigger_fires, null,
+		_run_list(ship.relic_triggers, ship.relic_trigger_fires, ship.relic_trigger_accum,
 			null, ship, foe, event, depth, sim)
 
 		for part: RefCounted in ship.parts:
@@ -4004,7 +4014,11 @@ static func _run_list(triggers: Array, fires: Array, accums: Variant,
 		if max_fires >= 0 and int(fires[index]) >= max_fires:
 			continue
 
-		var where: Dictionary = trigger.get("where", {})
+		# where가 Dictionary가 아닐 수 있다(작성 실수). Dictionary로 타입 지정해 바로
+		# 대입하면 SCRIPT ERROR가 난다 — 안전하게 강제한 뒤 .has()를 쓴다.
+		# Conditions.evaluate에는 원본을 그대로 넘겨 그쪽의 fail-closed가 작동하게 둔다.
+		var raw_where: Variant = trigger.get("where", {})
+		var where: Dictionary = raw_where if raw_where is Dictionary else {}
 		var accum_prev: int = 0
 		var accum: int = 0
 		if accums != null and where.has("every_nth_accumulated"):
@@ -4015,14 +4029,23 @@ static func _run_list(triggers: Array, fires: Array, accums: Variant,
 			# 조건이 거짓이어도 누적은 계속된다 — 이벤트 스트림의 러닝 토탈이기 때문이다
 			accums[index] = accum
 
+		# source_part는 이벤트가 난 함선에서 찾아야 한다.
+		# 양쪽 함선이 같은 Frame을 쓰면 슬롯 이름이 동일하므로(core, weapon_1, ...),
+		# 트리거 소유자의 함선에서 찾으면 적함 이벤트에 대해 크래시도 null도 아닌
+		# "자기 함선의 엉뚱한 파츠"를 조용히 집는다.
+		var event_ship: RefCounted = ship if str(event.get("ship", "")) == ship.side else foe
+		var source_part: RefCounted = null
+		if event_ship != null and event.has("slot"):
+			source_part = event_ship.get_part(str(event["slot"]))
+
 		var ctx: Dictionary = {
 			"sim": sim, "own_ship": ship, "enemy_ship": foe, "part": owner,
 			"event": event, "tick": sim.tick, "rng": sim.rng,
-			"source_part": ship.get_part(str(event.get("slot", ""))),
+			"source_part": source_part,
 			"accum": accum, "accum_prev": accum_prev,
 			"damage_mult": 1.0,
 		}
-		if not Conditions.evaluate(where, ctx):
+		if not Conditions.evaluate(raw_where, ctx):
 			continue
 
 		# 스펙 §4.6 — 깊이 상한을 넘으면 실행하지 않고 흔적을 남긴다
@@ -4045,7 +4068,8 @@ static func _matches(trigger: Dictionary, ship: RefCounted, event: Dictionary) -
 		return false
 	# 기본 범위는 자함이다. enemy_ship을 명시한 트리거만 적함 이벤트를 본다 —
 	# 이 기본값이 없으면 모든 파츠가 적의 모든 이벤트에 반응해 체인이 폭발한다.
-	var where: Dictionary = trigger.get("where", {})
+	var raw_where: Variant = trigger.get("where", {})
+	var where: Dictionary = raw_where if raw_where is Dictionary else {}
 	if str(event.get("ship", "")) != ship.side and not where.has("enemy_ship"):
 		return false
 	return true
