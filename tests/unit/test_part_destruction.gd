@@ -2,7 +2,7 @@ extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너가 대조해 서브테스트 중단을 잡는다 —
 ## _test_* 안에서 에러가 나면 그 함수만 중단되고 run()은 정상 종료하기 때문이다.
-const EXPECTED_CHECKS := 30
+const EXPECTED_CHECKS := 40
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -21,6 +21,7 @@ func run(t: RefCounted) -> void:
 	_test_reinforce(t)
 	_test_break_and_restore(t)
 	_test_fires_drain_restore(t)
+	_test_defense_edge_cases(t)
 	t.done()
 
 func _test_indestructible(t: RefCounted) -> void:
@@ -109,3 +110,36 @@ func _test_fires_drain_restore(t: RefCounted) -> void:
 	t.eq(s.fires_remaining, 0, "소진")
 	t.eq(s.try_break(), "indestructible", "파괴 불가면 소진해도 파손이 유예된다")
 	t.eq(s.block_reason(100), "fire_limit", "유예되어도 발동은 불가")
+
+func _test_defense_edge_cases(t: RefCounted) -> void:
+	# 이미 파손된 파츠는 다시 파손되지 않고 보강도 먹지 않는다
+	var p: RefCounted = _make()
+	p.reinforce_stacks = 2
+	p.broken = true
+	t.eq(p.try_break(), "already_broken", "이미 파손된 파츠는 already_broken")
+	t.eq(p.reinforce_stacks, 2, "이미 파손된 파츠는 보강 스택을 소모하지 않는다")
+
+	# 긴 파괴 불가는 짧은 것에 덮어쓰이지 않는다
+	var q: RefCounted = _make()
+	q.make_indestructible(100)
+	q.make_indestructible(10)
+	t.eq(q.indestructible_ticks, 100, "짧은 파괴 불가가 긴 것을 덮어쓰지 않는다")
+	q.make_indestructible(200)
+	t.eq(q.indestructible_ticks, 200, "더 긴 파괴 불가는 연장한다")
+
+	# 영구 파괴 불가는 유한한 값에 깎이지 않는다 (센티넬이 -1이라 maxi로는 못 지킨다)
+	var r: RefCounted = _make()
+	r.make_indestructible(K.PERMANENT)
+	r.make_indestructible(50)
+	t.eq(r.indestructible_ticks, K.PERMANENT, "영구는 유한값에 깎이지 않는다")
+	t.check(r.is_indestructible(), "영구 파괴 불가가 유지된다")
+
+	# is_limited — Task 8의 셀렉터(all_own_limited)가 이 계약에 의존한다
+	var s: RefCounted = _make()
+	t.check(not s.is_limited(), "무제한 파츠는 제한 걸린 파츠가 아니다")
+	s.drain_fires(1)
+	t.check(s.is_limited(), "drain_fires를 맞으면 제한이 걸린다")
+	var u: RefCounted = _make(3)
+	t.check(u.is_limited(), "fire_limit을 명시한 파츠는 처음부터 제한이 걸려 있다")
+	u.drain_fires(3)
+	t.check(u.is_limited(), "횟수를 다 써도 제한 걸린 파츠인 것은 변하지 않는다")
