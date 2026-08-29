@@ -1,5 +1,9 @@
 extends RefCounted
 
+## 이 모듈이 실행해야 할 어서션 수. 러너가 대조해 서브테스트 중단을 잡는다 —
+## _test_* 안에서 에러가 나면 그 함수만 중단되고 run()은 정상 종료하기 때문이다.
+const EXPECTED_CHECKS := 30
+
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
 
