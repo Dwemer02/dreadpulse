@@ -338,6 +338,7 @@ Core 파츠를 Augment로 사용 / `augment` 블록이 없는 파츠를 Augment�
 | `part_restored` | `slot`, `part_id` |
 | `reinforce_gained` / `reinforce_consumed` | `slot`, `stacks` |
 | `indestructible_applied` | `slot`, `duration` (`-1` = 영구) |
+| `break_prevented` | `slot`, `part_id`, `cause`, `by` (`indestructible`) — 파손이 유예됨 |
 | `threshold_crossed` | `threshold`, `destroyed_slot` |
 | `material_gained` / `material_spent` | `slot`, `amount`, `total`, `source`/`sink` |
 | `resonance_gained` | `amount`, `total`, `source` |

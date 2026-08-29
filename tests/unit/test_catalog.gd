@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 35
+const EXPECTED_CHECKS := 36
 
 const K = preload("res://sim/sim_const.gd")
 const Catalog = preload("res://sim/catalog.gd")
@@ -106,6 +106,19 @@ func _test_schema_errors(t: RefCounted) -> void:
 		  "active": { "cooldown": 0.0 } }
 	], "inline")
 	t.eq(c2.errors.size(), 4, "스키마 위반 4건이 전부 잡힌다: %s" % str(c2.errors))
+
+	var c3: RefCounted = Catalog.new()
+	c3.ingest_parts([
+		{ "id": "bad_op", "name": "x", "faction": "reclaimer", "roles": ["weapon"],
+		  "active": { "cooldown": 1.0, "on_fire": [{"op": "apply_overload", "stacks": 1}] } },
+		{ "id": "bad_selector", "name": "x", "faction": "reclaimer", "roles": ["weapon"],
+		  "active": { "cooldown": 1.0,
+		    "on_fire": [{"op": "accelerate", "target": "nowhere", "duration": 1.0}] } },
+		{ "id": "bad_condition", "name": "x", "faction": "reclaimer", "roles": ["weapon"],
+		  "active": { "cooldown": 1.0, "triggers": [
+		    {"on": "part_fired", "where": {"overload_at_least": 2}, "do": []}] } }
+	], "inline")
+	t.eq(c3.errors.size(), 3, "삭제된 어휘를 쓴 파츠 3건이 잡힌다: %s" % str(c3.errors))
 
 func _test_frame_schema_errors(t: RefCounted) -> void:
 	# 파츠에는 스키마 검증이 있는데 Frame에는 없으면, 망가진 Frame이 조용히 로드된다

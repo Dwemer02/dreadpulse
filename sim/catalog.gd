@@ -6,6 +6,9 @@ extends RefCounted
 ##   트리거 append / 키워드 union / modify 적용
 
 const K = preload("res://sim/sim_const.gd")
+const Actions = preload("res://sim/actions.gd")
+const Conditions = preload("res://sim/conditions.gd")
+const Targeting = preload("res://sim/targeting.gd")
 
 const VALID_ROLES: Array[String] = ["core", "weapon", "defense", "utility", "flexible"]
 const VALID_FACTIONS: Array[String] = ["reclaimer", "viridia", "aeonic", "first"]
@@ -89,6 +92,17 @@ func _validate_part(def: Variant) -> String:
 		return "%s: active가 Dictionary가 아니다" % pid
 	if float(active.get("cooldown", 0.0)) <= 0.0:
 		return "%s: active.cooldown이 0 이하다" % pid
+	var problem: String = _validate_effects(pid, active.get("on_fire", []), "active.on_fire")
+	if problem != "":
+		return problem
+	problem = _validate_triggers(pid, active.get("triggers", []), "active.triggers")
+	if problem != "":
+		return problem
+	if def.has("augment"):
+		problem = _validate_triggers(pid, (def["augment"] as Dictionary).get("triggers", []),
+			"augment.triggers")
+		if problem != "":
+			return problem
 	return ""
 
 # --- 병합 ---
@@ -139,3 +153,34 @@ func merge(part_id: String, augment_id: String) -> Dictionary:
 		merged["triggers"].append((tr as Dictionary).duplicate(true))
 
 	return merged
+
+# --- do 블록 어휘 검증 (op / 조건 / 셀렉터) ---
+
+func _validate_triggers(pid: String, triggers: Array, where: String) -> String:
+	for tr: Variant in triggers:
+		var trigger: Dictionary = tr
+		if not trigger.has("on"):
+			return "%s %s: 트리거에 \"on\"이 없다" % [pid, where]
+		for key: String in Conditions.unknown_keys(trigger.get("where", {})):
+			return "%s %s: 알 수 없는 조건 \"%s\"" % [pid, where, key]
+		var problem: String = _validate_effects(pid, trigger.get("do", []), where)
+		if problem != "":
+			return problem
+	return ""
+
+func _validate_effects(pid: String, block: Array, where: String) -> String:
+	for item: Variant in block:
+		var action: Dictionary = item
+		var op: String = str(action.get("op", ""))
+		if not Actions.OPS.has(op):
+			return "%s %s: 알 수 없는 op \"%s\"" % [pid, where, op]
+		var selector: String = str(action.get("target", ""))
+		if selector != "" and not Targeting.SELECTORS.has(selector):
+			return "%s %s: 알 수 없는 셀렉터 \"%s\"" % [pid, where, selector]
+		for key: String in Conditions.unknown_keys(action.get("where", {})):
+			return "%s %s: 알 수 없는 조건 \"%s\"" % [pid, where, key]
+		if action.has("do"):
+			var problem: String = _validate_effects(pid, action["do"], where)
+			if problem != "":
+				return problem
+	return ""
