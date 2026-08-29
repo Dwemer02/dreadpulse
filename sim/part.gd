@@ -65,30 +65,47 @@ func is_ready() -> bool:
 # --- 가속 / 둔화 ---
 
 func apply_accel(ticks: int) -> void:
-	if ticks == K.PERMANENT:
-		accel_ticks = K.PERMANENT
-		slow_ticks = 0
-		return
-	var remaining: int = ticks
-	if slow_ticks > 0:
-		var cancel: int = mini(slow_ticks, remaining)
-		slow_ticks -= cancel
-		remaining -= cancel
-	if accel_ticks != K.PERMANENT:
-		accel_ticks += remaining
+	_apply_speed_effect(ticks, true)
 
 func apply_slow(ticks: int) -> void:
+	_apply_speed_effect(ticks, false)
+
+## 가속과 둔화는 서로 배타적이다 — 상쇄 규칙상 둘 중 하나는 항상 0이다.
+## 이 불변식을 유지하는 것이 이 함수의 유일한 책임이다.
+## 영구(K.PERMANENT = -1)는 무한한 지속시간이므로 유한한 양으로 깎을 수 없고,
+## 유한한 양을 아무리 쌓아도 영구를 넘어설 수 없다.
+func _apply_speed_effect(ticks: int, accelerating: bool) -> void:
+	var same: int = accel_ticks if accelerating else slow_ticks
+	var opposite: int = slow_ticks if accelerating else accel_ticks
+
 	if ticks == K.PERMANENT:
-		slow_ticks = K.PERMANENT
-		accel_ticks = 0
-		return
-	var remaining: int = ticks
-	if accel_ticks > 0:
-		var cancel: int = mini(accel_ticks, remaining)
-		accel_ticks -= cancel
+		if opposite == K.PERMANENT:
+			# 영구끼리 맞부딪히면 서로를 지운다
+			same = 0
+			opposite = 0
+		else:
+			# 영구는 유한한 반대 효과를 전부 덮는다
+			same = K.PERMANENT
+			opposite = 0
+	elif opposite == K.PERMANENT:
+		# 영구인 반대 효과는 유한한 양에 깎이지 않는다 — 들어온 양이 전부 흡수된다
+		pass
+	elif same == K.PERMANENT:
+		# 이미 영구다. 더 쌓을 것이 없다
+		pass
+	else:
+		var remaining: int = ticks
+		var cancel: int = mini(opposite, remaining)
+		opposite -= cancel
 		remaining -= cancel
-	if slow_ticks != K.PERMANENT:
-		slow_ticks += remaining
+		same += remaining
+
+	if accelerating:
+		accel_ticks = same
+		slow_ticks = opposite
+	else:
+		slow_ticks = same
+		accel_ticks = opposite
 
 # --- 발동 ---
 
