@@ -32,6 +32,21 @@
 
 지속시간(`duration: 3.0`)은 로드 시점에 틱으로 변환한다. `duration: -1`(영구)은 `PERMANENT = -1` 센티넬로 유지하고 감소시키지 않는다.
 
+**센티넬이 음수라는 점을 조심하라.** `if ticks > 0` 같은 가드는 영구값(-1)을 조용히 건너뛴다. 실제로 초안의 가속 상쇄 로직이 이 실수를 저질러, 영구 둔화가 걸린 파츠에 유한 가속을 걸면 둔화가 통째로 무시됐다. 센티넬을 다루는 곳에서는 `!= 0` 또는 `== K.PERMANENT`로 명시적으로 분기하라.
+
+---
+
+## 각 태스크의 필수 자기검토 — 돌연변이 점검
+
+**모든 태스크에서, 커밋 전에 구현을 일부러 망가뜨려 테스트가 잡는지 확인하라.** 최소 세 군데를 골라 각각 러너를 돌리고, 실패 메시지를 확인한 뒤 원상복구한다. 하나라도 통과해버리면 그 테스트는 아무것도 지키지 않는 것이므로 어서션을 보강한다.
+
+이 계획을 실행하는 동안 이 점검이 실제로 잡아낸 것들:
+- 러너가 크래시한 모듈을 `ALL PASS`로 보고 (Task 1)
+- 계약 상수 두 개가 아무 어서션에도 걸리지 않음 (Task 2)
+- 가속 상쇄가 영구 센티넬을 무시하는 버그와, 그것을 방어하는 테스트의 부재 (Task 3)
+
+러너는 `timeout 120`을 앞에 붙여 실행하라.
+
 ---
 
 ## 파일 구조
@@ -127,9 +142,13 @@ func _init() -> void:
 	var all_failures: Array[String] = []
 
 	for path: String in MODULES:
+		# 파싱 에러가 난 스크립트는 null이 아니라 인스턴스화 불가능한 GDScript로 돌아온다.
+		# null만 걸러내면 아래 script.new()가 _init() 안에서 에러를 내고,
+		# 그러면 quit()에 도달하지 못해 헤드리스 프로세스가 멈춘 채 남는다.
+		# 이 계획의 모든 태스크가 "Step 3에서 일부러 실패시키기"로 시작하므로 매번 밟는다.
 		var script: GDScript = load(path)
-		if script == null:
-			all_failures.append("%s :: 모듈을 로드할 수 없음" % path)
+		if script == null or not script.can_instantiate():
+			all_failures.append("%s :: 모듈을 로드할 수 없음 — 파싱 에러 (stderr 확인)" % path.get_file())
 			continue
 		var module: RefCounted = script.new()
 		var t: RefCounted = helpers_script.new()
@@ -388,6 +407,8 @@ func run(t: RefCounted) -> void:
 	_test_accel_slow(t)
 	_test_rate_cap(t)
 	_test_fire_limit(t)
+	_test_broken_stops_everything(t)
+	_test_empower(t)
 	t.done()
 
 func _test_cooldown(t: RefCounted) -> void:
@@ -402,6 +423,13 @@ func _test_cooldown(t: RefCounted) -> void:
 	p.advance()  # 21틱: 42유닛
 	p.consume_fire(21)
 	t.eq(p.progress_units, 2, "발동 후 초과분 2유닛이 이월된다")
+
+	# 쿨타임에 미달한 상태에서 강제 발동하면 진행도를 빼지 않는다
+	# (체인이 fire_part로 준비되지 않은 파츠를 발동시킬 수 있다)
+	var early: RefCounted = _make(1.0)   # 40유닛 필요
+	early.advance()                      # 2유닛
+	early.consume_fire(1)
+	t.eq(early.progress_units, 2, "쿨타임 미달 시 발동해도 진행도가 깎이지 않는다")
 
 func _test_accel_slow(t: RefCounted) -> void:
 	# 가속: 쿨타임 1초 파츠가 10틱에 준비된다
@@ -447,6 +475,66 @@ func _test_accel_slow(t: RefCounted) -> void:
 	for i: int in 100:
 		v.advance()
 	t.eq(v.accel_ticks, K.PERMANENT, "영구 가속은 만료되지 않는다")
+
+	# 영구를 걸면 반대 효과는 지워진다
+	var w: RefCounted = _make(10.0)
+	w.apply_slow(30)
+	w.apply_accel(K.PERMANENT)
+	t.eq(w.slow_ticks, 0, "영구 가속은 남아 있던 둔화를 지운다")
+	t.eq(w.accel_ticks, K.PERMANENT, "영구 가속이 걸린다")
+
+	# 영구인 반대 효과는 유한한 양에 깎이지 않는다.
+	# 상쇄 가드를 `ticks > 0`으로 쓰면 여기서 영구 둔화가 통째로 무시된다.
+	var x: RefCounted = _make(10.0)
+	x.apply_slow(K.PERMANENT)
+	x.apply_accel(20)
+	t.eq(x.slow_ticks, K.PERMANENT, "영구 둔화는 유한 가속에 지워지지 않는다")
+	t.eq(x.accel_ticks, 0, "유한 가속은 영구 둔화에 전부 흡수된다")
+	t.eq(x.speed_units(), K.SPEED_SLOW, "영구 둔화가 계속 유효하다")
+
+	# 영구끼리는 서로를 지운다
+	var y: RefCounted = _make(10.0)
+	y.apply_slow(K.PERMANENT)
+	y.apply_accel(K.PERMANENT)
+	t.eq(y.accel_ticks, 0, "영구끼리 맞부딪히면 가속이 0")
+	t.eq(y.slow_ticks, 0, "영구끼리 맞부딪히면 둔화도 0")
+	t.eq(y.speed_units(), K.SPEED_NORMAL, "상쇄되어 보통 속도")
+
+	# 불변식: 가속과 둔화가 동시에 0이 아닌 상태는 존재하지 않는다
+	for pair: Array in [[20, 50], [50, 20], [30, 30], [K.PERMANENT, 10], [10, K.PERMANENT]]:
+		var z: RefCounted = _make(10.0)
+		z.apply_slow(pair[0])
+		z.apply_accel(pair[1])
+		t.check(z.accel_ticks == 0 or z.slow_ticks == 0,
+			"불변식: 가속(%d)과 둔화(%d)가 동시에 0이 아닐 수 없다" % [z.accel_ticks, z.slow_ticks])
+
+func _test_broken_stops_everything(t: RefCounted) -> void:
+	# 파손 파츠는 쿨타임도 지속효과도 멈춘다
+	var p: RefCounted = _make(10.0)
+	p.apply_accel(50)
+	p.advance()
+	var progress: int = p.progress_units
+	var accel: int = p.accel_ticks
+
+	p.broken = true
+	for i: int in 10:
+		p.advance()
+	t.eq(p.progress_units, progress, "파손 파츠는 쿨타임이 멈춘다")
+	t.eq(p.accel_ticks, accel, "파손 파츠는 가속 지속시간도 멈춘다")
+	t.check(not p.is_ready(), "파손 파츠는 준비 상태가 될 수 없다")
+
+func _test_empower(t: RefCounted) -> void:
+	# empower 스택은 넣은 순서대로 하나씩 소모된다
+	var p: RefCounted = _make(1.0)
+	t.near(p.take_empower(), 1.0, "스택이 없으면 1.0배")
+
+	p.empower_stacks.append(1.5)
+	p.empower_stacks.append(2.0)
+	t.near(p.take_empower(), 1.5, "먼저 넣은 스택이 먼저 나온다")
+	t.eq(p.empower_stacks.size(), 1, "한 스택 소모")
+	t.near(p.take_empower(), 2.0, "다음 스택")
+	t.eq(p.empower_stacks.size(), 0, "전부 소모")
+	t.near(p.take_empower(), 1.0, "소진 후에는 다시 1.0배")
 
 func _test_rate_cap(t: RefCounted) -> void:
 	# 스펙 §4.2 — 마지막 발동으로부터 4틱 미경과면 발동 불가
@@ -562,30 +650,51 @@ func is_ready() -> bool:
 # --- 가속 / 둔화 (스펙 §6.5) ---
 
 func apply_accel(ticks: int) -> void:
-	if ticks == K.PERMANENT:
-		accel_ticks = K.PERMANENT
-		slow_ticks = 0
-		return
-	var remaining: int = ticks
-	if slow_ticks > 0:
-		var cancel: int = mini(slow_ticks, remaining)
-		slow_ticks -= cancel
-		remaining -= cancel
-	if accel_ticks != K.PERMANENT:
-		accel_ticks += remaining
+	_apply_speed_effect(ticks, true)
 
 func apply_slow(ticks: int) -> void:
+	_apply_speed_effect(ticks, false)
+
+## 가속과 둔화는 서로 배타적이다 — 상쇄 규칙상 둘 중 하나는 항상 0이다.
+## 이 불변식을 유지하는 것이 이 함수의 유일한 책임이다.
+## 영구(K.PERMANENT = -1)는 무한한 지속시간이므로 유한한 양으로 깎을 수 없고,
+## 유한한 양을 아무리 쌓아도 영구를 넘어설 수 없다.
+##
+## 주의: 상쇄 가드를 `ticks > 0`으로 쓰면 안 된다. 영구 센티넬이 -1이라
+## 그 조건을 통과하지 못해, 영구 둔화가 걸린 파츠에 유한 가속을 걸었을 때
+## 둔화가 상쇄되지 않고 speed_units()가 가속을 먼저 보아 영구 둔화를 통째로 무시한다.
+func _apply_speed_effect(ticks: int, accelerating: bool) -> void:
+	var same: int = accel_ticks if accelerating else slow_ticks
+	var opposite: int = slow_ticks if accelerating else accel_ticks
+
 	if ticks == K.PERMANENT:
-		slow_ticks = K.PERMANENT
-		accel_ticks = 0
-		return
-	var remaining: int = ticks
-	if accel_ticks > 0:
-		var cancel: int = mini(accel_ticks, remaining)
-		accel_ticks -= cancel
+		if opposite == K.PERMANENT:
+			# 영구끼리 맞부딪히면 서로를 지운다
+			same = 0
+			opposite = 0
+		else:
+			# 영구는 유한한 반대 효과를 전부 덮는다
+			same = K.PERMANENT
+			opposite = 0
+	elif opposite == K.PERMANENT:
+		# 영구인 반대 효과는 유한한 양에 깎이지 않는다 — 들어온 양이 전부 흡수된다
+		pass
+	elif same == K.PERMANENT:
+		# 이미 영구다. 더 쌓을 것이 없다
+		pass
+	else:
+		var remaining: int = ticks
+		var cancel: int = mini(opposite, remaining)
+		opposite -= cancel
 		remaining -= cancel
-	if slow_ticks != K.PERMANENT:
-		slow_ticks += remaining
+		same += remaining
+
+	if accelerating:
+		accel_ticks = same
+		slow_ticks = opposite
+	else:
+		slow_ticks = same
+		accel_ticks = opposite
 
 # --- 발동 ---
 
