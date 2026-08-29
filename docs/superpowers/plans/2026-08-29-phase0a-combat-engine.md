@@ -36,6 +36,17 @@
 
 ---
 
+## 테스트 모듈 규약
+
+모든 테스트 모듈은 두 가지를 지켜야 한다. 러너가 강제한다.
+
+1. **`run()`의 마지막 줄은 `t.done()`이다.** GDScript에는 예외가 없어서, `run()`이 런타임 에러로 중단되면 러너가 감지할 방법이 이 완료 센티넬뿐이다.
+2. **`extends RefCounted` 바로 아래에 `const EXPECTED_CHECKS := N`을 선언한다.** 센티넬은 `run()` 자체의 중단만 잡는다 — 서브테스트(`_test_*`) 안에서 에러가 나면 GDScript는 그 함수만 중단하고 `run()`으로 돌아오므로 `t.done()`이 정상 호출되고 모듈 전체가 통과처럼 보인다. 우리 모듈은 전부 서브함수로 위임하므로 이 개수 검증이 실질적인 방어선이다.
+
+`N`은 러너를 한 번 돌려 출력되는 모듈별 개수를 그대로 넣으면 된다. 어서션을 추가·삭제할 때마다 갱신해야 하고, 잊으면 러너가 정확히 그 불일치를 실패로 보고한다 — 의도된 마찰이다.
+
+---
+
 ## 각 태스크의 필수 자기검토 — 돌연변이 점검
 
 **모든 태스크에서, 커밋 전에 구현을 일부러 망가뜨려 테스트가 잡는지 확인하라.** 최소 세 군데를 골라 각각 러너를 돌리고, 실패 메시지를 확인한 뒤 원상복구한다. 하나라도 통과해버리면 그 테스트는 아무것도 지키지 않는 것이므로 어서션을 보강한다.
@@ -140,6 +151,7 @@ func _init() -> void:
 	var helpers_script: GDScript = load(HELPERS_PATH)
 	var total_checks: int = 0
 	var all_failures: Array[String] = []
+	var module_lines: Array[String] = []
 
 	for path: String in MODULES:
 		# 파싱 에러가 난 스크립트는 null이 아니라 인스턴스화 불가능한 GDScript로 돌아온다.
@@ -153,14 +165,30 @@ func _init() -> void:
 		var module: RefCounted = script.new()
 		var t: RefCounted = helpers_script.new()
 		module.run(t)
+
+		# 완료 센티넬은 run() 자체가 중단된 경우만 잡는다.
+		# 서브테스트(_test_*)에서 에러가 나면 GDScript는 그 함수만 중단하고 run()으로
+		# 돌아오므로 t.done()이 정상 호출되고 모듈은 통과처럼 보인다.
+		# 그래서 어서션 개수도 함께 검증한다 — 서브테스트가 통째로 건너뛰어지면 수가 모자란다.
 		if not t.completed:
 			all_failures.append("%s :: 모듈이 끝까지 실행되지 않았다 — run()이 중간에 중단됐다 (stderr 확인)"
 				% path.get_file())
+		var expected: int = int(script.get_script_constant_map().get("EXPECTED_CHECKS", -1))
+		if expected < 0:
+			all_failures.append("%s :: EXPECTED_CHECKS 상수가 없다 — 서브테스트 중단을 감지할 수 없다"
+				% path.get_file())
+		elif t.checks != expected:
+			all_failures.append("%s :: 어서션 %d개를 기대했는데 %d개가 실행됐다 — 서브테스트가 중단됐거나, 어서션을 바꾸고 EXPECTED_CHECKS를 갱신하지 않았다"
+				% [path.get_file(), expected, t.checks])
+
+		module_lines.append("  %-28s %3d checks" % [path.get_file(), t.checks])
 		total_checks += t.checks
 		for failure: String in t.failures:
 			all_failures.append("%s :: %s" % [path.get_file(), failure])
 
 	print("")
+	for line: String in module_lines:
+		print(line)
 	print("checks: %d, failures: %d" % [total_checks, all_failures.size()])
 	for failure: String in all_failures:
 		print("  FAIL  %s" % failure)
@@ -777,6 +805,7 @@ func run(t: RefCounted) -> void:
 	_test_reinforce(t)
 	_test_break_and_restore(t)
 	_test_fires_drain_restore(t)
+	_test_defense_edge_cases(t)
 	t.done()
 
 func _test_indestructible(t: RefCounted) -> void:
@@ -824,7 +853,8 @@ func _test_break_and_restore(t: RefCounted) -> void:
 	t.eq(p.try_break(), "broken", "파손")
 	p.advance()
 	t.eq(p.progress_units, progress_before, "파손 파츠는 쿨타임이 멈춘다")
-	t.eq(p.accel_ticks, 50, "파손 파츠는 지속효과도 멈춘다")
+	# 파손 전 advance()가 이미 50 → 49로 깎았다. 파손 후 advance()가 no-op인지를 보는 것이다.
+	t.eq(p.accel_ticks, 49, "파손 파츠는 지속효과도 멈춘다")
 
 	p.restore()
 	t.check(not p.broken, "복구되면 파손이 풀린다")
@@ -865,6 +895,39 @@ func _test_fires_drain_restore(t: RefCounted) -> void:
 	t.eq(s.fires_remaining, 0, "소진")
 	t.eq(s.try_break(), "indestructible", "파괴 불가면 소진해도 파손이 유예된다")
 	t.eq(s.block_reason(100), "fire_limit", "유예되어도 발동은 불가")
+
+func _test_defense_edge_cases(t: RefCounted) -> void:
+	# 이미 파손된 파츠는 다시 파손되지 않고 보강도 먹지 않는다
+	var p: RefCounted = _make()
+	p.reinforce_stacks = 2
+	p.broken = true
+	t.eq(p.try_break(), "already_broken", "이미 파손된 파츠는 already_broken")
+	t.eq(p.reinforce_stacks, 2, "이미 파손된 파츠는 보강 스택을 소모하지 않는다")
+
+	# 긴 파괴 불가는 짧은 것에 덮어쓰이지 않는다
+	var q: RefCounted = _make()
+	q.make_indestructible(100)
+	q.make_indestructible(10)
+	t.eq(q.indestructible_ticks, 100, "짧은 파괴 불가가 긴 것을 덮어쓰지 않는다")
+	q.make_indestructible(200)
+	t.eq(q.indestructible_ticks, 200, "더 긴 파괴 불가는 연장한다")
+
+	# 영구 파괴 불가는 유한한 값에 깎이지 않는다 (센티넬이 -1이라 maxi만으로는 못 지킨다)
+	var r: RefCounted = _make()
+	r.make_indestructible(K.PERMANENT)
+	r.make_indestructible(50)
+	t.eq(r.indestructible_ticks, K.PERMANENT, "영구는 유한값에 깎이지 않는다")
+	t.check(r.is_indestructible(), "영구 파괴 불가가 유지된다")
+
+	# is_limited — Task 8의 셀렉터(all_own_limited)가 이 계약에 의존한다
+	var s: RefCounted = _make()
+	t.check(not s.is_limited(), "무제한 파츠는 제한 걸린 파츠가 아니다")
+	s.drain_fires(1)
+	t.check(s.is_limited(), "drain_fires를 맞으면 제한이 걸린다")
+	var u: RefCounted = _make(3)
+	t.check(u.is_limited(), "fire_limit을 명시한 파츠는 처음부터 제한이 걸려 있다")
+	u.drain_fires(3)
+	t.check(u.is_limited(), "횟수를 다 써도 제한 걸린 파츠인 것은 변하지 않는다")
 ```
 
 - [ ] **Step 2: 러너에 `"res://tests/unit/test_part_destruction.gd",`를 추가한다**
