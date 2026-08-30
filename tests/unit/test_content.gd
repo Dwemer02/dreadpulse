@@ -4,7 +4,7 @@ extends RefCounted
 ## 픽스처 테스트가 엔진을 검증한다면, 이 모듈은 **콘텐츠**를 검증한다.
 ## 카탈로그 로드 자체가 op·조건·셀렉터 오타를 잡는 관문이므로 여기가 첫 방어선이다.
 
-const EXPECTED_CHECKS := 62
+const EXPECTED_CHECKS := 65
 
 const K = preload("res://sim/sim_const.gd")
 const Catalog = preload("res://sim/catalog.gd")
@@ -22,6 +22,7 @@ func run(t: RefCounted) -> void:
 	_test_dual_use_coverage(t)
 	_test_smoke_combat(t)
 	_test_chain_grouping(t)
+	_test_display_order(t)
 	_test_every_event_describes(t)
 	_test_determinism(t)
 	t.done()
@@ -134,6 +135,38 @@ func _test_chain_grouping(t: RefCounted) -> void:
 
 	var ranking: Array = Analysis.signature_ranking(log)
 	t.check(not ranking.is_empty(), "대표 연쇄 서명을 뽑을 수 있다")
+
+## 표시용 재배열은 이벤트를 잃지도 만들지도 않고, 같은 틱 안에서 한 연쇄를
+## 두 조각으로 쪼개지 않아야 한다. 쪼개지면 화면에서 캐스케이드가 끊겨 보인다.
+func _test_display_order(t: RefCounted) -> void:
+	var c: RefCounted = Content.load_catalog()
+	var sim: RefCounted = Content.prepare(c, "reclaimer_pure", "hulk_breaker", SMOKE_SEED)["sim"]
+	var log: Array = sim.run()
+	var ordered: Array = Analysis.grouped_by_chain(log)
+	t.eq(ordered.size(), log.size(), "재배열이 이벤트를 잃거나 만들지 않는다")
+
+	var out_of_order: int = 0
+	var split_chains: int = 0
+	var last_t: float = -1.0
+	var seen_here: Dictionary = {}
+	var prev_key: String = ""
+	var tick_t: float = -1.0
+	for event: Dictionary in ordered:
+		var now: float = float(event["t"])
+		if now < last_t:
+			out_of_order += 1
+		last_t = now
+		if not is_equal_approx(now, tick_t):
+			tick_t = now
+			seen_here = {}
+			prev_key = ""
+		var key: String = str(event.get("chain_id", 0))
+		if key != prev_key and seen_here.has(key):
+			split_chains += 1
+		seen_here[key] = true
+		prev_key = key
+	t.eq(out_of_order, 0, "재배열해도 시간 순서는 뒤집히지 않는다")
+	t.eq(split_chains, 0, "한 틱 안에서 연쇄가 두 조각으로 쪼개지지 않는다")
 
 ## §6.1의 "이벤트는 자기서술적이어야 한다"를 실물로 검증한다 —
 ## 어떤 이벤트든 sim을 조회하지 않고 한 줄로 읽을 수 있어야 한다.

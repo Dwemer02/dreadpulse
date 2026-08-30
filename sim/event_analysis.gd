@@ -25,6 +25,34 @@ static func chains(log: Array) -> Array:
 		chain["depth"] = maxi(int(chain["depth"]), int(event.get("chain_depth", 0)) + 1)
 	return order
 
+## 같은 틱 안에서 연쇄별로 묶어 다시 정렬한 이벤트 배열.
+##
+## sim의 log는 방출 순서다. 한 틱에 두 파츠가 발동하면 두 연쇄의 이벤트가 서로 끼어든다 —
+## 대기 큐가 FIFO라서 A의 뿌리, B의 뿌리, A의 자식, B의 자식 순으로 나온다.
+## 그대로 그리면 §56이 요구한 캐스케이드가 조각나 보인다.
+## 같은 틱 안의 재배열은 시간을 왜곡하지 않으므로(t가 같다) 표시 순서만 바꾼다.
+static func grouped_by_chain(log: Array) -> Array:
+	var out: Array = []
+	var i: int = 0
+	while i < log.size():
+		var t: float = float((log[i] as Dictionary).get("t", 0.0))
+		var j: int = i
+		while j < log.size() and is_equal_approx(float((log[j] as Dictionary).get("t", 0.0)), t):
+			j += 1
+		var order: Array[int] = []
+		var buckets: Dictionary = {}
+		for k: int in range(i, j):
+			var cid: int = int((log[k] as Dictionary).get("chain_id", 0))
+			if not buckets.has(cid):
+				buckets[cid] = []
+				order.append(cid)
+			(buckets[cid] as Array).append(log[k])
+		for cid: int in order:
+			out.append_array(buckets[cid])
+		i = j
+	return out
+
+
 ## 연쇄에 관여한 파츠를 등장 순서대로, 중복 없이 이어붙인 서명.
 ## §56의 "MAIN CHAIN: Reactor → Cannon → Salvage" 요약이 이 값을 센 것이다.
 ##

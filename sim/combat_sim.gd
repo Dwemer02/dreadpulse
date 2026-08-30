@@ -176,8 +176,10 @@ func _fire(part: RefCounted, ship: RefCounted, cause: String) -> void:
 		# 배치 지표를 왜곡하고 Trigger Chain 로그를 읽을 수 없게 만든다.
 		if reason != part.last_block_reason:
 			part.last_block_reason = reason
-			emit("part_fire_blocked", ship.side,
-				{"slot": part.slot_id, "part_id": part.part_id, "reason": reason})
+			emit("part_fire_blocked", ship.side, {
+					"slot": part.slot_id, "part_id": part.part_id,
+					"part_name": part.part_name, "reason": reason,
+				})
 		return
 	part.last_block_reason = ""
 
