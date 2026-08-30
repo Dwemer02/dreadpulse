@@ -77,7 +77,7 @@ func _test_dual_use_coverage(t: RefCounted) -> void:
 			if aug != "":
 				as_augment[aug] = true
 	for pid: String in c.parts:
-		var is_core: bool = (c.parts[pid]["roles"] as Array).has("core")
+		var is_core: bool = str(c.parts[pid]["base_role"]) == "core"
 		t.check(as_active.has(pid), "%s가 어떤 빌드에서든 ACTIVE로 쓰인다" % pid)
 		if is_core:
 			continue

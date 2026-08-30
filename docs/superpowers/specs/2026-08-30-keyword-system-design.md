@@ -54,7 +54,7 @@ GDD §21·§25–27의 키워드 정의를 코드와 대조한 결과, 파츠를
 | 층 | 키워드 | 수 | 상태 |
 |---|---|:---:|---|
 | **1 · 팩션** | `reclaimer` `viridia` `aeonic` `first` | 4 | 기존 `faction` 필드를 키워드로 승격 |
-| **2 · 슬롯** | `weapon` `defense` `utility` `core` | 4 | 기존 `roles`를 키워드로 승격 |
+| **2 · 슬롯** | `weapon` `defense` `system` `core` | 4 | 기존 `roles`를 키워드로 승격. 장착 판정은 Base Role이 한다 |
 | **3 · 공격 타입** | `physical` `thermal` `corrosive` `energy` | 4 | **신규** |
 | **4 · 방어 타입** | `plating` `biomass` `energy_shield` | 3 | **신규** (`energy_shield`는 기존 shield 정식화) |
 | **5 · 효과** | `damage` `repair` `regen` `accelerate` `slow` `overheat` `fire_limit` `destroy` `indestructible` `reinforce` `restore` `multi_fire` | 12 | §21에서 `치명타` 제거, `보호막`은 4층 흡수, `연결` 보류 |
@@ -195,31 +195,26 @@ Reclaimer 코어 다수가 `plating`이되 생체 이식 코어는 `biomass`인 
 
 ---
 
-## 4. 슬롯 적합성 — 에러가 아니라 비작동으로
+## 4. 슬롯 적합성 — 폐기됨
 
-### 4.1 현재 동작
+> **이 절의 원안은 틀렸다. `2026-08-30-slot-structure-design.md`가 대체한다.**
 
-`sim/build_loader.gd:89-92`는 파츠의 `roles`에 슬롯의 role이 없으면
-**조립 실패**로 처리한다 — 에러를 반환하고 전투가 시작되지 않는다.
+원안은 "설치는 되나 키워드가 슬롯과 맞지 않으면 작동하지 않는다"였고,
+근거는 AUGMENT의 `add_keywords`로 슬롯 키워드를 붙일 수 있다는 것이었다.
 
-### 4.2 바꿀 동작
+**그 근거가 잘못이다.** AUGMENT가 슬롯을 우회할 수 있으면 증강 하나로
+방어 파츠를 무기 슬롯에 밀어넣을 수 있게 되고,
+함선 보드가 강제하려던 구조적 다양성(GDD §13)이 무너진다.
 
-> **설치는 가능하되, 키워드가 슬롯과 맞지 않으면 작동하지 않는다.**
+대체 설계의 요지:
 
-슬롯 적합성 판정을 조립 시점에서 런타임으로 옮기고,
-`part_fire_blocked` 이벤트에 사유를 하나 추가한다.
+- 파츠는 **Base Role 하나**를 고정으로 갖고, 그것이 장착 가능 슬롯을 결정한다.
+- **AUGMENT는 Base Role을 바꾸지 않는다.** 기능 키워드만 추가한다.
+- 2층 슬롯 키워드는 장착이 아니라 **트리거 연결**을 위한 것이다.
+- 슬롯 규칙을 깨는 것은 The First의 고유 영역이다.
 
-이러면 AUGMENT의 `add_keywords`로 무기가 아닌 파츠에 `weapon`을 붙여
-무기 슬롯에서 작동시킬 수 있다. 2층(슬롯) 키워드가 다른 층과 똑같이
-AUGMENT로 조작 가능한 대상이 되는 것이며, 이것이 2층을 키워드로 승격시키는 실익이다.
-
-현재 파츠 6종의 `roles`는 전부 단일 원소라 마이그레이션 자체는 가볍다.
-
-### 4.3 유지되는 예외
-
-- `core` 파츠는 AUGMENT로 쓸 수 없다 (`build_loader.gd:100`).
-- Core는 영구 `indestructible`을 기본 보유한다 (`ship_state.add_part`).
-- `flexible` 슬롯은 적합성 판정을 건너뛴다.
+결과적으로 조립 시점에 막는 기존 코드(`sim/build_loader.gd`)가 옳았고,
+바뀐 것은 `roles: Array` → `base_role: String` 스키마다.
 
 ---
 
@@ -229,11 +224,11 @@ AUGMENT로 조작 가능한 대상이 되는 것이며, 이것이 2층을 키워
 
 | 파츠 | 1 팩션 | 2 슬롯 | 3 공격 | 4 방어 | 5 효과 | 7 자원 |
 |---|---|---|---|---|---|---|
-| 과급 터빈 | reclaimer | utility | – | – | accelerate, fire_limit | – |
-| 분해기 | reclaimer | utility | – | – | destroy | **material** |
+| 과급 터빈 | reclaimer | system | – | – | accelerate, fire_limit | – |
+| 분해기 | reclaimer | system | – | – | destroy | **material** |
 | 리벳 레일건 | reclaimer | weapon | **physical** | – | damage, fire_limit | – |
 | 용접 장갑 | reclaimer | defense | – | **plating** | reinforce, repair, restore | – |
-| 방출 다기관 | reclaimer | utility | – | – | fire_limit, destroy | **material** |
+| 방출 다기관 | reclaimer | system | – | – | fire_limit, destroy | **material** |
 | 폐선 재활용로 | reclaimer | **core** | – | **plating** | accelerate | **material** |
 
 확인 사항 세 가지:

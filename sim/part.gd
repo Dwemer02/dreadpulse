@@ -6,7 +6,11 @@ const K = preload("res://sim/sim_const.gd")
 
 # --- 정체 (catalog가 채움) ---
 var slot_id: String = ""
+## 이 파츠가 꽂힌 **슬롯**의 role. `flexible`일 수 있다.
 var role: String = ""
+## **파츠 자신**의 Base Role. 파츠당 하나 고정이며 AUGMENT가 바꾸지 못한다.
+## 슬롯 role과 다를 수 있다 — flexible 슬롯에 꽂힌 경우가 그렇다.
+var base_role: String = ""
 var part_id: String = ""
 var part_name: String = ""
 var faction: String = ""

@@ -4,7 +4,7 @@
       "id": "supercharged_turbine",
       "name": "과급 터빈",
       "faction": "reclaimer",
-      "roles": ["utility"],
+      "base_role": "system",
       "keywords": ["accelerate", "fire_limit"],
       "active": {
         "cooldown": 5.0,
@@ -28,7 +28,7 @@
       "id": "breaker",
       "name": "분해기",
       "faction": "reclaimer",
-      "roles": ["utility"],
+      "base_role": "system",
       "keywords": [],
       "active": {
         "cooldown": 8.0,
@@ -48,7 +48,7 @@
       "id": "rivet_railgun",
       "name": "리벳 레일건",
       "faction": "reclaimer",
-      "roles": ["weapon"],
+      "base_role": "weapon",
       "keywords": ["damage", "fire_limit"],
       "active": {
         "cooldown": 6.0,
@@ -72,7 +72,7 @@
       "id": "weld_plating",
       "name": "용접 장갑",
       "faction": "reclaimer",
-      "roles": ["defense"],
+      "base_role": "defense",
       "keywords": ["reinforce", "repair"],
       "active": {
         "cooldown": 7.0,
@@ -93,7 +93,7 @@
       "id": "venting_manifold",
       "name": "방출 다기관",
       "faction": "reclaimer",
-      "roles": ["utility"],
+      "base_role": "system",
       "keywords": ["fire_limit", "destroy"],
       "active": {
         "cooldown": 10.0,
@@ -115,7 +115,7 @@
       "id": "scrap_reactor",
       "name": "폐선 재활용로",
       "faction": "reclaimer",
-      "roles": ["core"],
+      "base_role": "core",
       "keywords": [],
       "active": {
         "cooldown": 6.0,

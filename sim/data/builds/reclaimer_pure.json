@@ -8,8 +8,8 @@
     "weapon_1":  { "part": "rivet_railgun",        "augment": "supercharged_turbine" },
     "weapon_2":  { "part": "rivet_railgun" },
     "defense_1": { "part": "weld_plating",          "augment": "rivet_railgun" },
-    "utility_1": { "part": "breaker",              "augment": "weld_plating" },
-    "utility_2": { "part": "venting_manifold",     "augment": "breaker" },
+    "system_1": { "part": "breaker",              "augment": "weld_plating" },
+    "system_2": { "part": "venting_manifold",     "augment": "breaker" },
     "flex_1":    { "part": "supercharged_turbine", "augment": "venting_manifold" }
   }
 }

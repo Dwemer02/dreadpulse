@@ -7,9 +7,9 @@
     "weapon_1":  { "part": "fx_gun", "augment": "fx_turbine" },
     "weapon_2":  { "part": "fx_gun" },
     "defense_1": { "part": "fx_medic" },
-    "utility_1": { "part": "fx_turbine" },
-    "utility_2": { "part": "fx_turbine" },
+    "system_1": { "part": "fx_turbine" },
+    "system_2": { "part": "fx_turbine" },
     "flex_1":    { "part": "fx_turbine" }
   },
-  "links": [ ["utility_1", "weapon_1"] ]
+  "links": [ ["system_1", "weapon_1"] ]
 }

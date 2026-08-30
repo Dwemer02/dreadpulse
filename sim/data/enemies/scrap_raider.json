@@ -7,7 +7,7 @@
     "core":     { "part": "scrap_reactor" },
     "weapon_1": { "part": "rivet_railgun",        "augment": "supercharged_turbine" },
     "weapon_2": { "part": "rivet_railgun",        "augment": "supercharged_turbine" },
-    "utility_1":{ "part": "supercharged_turbine" },
+    "system_1":{ "part": "supercharged_turbine" },
     "flex_1":   { "part": "rivet_railgun" }
   }
 }

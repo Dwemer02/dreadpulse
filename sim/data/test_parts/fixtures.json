@@ -4,7 +4,7 @@
       "id": "fx_gun",
       "name": "픽스처 포",
       "faction": "reclaimer",
-      "roles": ["weapon"],
+      "base_role": "weapon",
       "keywords": ["damage"],
       "active": {
         "cooldown": 2.0,
@@ -22,7 +22,7 @@
       "id": "fx_turbine",
       "name": "픽스처 터빈",
       "faction": "reclaimer",
-      "roles": ["utility", "flexible"],
+      "base_role": "system",
       "keywords": ["accelerate", "fire_limit"],
       "active": {
         "cooldown": 5.0,
@@ -45,7 +45,7 @@
       "id": "fx_medic",
       "name": "픽스처 재생낭",
       "faction": "viridia",
-      "roles": ["defense"],
+      "base_role": "defense",
       "keywords": ["repair"],
       "active": {
         "cooldown": 4.0,
@@ -65,7 +65,7 @@
       "id": "fx_core",
       "name": "픽스처 코어",
       "faction": "aeonic",
-      "roles": ["core"],
+      "base_role": "core",
       "keywords": ["resonance"],
       "active": {
         "cooldown": 10.0,

@@ -169,7 +169,7 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 | 층 | 키워드 | 파츠당 |
 |---|---|---|
 | 1 팩션 | `reclaimer` `viridia` `aeonic` `first` | 1개 필수 |
-| 2 슬롯 | `weapon` `defense` `utility` `core` | 1개 이상 필수 |
+| 2 슬롯 | `weapon` `defense` `system` `core` | `base_role`에서 자동 주입 |
 | 3 공격 타입 | `physical` `thermal` `corrosive` `energy` | 무기는 1개 필수 |
 | 4 방어 타입 | `plating` `biomass` `energy_shield` | 방어·코어에 해당 시 |
 | 5 효과 | `damage` `repair` `regen` `accelerate` `slow` `overheat` `fire_limit`<br>`destroy` `indestructible` `reinforce` `restore` `multi_fire` | 0개 이상 |
@@ -231,8 +231,10 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 - **선체 재질(`plating`/`biomass`)은 Core 파츠가 결정한다.** Frame이 아니다.
   같은 팩션 안에도 재질이 다른 Core가 존재해야 한다 — 그래야 상성이 팩션 단위가
   아니라 빌드 단위가 되고 §3.4가 지켜진다.
-- **슬롯 부적합은 조립 에러가 아니라 런타임 비작동이다.** 설치는 되고 발동만 막힌다.
-  AUGMENT의 `add_keywords`로 슬롯 키워드를 붙일 수 있어야 하기 때문이다.
+- **파츠의 `base_role`은 하나 고정이고 AUGMENT가 바꾸지 못한다.** 장착 판정은
+  `base_role`만 본다 (`build_loader.gd`). 2층 슬롯 키워드는 트리거 연결용이며,
+  AUGMENT로 `weapon`을 붙여도 슬롯은 그대로다. 슬롯 규칙을 깨는 것은 The First뿐이다.
+  `base_role`은 catalog가 `keywords`에 자동 주입하므로 JSON에 두 번 쓰지 마라.
 
 ## 이벤트 스트림 계약 (소비자가 알아야 할 것)
 

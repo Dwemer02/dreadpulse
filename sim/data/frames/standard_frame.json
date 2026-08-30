@@ -9,8 +9,8 @@
     { "id": "weapon_1",  "role": "weapon"   },
     { "id": "weapon_2",  "role": "weapon"   },
     { "id": "defense_1", "role": "defense"  },
-    { "id": "utility_1", "role": "utility"  },
-    { "id": "utility_2", "role": "utility"  },
+    { "id": "system_1",  "role": "system"  },
+    { "id": "system_2",  "role": "system"  },
     { "id": "flex_1",    "role": "flexible" }
   ]
 }

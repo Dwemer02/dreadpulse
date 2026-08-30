@@ -322,11 +322,11 @@ func _test_fire_part_and_multi_fire(t: RefCounted) -> void:
 	var own: RefCounted = _ship()
 	var linked_a: RefCounted = _part("weapon_1")
 	var linked_b: RefCounted = _part("weapon_2")
-	var owner: RefCounted = _part("utility_1")
+	var owner: RefCounted = _part("system_1")
 	own.add_part(owner)
 	own.add_part(linked_a)
 	own.add_part(linked_b)
-	own.links["utility_1"] = ["weapon_1", "weapon_2"]
+	own.links["system_1"] = ["weapon_1", "weapon_2"]
 	var ctx: Dictionary = _ctx(sim, own, null, owner, _rng())
 
 	Actions.run_block([{"op": "fire_part", "target": "linked"}], ctx)

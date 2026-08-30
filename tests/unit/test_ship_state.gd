@@ -171,7 +171,7 @@ func _test_part_lookup(t: RefCounted) -> void:
 	var s: RefCounted = _make_ship()
 	var core: RefCounted = _add_part(s, "core", "core")
 	var gun: RefCounted = _add_part(s, "weapon_1", "weapon")
-	var util: RefCounted = _add_part(s, "utility_1", "utility")
+	var util: RefCounted = _add_part(s, "system_1", "system")
 
 	t.eq(s.get_part("weapon_1"), gun, "슬롯 id로 조회")
 	t.eq(s.get_part("nope"), null, "없는 슬롯은 null")

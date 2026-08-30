@@ -6,7 +6,7 @@
     "core":      { "part": "fx_core" },
     "weapon_1":  { "part": "fx_gun" },
     "defense_1": { "part": "fx_medic" },
-    "utility_1": { "part": "fx_turbine" }
+    "system_1": { "part": "fx_turbine" }
   },
   "links": []
 }

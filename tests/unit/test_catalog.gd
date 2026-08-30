@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 36
+const EXPECTED_CHECKS := 39
 
 const K = preload("res://sim/sim_const.gd")
 const Catalog = preload("res://sim/catalog.gd")
@@ -36,7 +36,7 @@ func _test_merge_plain(t: RefCounted) -> void:
 	t.eq(m["fire_limit"], 6, "fire_limit")
 	t.eq(m["augment_id"], "", "augment 없음")
 	t.eq(m["triggers"].size(), 0, "ACTIVE 트리거 없음")
-	t.eq(m["keywords"].size(), 2, "키워드 2종")
+	t.eq(m["keywords"].size(), 3, "키워드 2종 + 자동 주입된 base_role")
 
 	# fire_limit을 명시하지 않은 파츠는 무제한이다.
 	# -1(무제한)과 0(발동 불가)은 의미가 정반대이므로 리터럴 대조까지 한다.
@@ -44,11 +44,17 @@ func _test_merge_plain(t: RefCounted) -> void:
 	t.eq(plain["fire_limit"], K.UNLIMITED, "fire_limit 미지정이면 무제한")
 	t.eq(plain["fire_limit"], -1, "무제한 센티넬은 -1이다 (0이면 발동 불가라는 정반대 의미가 된다)")
 
-	# roles도 다른 필드와 마찬가지로 원본과 공유하지 않는다
-	plain["roles"].append("core")
+	# base_role은 문자열 하나다 — 배열이면 옛 스키마가 남은 것이다
+	t.check(plain["base_role"] is String, "base_role은 배열이 아니라 문자열 하나다")
+	t.eq(plain["base_role"], "weapon", "base_role이 그대로 전달된다")
+	# Base Role은 키워드에도 자동 주입된다 (저작자가 두 번 쓰면 어긋나므로)
+	t.check(plain["keywords"].has("weapon"), "base_role이 키워드로 자동 주입된다")
+
+	# 키워드 배열은 원본과 공유하지 않는다. base_role은 값 타입이라 위험이 없지만
+	# keywords는 배열이라 병합본을 만지면 카탈로그 원본이 오염될 수 있다.
+	plain["keywords"].append("core")
 	var fresh: Dictionary = c.merge("fx_gun", "")
-	t.eq(fresh["roles"].size(), 1, "roles를 바꿔도 카탈로그 원본이 오염되지 않는다")
-	t.check(not fresh["roles"].has("core"), "오염된 역할이 새 병합에 새지 않는다")
+	t.check(not fresh["keywords"].has("core"), "오염된 키워드가 새 병합에 새지 않는다")
 
 func _test_merge_augment(t: RefCounted) -> void:
 	# 병합의 세 가지 연산
@@ -63,7 +69,7 @@ func _test_merge_augment(t: RefCounted) -> void:
 	t.check(m["keywords"].has("damage"), "숙주 키워드 유지")
 	t.check(m["keywords"].has("accelerate"), "AUGMENT 키워드 추가")
 	t.check(m["keywords"].has("fire_limit"), "AUGMENT 키워드 추가")
-	t.eq(m["keywords"].size(), 3, "union이므로 중복 없이 3종")
+	t.eq(m["keywords"].size(), 4, "union이므로 중복 없이 3종 + base_role")
 
 	# (3) modify 적용 — fx_gun 쿨타임 2.0초에 0.5배
 	t.eq(m["cooldown_units"], K.cooldown_to_units(1.0), "cooldown_mult 0.5 적용")
@@ -76,7 +82,7 @@ func _test_merge_augment(t: RefCounted) -> void:
 	# 원본 정의가 오염되지 않는다 — 같은 파츠를 여러 슬롯에 쓸 수 있어야 한다
 	var m2: Dictionary = c.merge("fx_gun", "")
 	t.eq(m2["triggers"].size(), 0, "병합이 카탈로그 원본을 오염시키지 않는다")
-	t.eq(m2["keywords"].size(), 1, "원본 키워드도 오염되지 않는다")
+	t.eq(m2["keywords"].size(), 2, "원본 키워드도 오염되지 않는다 (damage + base_role)")
 
 	# 반환값은 깊은 복사본이다 — on_fire 내부 딕셔너리를 바꿔도 다음 병합에 새지 않는다
 	# (fx_gun은 active.triggers가 없어 위 두 어서션만으로는 얕은 복사를 못 잡는다)
@@ -88,7 +94,7 @@ func _test_merge_augment(t: RefCounted) -> void:
 	# 위 union 어서션만으로는 중복 제거 로직을 못 잡는다. 숙주와 AUGMENT가
 	# 같은 키워드를 선언하는 조합(fx_turbine을 자기 자신에 AUGMENT)으로 확인한다.
 	var m4: Dictionary = c.merge("fx_turbine", "fx_turbine")
-	t.eq(m4["keywords"].size(), 2, "숙주와 AUGMENT가 겹치는 키워드는 중복 없이 유지된다")
+	t.eq(m4["keywords"].size(), 3, "숙주와 AUGMENT가 겹치는 키워드는 중복 없이 유지된다 (+base_role)")
 
 func _test_schema_errors(t: RefCounted) -> void:
 	var c: RefCounted = Catalog.new()
@@ -97,24 +103,29 @@ func _test_schema_errors(t: RefCounted) -> void:
 
 	var c2: RefCounted = Catalog.new()
 	c2.ingest_parts([
-		{ "id": "bad_no_active", "name": "x", "faction": "reclaimer", "roles": ["weapon"] },
-		{ "id": "bad_role", "name": "x", "faction": "reclaimer", "roles": ["wizard"],
+		{ "id": "bad_no_active", "name": "x", "faction": "reclaimer", "base_role": "weapon" },
+		{ "id": "bad_role", "name": "x", "faction": "reclaimer", "base_role": "wizard",
 		  "active": { "cooldown": 1.0 } },
-		{ "id": "bad_faction", "name": "x", "faction": "atlantis", "roles": ["weapon"],
+		{ "id": "bad_faction", "name": "x", "faction": "atlantis", "base_role": "weapon",
 		  "active": { "cooldown": 1.0 } },
-		{ "id": "bad_cooldown", "name": "x", "faction": "reclaimer", "roles": ["weapon"],
-		  "active": { "cooldown": 0.0 } }
+		{ "id": "bad_cooldown", "name": "x", "faction": "reclaimer", "base_role": "weapon",
+		  "active": { "cooldown": 0.0 } },
+		# Base Role은 파츠당 하나다. 옛 `roles` 배열 스키마를 그대로 옮긴 저작 실수는
+		# 조용히 통과하면 안 된다 — 배열의 첫 원소만 쓰이거나 전부 무시될 것이기 때문이다.
+		{ "id": "bad_role_array", "name": "x", "faction": "reclaimer",
+		  "base_role": ["weapon", "defense"], "active": { "cooldown": 1.0 } }
 	], "inline")
-	t.eq(c2.errors.size(), 4, "스키마 위반 4건이 전부 잡힌다: %s" % str(c2.errors))
+	t.eq(c2.errors.size(), 5, "스키마 위반 5건이 전부 잡힌다: %s" % str(c2.errors))
+	t.check(not c2.parts.has("bad_role_array"), "배열 base_role은 카탈로그에 등록되지 않는다")
 
 	var c3: RefCounted = Catalog.new()
 	c3.ingest_parts([
-		{ "id": "bad_op", "name": "x", "faction": "reclaimer", "roles": ["weapon"],
+		{ "id": "bad_op", "name": "x", "faction": "reclaimer", "base_role": "weapon",
 		  "active": { "cooldown": 1.0, "on_fire": [{"op": "apply_overload", "stacks": 1}] } },
-		{ "id": "bad_selector", "name": "x", "faction": "reclaimer", "roles": ["weapon"],
+		{ "id": "bad_selector", "name": "x", "faction": "reclaimer", "base_role": "weapon",
 		  "active": { "cooldown": 1.0,
 		    "on_fire": [{"op": "accelerate", "target": "nowhere", "duration": 1.0}] } },
-		{ "id": "bad_condition", "name": "x", "faction": "reclaimer", "roles": ["weapon"],
+		{ "id": "bad_condition", "name": "x", "faction": "reclaimer", "base_role": "weapon",
 		  "active": { "cooldown": 1.0, "triggers": [
 		    {"on": "part_fired", "where": {"overload_at_least": 2}, "do": []}] } }
 	], "inline")

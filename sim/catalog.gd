@@ -10,7 +10,12 @@ const Actions = preload("res://sim/actions.gd")
 const Conditions = preload("res://sim/conditions.gd")
 const Targeting = preload("res://sim/targeting.gd")
 
-const VALID_ROLES: Array[String] = ["core", "weapon", "defense", "utility", "flexible"]
+## 파츠의 Base Role. 파츠당 정확히 하나이며 어느 슬롯에 장착되는지를 결정한다.
+## AUGMENT는 이것을 바꾸지 못한다 — 기능 키워드만 추가한다.
+## `flexible`은 여기 없다. 그것은 슬롯 쪽의 role이지 파츠가 가질 수 있는 값이 아니다.
+const VALID_BASE_ROLES: Array[String] = ["core", "weapon", "defense", "system"]
+## 프레임 슬롯이 가질 수 있는 role. Base Role 4종 + 아무 파츠나 받는 flexible.
+const VALID_SLOT_ROLES: Array[String] = ["core", "weapon", "defense", "system", "flexible"]
 const VALID_FACTIONS: Array[String] = ["reclaimer", "viridia", "aeonic", "first"]
 
 var parts: Dictionary = {}    # part_id -> 정의 Dictionary
@@ -85,15 +90,17 @@ func ingest_parts(defs: Array, source: String) -> void:
 func _validate_part(def: Variant) -> String:
 	if not (def is Dictionary):
 		return "파츠 정의가 Dictionary가 아니다"
-	for key: String in ["id", "name", "faction", "roles", "active"]:
+	for key: String in ["id", "name", "faction", "base_role", "active"]:
 		if not def.has(key):
 			return "%s: \"%s\" 누락" % [str(def.get("id", "?")), key]
 	var pid: String = def["id"]
 	if not VALID_FACTIONS.has(def["faction"]):
 		return "%s: 알 수 없는 팩션 \"%s\"" % [pid, def["faction"]]
-	for role: Variant in def["roles"]:
-		if not VALID_ROLES.has(role):
-			return "%s: 알 수 없는 역할 \"%s\"" % [pid, str(role)]
+	# Base Role은 정확히 하나다. 배열이 오면 옛 `roles` 스키마를 그대로 옮긴 저작 실수다.
+	if not (def["base_role"] is String):
+		return "%s: base_role은 문자열 하나여야 한다 (배열이 아니다)" % pid
+	if not VALID_BASE_ROLES.has(def["base_role"]):
+		return "%s: 알 수 없는 Base Role \"%s\"" % [pid, str(def["base_role"])]
 	var active: Variant = def["active"]
 	if not (active is Dictionary):
 		return "%s: active가 Dictionary가 아니다" % pid
@@ -122,7 +129,13 @@ func merge(part_id: String, augment_id: String) -> Dictionary:
 	var host: Dictionary = parts[part_id]
 	var active: Dictionary = host["active"]
 
-	var keywords: Array[String] = []
+	# Base Role은 키워드에 자동 주입한다. 저작자가 base_role과 keywords에 같은 값을
+	# 두 번 쓰면 반드시 어긋나기 때문이다 — ship_state.add_part()가 Core에
+	# indestructible을 자동으로 붙이는 것과 같은 패턴이다.
+	# 주입된 뒤에는 다른 키워드와 구별되지 않는다. AUGMENT가 `weapon`을 덧붙일 수
+	# 있고 그것이 트리거에 걸리지만, 장착 판정은 여전히 base_role만 본다.
+	# (팩션 키워드 주입은 키워드 7층 마이그레이션에서 함께 한다 — 여기서는 안 한다.)
+	var keywords: Array[String] = [str(host["base_role"])]
 	for kw: Variant in host.get("keywords", []):
 		if not keywords.has(str(kw)):
 			keywords.append(str(kw))
@@ -131,7 +144,7 @@ func merge(part_id: String, augment_id: String) -> Dictionary:
 		"part_id": part_id,
 		"part_name": host["name"],
 		"faction": host["faction"],
-		"roles": host["roles"].duplicate(),
+		"base_role": str(host["base_role"]),
 		"keywords": keywords,
 		"cooldown_units": K.cooldown_to_units(float(active["cooldown"])),
 		"fire_limit": int(active.get("fire_limit", K.UNLIMITED)),

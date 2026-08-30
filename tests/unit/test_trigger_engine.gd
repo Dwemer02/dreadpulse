@@ -368,7 +368,7 @@ func _test_source_part(t: RefCounted) -> void:
 	var other_source: RefCounted = _part("weapon_2", "viridia", [])
 	player.add_part(other_source)
 
-	var reactor: RefCounted = _part("utility_1")
+	var reactor: RefCounted = _part("system_1")
 	_add_trigger(reactor, _trig("damage_dealt", _gain_material_do(1), {"source_faction": "reclaimer"}))
 	_add_trigger(reactor, _trig("damage_dealt", _gain_material_do(1), {"source_keyword": "damage"}))
 	player.add_part(reactor)
@@ -398,7 +398,7 @@ func _test_source_part_comes_from_event_ship(t: RefCounted) -> void:
 	player.add_part(_part("weapon_1", "reclaimer", ["damage"]))
 	enemy.add_part(_part("weapon_1", "viridia", ["repair"]))
 
-	var reactor: RefCounted = _part("utility_1")
+	var reactor: RefCounted = _part("system_1")
 	_add_trigger(reactor, _trig("part_fired", _gain_material_do(7),
 		{"enemy_ship": true, "source_keyword": "repair"}))
 	player.add_part(reactor)
@@ -413,7 +413,7 @@ func _test_source_part_comes_from_event_ship(t: RefCounted) -> void:
 	var enemy2: RefCounted = _ship("enemy")
 	player2.add_part(_part("weapon_1", "reclaimer", ["damage"]))
 	enemy2.add_part(_part("weapon_1", "viridia", ["repair"]))
-	var reactor2: RefCounted = _part("utility_1")
+	var reactor2: RefCounted = _part("system_1")
 	_add_trigger(reactor2, _trig("part_fired", _gain_material_do(7),
 		{"enemy_ship": true, "source_keyword": "damage"}))
 	player2.add_part(reactor2)
@@ -426,7 +426,7 @@ func _test_source_part_comes_from_event_ship(t: RefCounted) -> void:
 	var enemy3: RefCounted = _ship("enemy")
 	player3.add_part(_part("weapon_1", "reclaimer", []))
 	enemy3.add_part(_part("weapon_1", "viridia", []))
-	var reactor3: RefCounted = _part("utility_1")
+	var reactor3: RefCounted = _part("system_1")
 	_add_trigger(reactor3, _trig("part_fired", _gain_material_do(5),
 		{"enemy_ship": true, "source_faction": "viridia"}))
 	player3.add_part(reactor3)

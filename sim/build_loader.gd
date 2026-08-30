@@ -86,10 +86,12 @@ func assemble(build: Dictionary, catalog: RefCounted, side: String) -> RefCounte
 			errors.append("%s: 존재하지 않는 파츠 id \"%s\"" % [slot_id, part_id])
 			return null
 
-		var roles: Array = catalog.parts[part_id]["roles"]
-		if role != "flexible" and not roles.has(role):
-			errors.append("%s: 역할 불일치 — \"%s\"는 %s 슬롯에 들어갈 수 없다"
-				% [slot_id, part_id, role])
+		# 장착 판정은 Base Role만 본다. keywords에 슬롯 키워드가 더 있어도 무관하다 —
+		# AUGMENT는 기능을 확장할 뿐 파츠가 원래 무엇이었는지를 바꾸지 못한다.
+		var base_role: String = str(catalog.parts[part_id]["base_role"])
+		if role != "flexible" and base_role != role:
+			errors.append("%s: 역할 불일치 — \"%s\"(%s)는 %s 슬롯에 들어갈 수 없다"
+				% [slot_id, part_id, base_role, role])
 			return null
 
 		if augment_id != "":
@@ -97,7 +99,7 @@ func assemble(build: Dictionary, catalog: RefCounted, side: String) -> RefCounte
 				errors.append("%s: 존재하지 않는 augment 파츠 id \"%s\"" % [slot_id, augment_id])
 				return null
 			var aug_def: Dictionary = catalog.parts[augment_id]
-			if (aug_def["roles"] as Array).has("core"):
+			if str(aug_def["base_role"]) == "core":
 				errors.append("%s: Core 파츠 \"%s\"는 Augment로 쓸 수 없다" % [slot_id, augment_id])
 				return null
 			if not aug_def.has("augment"):
@@ -144,6 +146,7 @@ func _make_part(catalog: RefCounted, slot_id: String, role: String,
 	var p: RefCounted = Part.new()
 	p.slot_id = slot_id
 	p.role = role
+	p.base_role = spec["base_role"]
 	p.part_id = spec["part_id"]
 	p.part_name = spec["part_name"]
 	p.faction = spec["faction"]

@@ -23,8 +23,8 @@ func _base_build() -> Dictionary:
 			"weapon_1":  { "part": "fx_gun", "augment": "fx_turbine" },
 			"weapon_2":  { "part": "fx_gun" },
 			"defense_1": { "part": "fx_medic" },
-			"utility_1": { "part": "fx_turbine" },
-			"utility_2": { "part": "fx_turbine" },
+			"system_1": { "part": "fx_turbine" },
+			"system_2": { "part": "fx_turbine" },
 			"flex_1":    { "part": "fx_turbine" }
 		},
 		"links": []
@@ -83,7 +83,7 @@ func _test_happy_path(t: RefCounted) -> void:
 	t.eq(w2.cooldown_units, K.cooldown_to_units(2.0), "weapon_2는 원래 쿨타임")
 
 	# fire_limit이 런타임에 반영된다
-	var u1: RefCounted = ship.get_part("utility_1")
+	var u1: RefCounted = ship.get_part("system_1")
 	t.eq(u1.fire_limit, 6, "fx_turbine의 fire_limit")
 	t.eq(u1.fires_remaining, 6, "남은 횟수 초기값")
 
@@ -93,10 +93,10 @@ func _test_happy_path(t: RefCounted) -> void:
 	# links는 양방향 인접 목록이 된다
 	var loader2: RefCounted = BuildLoader.new()
 	var b: Dictionary = _base_build()
-	b["links"] = [["utility_1", "weapon_1"]]
+	b["links"] = [["system_1", "weapon_1"]]
 	var ship2: RefCounted = loader2.assemble(b, _catalog(), "player")
-	t.eq(ship2.links["utility_1"], ["weapon_1"], "정방향 연결")
-	t.eq(ship2.links["weapon_1"], ["utility_1"], "연결은 방향이 없다")
+	t.eq(ship2.links["system_1"], ["weapon_1"], "정방향 연결")
+	t.eq(ship2.links["weapon_1"], ["system_1"], "연결은 방향이 없다")
 
 	# role이 슬롯 정의에서 제대로 전달되는지. 이게 틀리면 ship.add_part()가
 	# Core에 영구 파괴 불가를 부여하지 못해 Core가 전투 중 파괴선에 죽는다.
@@ -149,7 +149,7 @@ func _test_validation(t: RefCounted) -> void:
 		"Core 파츠")
 
 	_expect_error(t,
-		func(b: Dictionary) -> void: b["links"] = [["utility_1", "nonexistent_slot"]],
+		func(b: Dictionary) -> void: b["links"] = [["system_1", "nonexistent_slot"]],
 		"존재하지 않는 슬롯을 links에 지정",
 		"links: 존재하지 않는 슬롯")
 
@@ -163,12 +163,12 @@ func _test_validation(t: RefCounted) -> void:
 	# Core만 필수다. 나머지 슬롯은 비어 있어도 조립된다.
 	var loader3: RefCounted = BuildLoader.new()
 	var b3: Dictionary = _base_build()
-	b3["slots"].erase("utility_2")
+	b3["slots"].erase("system_2")
 	b3["slots"].erase("flex_1")
 	var sparse: RefCounted = loader3.assemble(b3, _catalog(), "player")
 	t.check(sparse != null, "빈 슬롯이 있어도 조립된다: %s" % str(loader3.errors))
 	t.eq(sparse.parts.size(), 5, "채운 슬롯 수만큼만 파츠가 생긴다")
-	t.eq(sparse.get_part("utility_2"), null, "비운 슬롯은 조회되지 않는다")
+	t.eq(sparse.get_part("system_2"), null, "비운 슬롯은 조회되지 않는다")
 	t.eq(sparse.parts[0].slot_id, "core", "빈 슬롯이 있어도 순서는 Frame 정의 순서다")
 
 ## 계획서 테스트에 빠져 있던 케이스 (1): augment 블록이 없는 파츠를 Augment로 사용.
@@ -182,7 +182,7 @@ func _test_missing_augment_block(t: RefCounted) -> void:
 			"id": "fx_no_augment_block",
 			"name": "픽스처 무증강",
 			"faction": "reclaimer",
-			"roles": ["utility"],
+			"base_role": "system",
 			"active": { "cooldown": 3.0 }
 		}
 	], "inline_fixture")

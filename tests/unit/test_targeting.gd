@@ -13,7 +13,7 @@ func _ship() -> RefCounted:
 	s.max_hull = 200
 	s.hull = 200
 	for spec: Array in [["core", "core"], ["weapon_1", "weapon"], ["weapon_2", "weapon"],
-			["utility_1", "utility"]]:
+			["system_1", "system"]]:
 		var p: RefCounted = Part.new()
 		p.slot_id = spec[0]
 		p.role = spec[1]
@@ -66,7 +66,7 @@ func _test_slowest(t: RefCounted) -> void:
 	s.get_part("core").progress_units = 70
 	s.get_part("weapon_1").progress_units = 10
 	s.get_part("weapon_2").progress_units = 50
-	s.get_part("utility_1").progress_units = 30
+	s.get_part("system_1").progress_units = 30
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 1
 	var ctx: Dictionary = _ctx(s, s.get_part("weapon_1"), rng)
@@ -75,7 +75,7 @@ func _test_slowest(t: RefCounted) -> void:
 
 	# 가장 느린 파츠가 파손 상태면 후보에서 빠진다 — 다음으로 느린 살아있는 파츠가 뽑혀야 한다
 	s.get_part("weapon_1").broken = true
-	t.eq(_slots(Targeting.resolve("slowest_own", ctx)), ["utility_1"],
+	t.eq(_slots(Targeting.resolve("slowest_own", ctx)), ["system_1"],
 		"가장 느린 파츠가 파손이면 그다음으로 느린 살아있는 파츠")
 
 	# 동점이면 슬롯 순서가 이긴다 — 결정론을 위해
@@ -108,22 +108,22 @@ func _test_slowest(t: RefCounted) -> void:
 
 func _test_linked(t: RefCounted) -> void:
 	var s: RefCounted = _ship()
-	s.links["weapon_1"] = ["utility_1", "weapon_2"]
+	s.links["weapon_1"] = ["system_1", "weapon_2"]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 1
 	var ctx: Dictionary = _ctx(s, s.get_part("weapon_1"), rng)
-	t.eq(_slots(Targeting.resolve("linked", ctx)), ["utility_1", "weapon_2"], "연결된 파츠 전부")
+	t.eq(_slots(Targeting.resolve("linked", ctx)), ["system_1", "weapon_2"], "연결된 파츠 전부")
 
 	var ctx2: Dictionary = _ctx(s, s.get_part("core"), rng)
 	t.eq(Targeting.resolve("linked", ctx2).size(), 0, "연결이 없으면 빈 배열")
 
 	# 연결된 파츠 중 파손된 것은 제외된다
 	s.get_part("weapon_2").broken = true
-	t.eq(_slots(Targeting.resolve("linked", ctx)), ["utility_1"], "연결된 파츠 중 파손은 제외")
+	t.eq(_slots(Targeting.resolve("linked", ctx)), ["system_1"], "연결된 파츠 중 파손은 제외")
 
 	# 연결이 존재하지 않는 슬롯 id를 가리키면 get_part가 null을 돌려주고, 그 항목은 건너뛴다
-	s.links["weapon_1"] = ["utility_1", "no_such_slot"]
-	t.eq(_slots(Targeting.resolve("linked", ctx)), ["utility_1"], "존재하지 않는 슬롯 id는 건너뛴다")
+	s.links["weapon_1"] = ["system_1", "no_such_slot"]
+	t.eq(_slots(Targeting.resolve("linked", ctx)), ["system_1"], "존재하지 않는 슬롯 id는 건너뛴다")
 
 func _test_broken_and_limited(t: RefCounted) -> void:
 	var s: RefCounted = _ship()
@@ -136,13 +136,13 @@ func _test_broken_and_limited(t: RefCounted) -> void:
 	t.eq(_slots(Targeting.resolve("random_broken_own", ctx)), ["weapon_2"], "유일한 파손 파츠")
 
 	t.eq(Targeting.resolve("all_own_limited", ctx).size(), 0, "제한 걸린 파츠가 없다")
-	s.get_part("utility_1").fire_limit = 4
-	s.get_part("utility_1").fires_remaining = 4
-	t.eq(_slots(Targeting.resolve("all_own_limited", ctx)), ["utility_1"], "제한 걸린 파츠 1개")
-	t.eq(_slots(Targeting.resolve("random_own_limited", ctx)), ["utility_1"], "무작위 제한 파츠")
+	s.get_part("system_1").fire_limit = 4
+	s.get_part("system_1").fires_remaining = 4
+	t.eq(_slots(Targeting.resolve("all_own_limited", ctx)), ["system_1"], "제한 걸린 파츠 1개")
+	t.eq(_slots(Targeting.resolve("random_own_limited", ctx)), ["system_1"], "무작위 제한 파츠")
 
 	# 파손된 제한 파츠는 all_own_limited에서 제외된다
-	s.get_part("utility_1").broken = true
+	s.get_part("system_1").broken = true
 	t.eq(Targeting.resolve("all_own_limited", ctx).size(), 0, "파손된 제한 파츠는 제외")
 
 func _test_determinism(t: RefCounted) -> void:
@@ -173,7 +173,7 @@ func _test_determinism(t: RefCounted) -> void:
 	var s4: RefCounted = _ship()
 	s4.get_part("weapon_1").broken = true
 	s4.get_part("weapon_2").broken = true
-	s4.get_part("utility_1").broken = true
+	s4.get_part("system_1").broken = true
 	var rng4 := RandomNumberGenerator.new()
 	rng4.seed = 999
 	var ctx4: Dictionary = _ctx(s4, s4.get_part("core"), rng4)
@@ -195,8 +195,8 @@ func _test_unknown(t: RefCounted) -> void:
 	var s2: RefCounted = _ship()
 	s2.links["core"] = ["weapon_1"]
 	s2.get_part("weapon_2").broken = true
-	s2.get_part("utility_1").fire_limit = 4
-	s2.get_part("utility_1").fires_remaining = 4
+	s2.get_part("system_1").fire_limit = 4
+	s2.get_part("system_1").fires_remaining = 4
 	var rng2 := RandomNumberGenerator.new()
 	rng2.seed = 1
 	var ctx2: Dictionary = _ctx(s2, s2.get_part("core"), rng2)
