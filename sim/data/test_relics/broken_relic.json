@@ -1,0 +1,12 @@
+{
+  "relics": [
+    {
+      "id": "typo_relic",
+      "name": "오타 Relic (테스트 픽스처)",
+      "triggers": [
+        { "on": "resonance_gained",
+          "do": [ { "op": "acclerate", "target": "all_own_active", "duration": 2.0 } ] }
+      ]
+    }
+  ]
+}

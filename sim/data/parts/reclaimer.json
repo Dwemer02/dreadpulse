@@ -1,0 +1,135 @@
+{
+  "parts": [
+    {
+      "id": "supercharged_turbine",
+      "name": "과급 터빈",
+      "faction": "reclaimer",
+      "roles": ["utility"],
+      "keywords": ["accelerate", "fire_limit"],
+      "active": {
+        "cooldown": 5.0,
+        "fire_limit": 6,
+        "on_fire": [
+          { "op": "accelerate", "target": "self", "duration": 3.0 }
+        ]
+      },
+      "augment": {
+        "add_keywords": ["accelerate", "fire_limit"],
+        "triggers": [
+          { "on": "part_fired", "where": { "is_host": true },
+            "do": [
+              { "op": "accelerate",  "target": "host", "duration": 2.0 },
+              { "op": "drain_fires", "target": "host", "amount": 1 }
+            ] }
+        ]
+      }
+    },
+    {
+      "id": "breaker",
+      "name": "분해기",
+      "faction": "reclaimer",
+      "roles": ["utility"],
+      "keywords": [],
+      "active": {
+        "cooldown": 8.0,
+        "on_fire": [
+          { "op": "gain_material", "amount": 2 },
+          { "op": "gain_material", "amount": 4, "where": { "has_broken_own": true } }
+        ]
+      },
+      "augment": {
+        "triggers": [
+          { "on": "part_destroyed",
+            "do": [ { "op": "gain_material", "amount": 4 } ] }
+        ]
+      }
+    },
+    {
+      "id": "rivet_railgun",
+      "name": "리벳 레일건",
+      "faction": "reclaimer",
+      "roles": ["weapon"],
+      "keywords": ["damage", "fire_limit"],
+      "active": {
+        "cooldown": 6.0,
+        "fire_limit": 8,
+        "on_fire": [
+          { "op": "deal_damage", "amount": 18 }
+        ]
+      },
+      "augment": {
+        "add_keywords": ["damage", "fire_limit"],
+        "triggers": [
+          { "on": "part_fired", "where": { "is_host": true },
+            "do": [
+              { "op": "deal_damage", "amount": 6 },
+              { "op": "drain_fires", "target": "host", "amount": 1 }
+            ] }
+        ]
+      }
+    },
+    {
+      "id": "weld_plating",
+      "name": "용접 장갑",
+      "faction": "reclaimer",
+      "roles": ["defense"],
+      "keywords": ["reinforce", "repair"],
+      "active": {
+        "cooldown": 7.0,
+        "on_fire": [
+          { "op": "reinforce", "target": "random_own_active", "stacks": 1 },
+          { "op": "repair", "amount": 8 }
+        ]
+      },
+      "augment": {
+        "add_keywords": ["restore"],
+        "triggers": [
+          { "on": "part_destroyed", "max_fires": 2,
+            "do": [ { "op": "restore_part", "target": "random_broken_own" } ] }
+        ]
+      }
+    },
+    {
+      "id": "venting_manifold",
+      "name": "방출 다기관",
+      "faction": "reclaimer",
+      "roles": ["utility"],
+      "keywords": ["fire_limit", "destroy"],
+      "active": {
+        "cooldown": 10.0,
+        "on_fire": [
+          { "op": "drain_fires", "target": "all_own_limited",
+            "amount": 1, "material_per_part": 4 }
+        ]
+      },
+      "augment": {
+        "add_keywords": ["fire_limit"],
+        "triggers": [
+          { "on": "part_destroyed",
+            "where": { "event_field": { "field": "cause", "equals": "fires_exhausted" } },
+            "do": [ { "op": "gain_material", "amount": 6 } ] }
+        ]
+      }
+    },
+    {
+      "id": "scrap_reactor",
+      "name": "폐선 재활용로",
+      "faction": "reclaimer",
+      "roles": ["core"],
+      "keywords": [],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          { "op": "gain_material", "amount": 2 }
+        ],
+        "triggers": [
+          { "on": "combat_start",
+            "do": [ { "op": "gain_material", "amount": 5 } ] },
+          { "on": "material_gained",
+            "where": { "every_nth_accumulated": { "field": "amount", "n": 10 } },
+            "do": [ { "op": "accelerate", "target": "random_own_active", "duration": 4.0 } ] }
+        ]
+      }
+    }
+  ]
+}

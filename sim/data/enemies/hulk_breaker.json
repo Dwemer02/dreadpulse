@@ -1,0 +1,15 @@
+{
+  "id": "hulk_breaker",
+  "name": "선체 분쇄기",
+  "frame": "standard_frame",
+  "relic": null,
+  "slots": {
+    "core":      { "part": "scrap_reactor" },
+    "weapon_1":  { "part": "rivet_railgun" },
+    "weapon_2":  { "part": "rivet_railgun",    "augment": "weld_plating" },
+    "defense_1": { "part": "weld_plating",     "augment": "breaker" },
+    "utility_1": { "part": "venting_manifold" },
+    "utility_2": { "part": "breaker" },
+    "flex_1":    { "part": "weld_plating" }
+  }
+}

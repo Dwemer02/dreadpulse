@@ -54,6 +54,13 @@ func load_relics(path: String) -> void:
 		if not (relic is Dictionary) or not relic.has("id"):
 			errors.append("%s: relic에 id가 없다" % path)
 			continue
+		# Relic 트리거도 파츠 트리거와 같은 어휘 검증을 받는다. 검증하지 않으면
+		# 오타 난 op·조건·셀렉터가 로드를 통과하고 전투에서 조용히 아무것도 하지 않는다.
+		var problem: String = _validate_triggers(str(relic["id"]),
+			relic.get("triggers", []), "relic.triggers")
+		if problem != "":
+			errors.append("%s: %s" % [path, problem])
+			continue
 		relics[relic["id"]] = relic
 
 func load_frame(path: String) -> void:

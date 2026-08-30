@@ -1,0 +1,22 @@
+{
+  "relics": [
+    {
+      "id": "resonance_relay",
+      "name": "Resonance Relay",
+      "triggers": [
+        { "on": "resonance_gained",
+          "do": [ { "op": "accelerate", "target": "all_own_active", "duration": 2.0 } ] }
+      ]
+    },
+    {
+      "id": "prime_oscillator",
+      "name": "Prime Oscillator",
+      "modifiers": { "resonance_discount": 1 }
+    },
+    {
+      "id": "convergence_engine",
+      "name": "Convergence Engine",
+      "modifiers": { "convergence_gap_seconds": 2.0 }
+    }
+  ]
+}

@@ -17,6 +17,15 @@ var seed_value: int = 0
 
 var tick: int = 0
 var chain_depth: int = 0
+## 한 뿌리 사건이 촉발한 연쇄 전체에 붙는 식별자.
+##
+## log는 평평한 배열이고 여러 뿌리가 서로 섞여 들어온다 — 같은 틱에 두 파츠가 발동하면
+## 둘의 depth 0 이벤트가 나란히 놓이고, 그 뒤에 양쪽의 depth 1 이벤트가 이어진다.
+## 그래서 chain_depth만으로는 "무엇이 무엇을 불렀는가"를 복원할 수 없다.
+## 소비자(debug/ · tests/)가 sim 내부를 조회하지 않고 체인을 재구성하려면 이 필드가
+## 필요하다 — §6.1의 "이벤트는 자기서술적이어야 한다"를 체인 차원에서 만족시키는 값이다.
+var current_chain_id: int = 0
+var _chain_seq: int = 0
 var finished: bool = false
 var winner: String = ""
 
@@ -46,6 +55,7 @@ func setup(player_ship: RefCounted, enemy_ship: RefCounted, combat_seed: int) ->
 ## 패턴과 일관된다.
 func setup_ready() -> void:
 	for ship: RefCounted in [player, enemy]:
+		_begin_chain()
 		emit("combat_start", ship.side, {
 			"player_build": player.build_id, "enemy_build": enemy.build_id, "seed": seed_value,
 		})
@@ -90,8 +100,10 @@ func step() -> void:
 	for ship: RefCounted in [player, enemy]:
 		var effects: Dictionary = ship.advance_effects(tick)
 		if int(effects["regen"]) > 0:
+			_begin_chain()
 			emit("regen_ticked", ship.side, {"amount": effects["regen"]})
 		if int(effects["overheat"]) > 0:
+			_begin_chain()
 			emit("overheat_ticked", ship.side,
 				{"damage": effects["overheat"], "stacks": ship.overheat_stacks})
 	_drain_chain()
@@ -112,8 +124,15 @@ func emit(type: String, ship_side: String, fields: Dictionary) -> void:
 	event["ship"] = ship_side
 	event["t"] = K.ticks_to_secs(tick)
 	event["chain_depth"] = chain_depth
+	event["chain_id"] = current_chain_id
 	log.append(event)
 	_pending.append(event)
+
+## 새 연쇄의 뿌리를 연다. 틱이 스스로 일으킨 사건만 뿌리다 — 쿨타임 발동, 예약 실행,
+## 지속 효과, 파괴선, 전투 시작·종료. 체인이 부른 강제 발동은 부른 쪽 연쇄에 매달린다.
+func _begin_chain() -> void:
+	_chain_seq += 1
+	current_chain_id = _chain_seq
 
 func schedule(delay_ticks: int, action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> void:
 	_scheduled.append({
@@ -138,6 +157,13 @@ func _other(ship: RefCounted) -> RefCounted:
 	return enemy if ship == player else player
 
 func _fire(part: RefCounted, ship: RefCounted, cause: String) -> void:
+	# 체인이 부른 강제 발동(fire_part)은 부른 쪽 연쇄에 계속 매달린다.
+	# 주의: Phase 0b 현재 Reclaimer 콘텐츠에는 fire_part를 쓰는 파츠가 없어서
+	# 이 분기의 "chain" 쪽은 실제 콘텐츠로 검증되지 않는다(픽스처로만 검증됨).
+	# fire_part를 쓰는 첫 파츠(Viridia bio_nerve_cord / Aeonic future_debtor)를
+	# 넣을 때 강제 발동이 부모 연쇄에 붙는지 반드시 확인할 것.
+	if cause != "chain":
+		_begin_chain()
 	var foe: RefCounted = _other(ship)
 
 	var reason: String = part.block_reason(tick)
@@ -206,6 +232,7 @@ func _drain_chain() -> void:
 	while not _pending.is_empty():
 		var event: Dictionary = _pending.pop_front()
 		chain_depth = int(event.get("chain_depth", 0))
+		current_chain_id = int(event.get("chain_id", 0))
 		TriggerEngine.dispatch(event, [player, enemy], self)
 	chain_depth = 0
 
@@ -221,12 +248,14 @@ func _run_scheduled() -> void:
 			kept.append(entry)
 	_scheduled = kept
 	for entry: Dictionary in due:
+		_begin_chain()
 		var ctx: Dictionary = entry["ctx"]
 		ctx["tick"] = tick
 		Actions.apply(entry["action"], ctx, entry["resolved"])
 
 func _check_thresholds(ship: RefCounted) -> void:
 	for threshold: Variant in ship.newly_crossed_thresholds():
+		_begin_chain()
 		var pool: Array = ship.destructible_parts()
 		var destroyed_slot: String = ""
 		if not pool.is_empty():
@@ -262,6 +291,7 @@ func _finish_by_timeout() -> void:
 
 func _finish(reason: String) -> void:
 	finished = true
+	_begin_chain()
 	emit("combat_end", "player", {
 		"winner": winner, "elapsed": K.ticks_to_secs(tick), "reason": reason,
 	})
