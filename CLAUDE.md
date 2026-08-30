@@ -163,10 +163,25 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 
 - 구조: `iteration`(Run) · `build`/`pattern`(빌드) · `frame`(함선) · `part`(파츠) ·
   `active` / `augment` · `slot` · `role` · `link` · `relic`
-- 자원: `material` · `resonance` · `fire_limit`(파츠 발동 횟수)
-- 전투 키워드: `damage` `shield` `repair` `regen` `accelerate` `slow` `overheat`
-  `fire_limit` `destroy` `indestructible` `reinforce` `restore` `link` `multi_fire` `crit`
-- 팩션: `reclaimer` · `viridia` · `aeonic` · `first`
+
+**키워드는 7층이다** (GDD §21). 모든 파츠는 1층·2층을 반드시 갖는다.
+
+| 층 | 키워드 | 파츠당 |
+|---|---|---|
+| 1 팩션 | `reclaimer` `viridia` `aeonic` `first` | 1개 필수 |
+| 2 슬롯 | `weapon` `defense` `utility` `core` | 1개 이상 필수 |
+| 3 공격 타입 | `physical` `thermal` `corrosive` `energy` | 무기는 1개 필수 |
+| 4 방어 타입 | `plating` `biomass` `energy_shield` | 방어·코어에 해당 시 |
+| 5 효과 | `damage` `repair` `regen` `accelerate` `slow` `overheat` `fire_limit`<br>`destroy` `indestructible` `reinforce` `restore` `multi_fire` | 0개 이상 |
+| 6 조작 | `charge`(=`reduce_cooldown`) · `amplify`(=`empower`) | 0개 이상 |
+| 7 자원 | `material` `resonance` | 해당 시 |
+
+`keywords: []`인 파츠는 저작 실수다 — 최소한 1·2층은 채워져야 한다.
+
+**제외·보류된 키워드.** `crit` 제거(The Bazaar와 유사, 복잡성).
+`shield` → `energy_shield`로 단일화. `link` 보류(정적 `links`만 존재).
+`resonate` 공진 보류(오토체스류 문법). 되살리기 전에
+`docs/superpowers/specs/2026-08-30-keyword-system-design.md` §6을 읽을 것.
 
 **파츠는 코드에서 `part`다.** `component`는 UI 표시 문자열 전용이다 (GDD §41의 UI 용어는
 게임 내 The First 인터페이스 문구이지 코드 식별자가 아니다).
@@ -210,6 +225,14 @@ Always start by running `--help` to discover available commands. Use the CLI whe
   `행동 누적 → 공명`(발동 8회마다 +1)이며, 공명을 직접 생성하는 효과는 희귀하게 유지한다.
 - 파괴선 75/50/25%는 처음 통과할 때만 작동한다. `indestructible` 파츠는 파괴선·발동 횟수
   소진·파괴 효과 전부에서 면제되며, Core는 영구 `indestructible`을 기본 보유한다.
+- **공격/방어 타입 배율의 하한은 0이 아니다.** 면역과 무효는 이 게임에 존재하지 않는다
+  (GDD §3.4). `physical`은 상성이 없는 대신 페널티도 없다 — 타입 체계를 모르는
+  플레이어의 안전밸브다.
+- **선체 재질(`plating`/`biomass`)은 Core 파츠가 결정한다.** Frame이 아니다.
+  같은 팩션 안에도 재질이 다른 Core가 존재해야 한다 — 그래야 상성이 팩션 단위가
+  아니라 빌드 단위가 되고 §3.4가 지켜진다.
+- **슬롯 부적합은 조립 에러가 아니라 런타임 비작동이다.** 설치는 되고 발동만 막힌다.
+  AUGMENT의 `add_keywords`로 슬롯 키워드를 붙일 수 있어야 하기 때문이다.
 
 ## 이벤트 스트림 계약 (소비자가 알아야 할 것)
 
