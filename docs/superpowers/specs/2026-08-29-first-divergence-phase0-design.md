@@ -2,7 +2,11 @@
 
 - 날짜: 2026-08-29
 - 근거 문서: [THE_FIRST_DIVERGENCE_GDD.md](../../THE_FIRST_DIVERGENCE_GDD.md) (v0.1)
-- 상태: 사용자 승인 완료 (접근안 + 범위), 스펙 리뷰 대기
+- 상태: **Phase 0a 전투 엔진 완료 · Phase 0b 진행 중 (Reclaimer만 구현)**
+  - 완료: sim 엔진 10파일, 단위 테스트 757건, Reclaimer 파츠 6종 + Relic 3종 + 빌드 3종,
+    배치 러너, 디버그 뷰(메인 씬)
+  - 보류: Viridia · Aeonic 파츠 12종, 적 4종, 무작위 빌드 생성, 지표 A·D·E
+    (파츠·Relic 수치가 바뀔 예정이라 큰 공수를 들이지 않기로 함)
 - 선행 프로젝트: DREADPULSE (폐기). 브랜치 `phase0-combat-sim`에 히스토리 보존.
 
 ---
@@ -320,7 +324,15 @@ Core 파츠를 Augment로 사용 / `augment` 블록이 없는 파츠를 Augment�
 
 ### 6.1 이벤트
 
-모든 이벤트는 `{ type, t, ship, ... }` 형태의 Dictionary다. `ship`은 `"player"` 또는 `"enemy"`.
+모든 이벤트는 `{ type, t, ship, chain_depth, chain_id, ... }` 형태의 Dictionary다.
+`ship`은 `"player"` 또는 `"enemy"`.
+
+`chain_id`는 **한 뿌리 사건이 촉발한 연쇄 전체에 붙는 식별자**다. log는 평평한 배열이고
+여러 뿌리가 섞여 들어온다 — 같은 틱에 두 파츠가 발동하면 둘의 `chain_depth: 0` 이벤트가
+나란히 놓이고 그 뒤에 양쪽의 자식 이벤트가 이어진다. 따라서 `chain_depth`만으로는
+"무엇이 무엇을 불렀는가"를 복원할 수 없다. 뿌리는 틱이 스스로 일으킨 사건뿐이다 —
+쿨타임 발동, `delay` 예약 실행, 지속 효과, 파괴선, 전투 시작·종료.
+체인이 부른 강제 발동(`fire_part`)은 부른 쪽 연쇄에 계속 매달린다.
 
 | 이벤트 | 주요 필드 |
 |---|---|
@@ -347,6 +359,12 @@ Core 파츠를 Augment로 사용 / `augment` 블록이 없는 파츠를 Augment�
 
 **이벤트는 자기서술적이어야 한다** — 소비자가 sim 내부를 조회하지 않고도 사람이 읽을 수 있는
 줄을 만들 수 있을 만큼의 필드를 담는다 (이전 프로젝트에서 확인된 요구사항).
+이 요구는 `sim/event_analysis.gd`의 `describe()`가 실물로 검증한다 — 어떤 이벤트 타입이
+서술문을 만들지 못하면 그 이벤트에 필드가 모자란 것이고, 단위 테스트가 그것을 실패로 본다.
+
+**표시 순서는 방출 순서와 다르다.** 대기 큐가 FIFO이므로 한 틱 안에서 두 연쇄의 이벤트가
+서로 끼어든다. 소비자는 `Analysis.grouped_by_chain()`으로 **같은 틱 안에서만** 연쇄별로
+묶어 읽는다. `t`가 같은 이벤트끼리의 재배열이므로 시간을 왜곡하지 않는다.
 
 ### 6.2 트리거
 
@@ -380,6 +398,16 @@ Core 파츠를 Augment로 사용 / `augment` 블록이 없는 파츠를 Augment�
 | `own_ship` / `enemy_ship` | 이벤트가 발생한 함선 |
 
 `prime_oscillator` Relic은 `resonance_at_least`의 요구치를 1 낮춰 평가한다 (§9.4).
+
+> **제약 — "숙주가 파손되면 …" 트리거는 성립하지 않는다.**
+> 파손된 파츠는 효과가 정지하고, 거기 붙은 AUGMENT 트리거도 함께 멈춘다(§8).
+> `part_destroyed`는 파손이 확정된 **뒤에** 방출되므로, 그 이벤트가 트리거에 도달할 때
+> 숙주는 이미 파손 상태다 — 즉 `{"on": "part_destroyed", "where": {"is_host": true}}`는
+> **절대 발동하지 않는다.** 크래시도 에러도 없이 조용히 죽는다.
+>
+> 이런 효과는 **숙주가 아닌 관찰자**에게 얹어야 한다. 예: "숙주가 파손되면 복구" 대신
+> "아군 파츠가 파손되면 파손 파츠 하나를 복구"(§9.1 `weld_plating` 참조).
+> 이 규칙은 §9.1 `weld_plating` · `venting_manifold`, §9.3 `phase_shifter`에 영향을 준다.
 
 ### 6.3 액션
 
@@ -536,9 +564,9 @@ Viridia가 복구해 카운터를 되돌린다.
 |---|---|---|---|---|
 | `supercharged_turbine` | 과급 터빈 | utility | 쿨 5초, 제한 6회: 자신 가속 3초 | 숙주 가속 2초, 숙주 횟수 −1 |
 | `breaker` | 분해기 | utility | 쿨 8초: 자재 +2, 자함에 파손 파츠가 있으면 자재 +4 추가 | 아군 파츠가 파손될 때 자재 +4 |
-| `rivet_railgun` | 리벳 레일건 | weapon | 쿨 6초, 제한 8회: 피해 18 | 숙주 발동 시 피해 6 추가, 숙주 횟수 −1 |
-| `weld_plating` | 용접 장갑 | defense | 쿨 7초: 무작위 아군 파츠에 보강 +1, 선체 수리 8 | 숙주가 파손되면 즉시 복구 (`max_fires: 2`) |
-| `venting_manifold` | 방출 다기관 | utility | 쿨 10초: 제한이 걸린 아군 파츠 전부의 남은 횟수 −1, 깎인 파츠 수 × 4 자재 | 숙주가 횟수 소진으로 파손될 때 자재 +6 |
+| `rivet_railgun` | 리벳 레일건 | weapon | 쿨 6초, 제한 10회: 피해 21 | 숙주 발동 시 피해 6 추가, 숙주 횟수 −1 |
+| `weld_plating` | 용접 장갑 | defense | 쿨 7초: 무작위 아군 파츠에 보강 +1, 선체 수리 6 | **아군 파츠가 파손되면** 파손 파츠 1개 복구 (`max_fires: 2`) |
+| `venting_manifold` | 방출 다기관 | utility | 쿨 10초: 제한이 걸린 아군 파츠 전부의 남은 횟수 −1, 깎인 파츠 수 × 4 자재 | **아군 파츠가** 횟수 소진으로 파손될 때 자재 +6 |
 | `scrap_reactor` | 폐선 재활용로 | **core** | 쿨 6초: 자재 +2. 시작 시 자재 +5. 자재를 누적 10 획득할 때마다 무작위 아군 파츠 가속 4초 | — |
 
 ### 9.2 Viridia — Grow & Connect (§26)
@@ -563,7 +591,7 @@ Viridia가 복구해 카운터를 되돌린다.
 | `future_debtor` | 미래 차입기 | utility | 쿨 6초: 남은 쿨타임이 가장 긴 아군 파츠를 즉시 발동시키고 그 파츠의 남은 횟수 −1 | 숙주 발동 시 숙주 쿨타임 40% 즉시 감소, 숙주 횟수 −1 |
 | `foresight_lens` | 예견 렌즈 | weapon | 쿨 4초: 피해 10. 세 번째 발동마다 다중 발동 3 | 숙주의 세 번째 발동마다 숙주 효과를 2회 더 실행 (`multi_fire{times:2}`, `do` 생략) |
 | `temporal_anchor` | 시간 고정장 | defense | 쿨 9초: 보강 +2, 보호막 15 | 전투 시작 시 숙주에 파괴 불가 15초 |
-| `phase_shifter` | 위상 전환기 | utility | 쿨 7초: 파손 아군 파츠 1개 복구, 그 파츠의 남은 횟수 −2 | 숙주가 파손되면 8초 후 자동 복구 |
+| `phase_shifter` | 위상 전환기 | utility | 쿨 7초: 파손 아군 파츠 1개 복구, 그 파츠의 남은 횟수 −2 | **아군 파츠가 파손되면** 8초 후 그 파츠를 자동 복구 (§6.2 제약 참조) |
 | `precognitive_sight` | 선행 조준기 | weapon | 쿨 5초: 피해 14 (30초 이전이면 +50%) | 공명이 오를 때마다 숙주의 다음 발동 피해 +30% |
 | `convergence_core` | 수렴 코어 | **core** | 쿨 10초: 공명 +1. 시작 시 모든 아군 파츠 가속 10초 | — |
 
@@ -674,12 +702,15 @@ Relic은 룰브레이커다. `prime_oscillator`는 조건 평가기에, `converg
 
 ## 12. 검증 방법
 
-```powershell
-# 단위 (exit 0 = 통과)
-& $godot --headless --path . --script res://tests/run_unit.gd
-# 배치 지표 5종 리포트
-& $godot --headless --path . --script res://tests/run_batch.gd
+```bash
+# 단위 (exit 0 = 통과). Godot을 직접 부르지 마라 — 래퍼가 SCRIPT ERROR도 함께 잡는다.
+bash tests/run.sh
+# 배치 지표 리포트 (측정 불가 지표는 사유와 함께 출력된다)
+godot --headless --path . --script res://tests/run_batch.gd
 ```
+
+**눈으로 확인**: Godot 에디터에서 F5. 메인 씬이 `res://debug/combat_view.tscn`이다.
+빌드·적·시드를 고르고 재생하면 전투가 재생되고, 오른쪽에 Trigger Chain이 흐른다.
 
 - **단위 테스트**가 검증하는 것: 파츠 개별 효과, 트리거 매칭, 조건 평가, 대상 셀렉터,
   발동 상한 0.2초, 발동 횟수 소진 파손, 파괴 불가 유예, 가속·둔화 상쇄,

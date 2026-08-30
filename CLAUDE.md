@@ -211,9 +211,24 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 - 파괴선 75/50/25%는 처음 통과할 때만 작동한다. `indestructible` 파츠는 파괴선·발동 횟수
   소진·파괴 효과 전부에서 면제되며, Core는 영구 `indestructible`을 기본 보유한다.
 
+## 이벤트 스트림 계약 (소비자가 알아야 할 것)
+
+- 모든 이벤트는 `chain_depth`와 `chain_id`를 갖는다. **연쇄를 복원할 때는 `chain_id`를 쓴다** —
+  대기 큐가 FIFO라서 한 틱 안에서 두 연쇄의 이벤트가 서로 끼어들기 때문에 `chain_depth`만으로는
+  "무엇이 무엇을 불렀는가"를 알 수 없다. 표시용 정렬은 `Analysis.grouped_by_chain()`을 쓴다.
+- **"숙주가 파손되면 …" 형태의 AUGMENT 트리거는 절대 발동하지 않는다.** 파손된 파츠는
+  트리거가 멈추고 `part_destroyed`는 파손 확정 뒤에 방출된다. 이런 효과는 숙주가 아니라
+  **관찰자 파츠**에 얹는다. 조용히 죽으므로 코드 리뷰로는 잡히지 않는다.
+- 불발(`part_fire_blocked`)은 같은 사유가 이어지는 동안 한 번만 방출된다. 따라서 집계값은
+  "막힌 발동 횟수"가 아니라 "막힌 상태에 새로 진입한 횟수"다.
+- 무엇이 실제 콘텐츠인지는 `sim/content.gd` 한 곳에 적는다. tests/와 debug/는 여기서만 읽는다.
+
 ## 검증
 
-- 단위 검증: `godot --headless --path . --script res://tests/run_unit.gd` (exit 0 = 통과)
+- 단위 검증: `bash tests/run.sh` (exit 0 = 통과).
+  Godot을 직접 부르지 마라 — 래퍼가 어서션 실패와 SCRIPT ERROR를 **둘 다** 본다.
+  모든 테스트 모듈은 `run()`이 `t.done()`으로 끝나고 `const EXPECTED_CHECKS := N`을 선언해야 한다.
 - 배치 검증: `godot --headless --path . --script res://tests/run_batch.gd`
+- 눈으로 확인: Godot 에디터에서 F5 (메인 씬 = `res://debug/combat_view.tscn`)
 - 밸런스 수치는 전부 플레이스홀더다. 수치 변경은 자유롭되, 배치 리포트의 검증 지표
   5종(dual-use 균형 / 체인 가독성 / 파괴선 / 팩션 차이 / 혼종 밸런스)이 깨지는지 확인할 것.
