@@ -25,24 +25,48 @@ static func chains(log: Array) -> Array:
 		chain["depth"] = maxi(int(chain["depth"]), int(event.get("chain_depth", 0)) + 1)
 	return order
 
-## 연쇄의 서명 — 그 연쇄에 관여한 파츠 이름을 등장 순서대로, 중복 없이 이어붙인다.
+## 연쇄에 관여한 파츠를 등장 순서대로, 중복 없이 이어붙인 서명.
 ## §56의 "MAIN CHAIN: Reactor → Cannon → Salvage" 요약이 이 값을 센 것이다.
-static func chain_signature(chain: Dictionary) -> String:
-	var names: Array[String] = []
+##
+## 행위자는 part_name이 아니라 슬롯으로 찾는다 — 연쇄의 중간 마디(material_gained,
+## fires_changed, speed_changed 등)는 part_name을 싣지 않고 slot만 싣기 때문이다.
+## part_name만 보면 서명이 항상 파츠 하나로 줄어들어 요약이 무의미해진다.
+static func chain_signature(chain: Dictionary, names: Dictionary) -> String:
+	var out: Array[String] = []
 	for event: Dictionary in chain["events"]:
-		var name: String = str(event.get("part_name", ""))
-		if name == "" or names.has(name):
+		var key: String = actor_key(event)
+		if key == "":
 			continue
-		names.append(name)
-	return " → ".join(names)
+		var name: String = str(names.get(key, key.get_slice("/", 1)))
+		if name == "" or out.has(name):
+			continue
+		out.append(name)
+	return " → ".join(out)
 
-## 서명별 등장 횟수. {서명: 횟수}, 많이 나온 순으로 정렬된 [[서명, 횟수]] 배열을 돌려준다.
+## 이 이벤트를 일으킨(또는 이 이벤트가 가리키는) 파츠의 "함선/슬롯" 키. 없으면 빈 문자열.
+static func actor_key(event: Dictionary) -> String:
+	var slot: String = str(event.get("slot", event.get("source_slot", "")))
+	if slot == "":
+		return ""
+	return "%s/%s" % [str(event.get("ship", "")), slot]
+
+## 슬롯 -> 파츠 이름 표. part_fired 이벤트만이 둘을 함께 싣는다.
+static func slot_names(log: Array) -> Dictionary:
+	var out: Dictionary = {}
+	for event: Dictionary in log:
+		if str(event["type"]) != "part_fired":
+			continue
+		out[actor_key(event)] = str(event.get("part_name", ""))
+	return out
+
+## 서명별 등장 횟수를 많이 나온 순으로 정렬한 [[서명, 횟수]] 배열.
 static func signature_ranking(log: Array, min_depth: int = 2) -> Array:
+	var names: Dictionary = slot_names(log)
 	var counts: Dictionary = {}
 	for chain: Dictionary in chains(log):
 		if int(chain["depth"]) < min_depth:
 			continue
-		var sig: String = chain_signature(chain)
+		var sig: String = chain_signature(chain, names)
 		if sig == "":
 			continue
 		counts[sig] = int(counts.get(sig, 0)) + 1

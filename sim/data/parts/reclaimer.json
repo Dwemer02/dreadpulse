@@ -52,9 +52,9 @@
       "keywords": ["damage", "fire_limit"],
       "active": {
         "cooldown": 6.0,
-        "fire_limit": 8,
+        "fire_limit": 10,
         "on_fire": [
-          { "op": "deal_damage", "amount": 18 }
+          { "op": "deal_damage", "amount": 21 }
         ]
       },
       "augment": {
@@ -78,7 +78,7 @@
         "cooldown": 7.0,
         "on_fire": [
           { "op": "reinforce", "target": "random_own_active", "stacks": 1 },
-          { "op": "repair", "amount": 8 }
+          { "op": "repair", "amount": 6 }
         ]
       },
       "augment": {
