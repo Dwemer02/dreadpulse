@@ -14,6 +14,8 @@ const MODULES: Array[String] = [
 	"res://tests/unit/test_ship_state.gd",
 	"res://tests/unit/test_build_loader.gd",
 	"res://tests/unit/test_targeting.gd",
+	"res://tests/unit/test_damage_types.gd",
+	"res://tests/unit/test_status_effects.gd",
 	"res://tests/unit/test_conditions.gd",
 	"res://tests/unit/test_actions.gd",
 	"res://tests/unit/test_trigger_engine.gd",

@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신할 것
-const EXPECTED_CHECKS := 70
+const EXPECTED_CHECKS := 87
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -102,8 +102,142 @@ func run(t: RefCounted) -> void:
 	_test_thresholds(t)
 	_test_delay_schedule(t)
 	_test_combat_end_not_dispatched(t)
+	_test_corrosion_on_fire(t)
+	_test_collapse_in_tick(t)
+	_test_stasis_blocks_firing_not_triggers(t)
 	_test_determinism(t)
 	t.done()
+
+# --- 상태이상 통합 (틱 순서와 맞물리는 부분) ---
+
+## 부식은 파츠가 발동할 때 소유 함선을 때린다. 중첩은 줄지 않는다.
+func _test_corrosion_on_fire(t: RefCounted) -> void:
+	var sim: RefCounted = CombatSim.new()
+	var player: RefCounted = _bare_ship("player", 1000)
+	var enemy: RefCounted = _bare_ship("enemy", 1000)
+	var gun: RefCounted = _bare_part("weapon_1", 1.0)
+	gun.on_fire = [{"op": "deal_damage", "amount": 1}]
+	gun.corrosion_stacks = 8
+	player.add_part(gun)
+	sim.setup(player, enemy, 1)
+
+	for i: int in 25:
+		sim.step()
+
+	var ticked: Array = _events_of_type(sim.log, "corrosion_ticked")
+	t.check(ticked.size() > 0, "발동할 때 부식 피해가 들어간다")
+	t.eq(int(ticked[0]["stacks"]), 8, "중첩만큼 피해")
+	t.eq(str(ticked[0]["ship"]), "player", "피해는 파츠 소유 함선이 받는다")
+	t.eq(gun.corrosion_stacks, 8, "발동해도 중첩은 줄지 않는다 (자연 감소 없음)")
+	t.check(player.hull < 1000, "자기 선체가 깎인다")
+
+	# 부식이 없는 파츠는 이벤트를 만들지 않는다
+	var clean: RefCounted = CombatSim.new()
+	var p2: RefCounted = _bare_ship("player", 1000)
+	var e2: RefCounted = _bare_ship("enemy", 1000)
+	var g2: RefCounted = _bare_part("weapon_1", 1.0)
+	g2.on_fire = [{"op": "deal_damage", "amount": 1}]
+	p2.add_part(g2)
+	clean.setup(p2, e2, 1)
+	for i: int in 25:
+		clean.step()
+	t.eq(_events_of_type(clean.log, "corrosion_ticked").size(), 0,
+		"부식이 없으면 이벤트를 만들지 않는다")
+
+## 붕괴는 매 틱 검사된다. **파열이 늘지 않아도 선체가 줄어 임계에 닿으면 터진다** —
+## 이것이 5.5단계를 지속 피해 뒤에 둔 이유다.
+func _test_collapse_in_tick(t: RefCounted) -> void:
+	var sim: RefCounted = CombatSim.new()
+	var player: RefCounted = _bare_ship("player", 100)
+	var enemy: RefCounted = _bare_ship("enemy", 1000)
+	# 적이 플레이어를 때려 선체를 내린다. 파열은 전투 시작 시 한 번만 준다.
+	var gun: RefCounted = _bare_part("weapon_1", 1.0)
+	gun.on_fire = [{"op": "deal_damage", "amount": 10}]
+	enemy.add_part(gun)
+	var dummy: RefCounted = _bare_part("weapon_1", 99.0)
+	player.add_part(dummy)
+	player.fracture = 40
+	sim.setup(player, enemy, 1)
+
+	for i: int in 200:
+		if sim.finished:
+			break
+		sim.step()
+
+	var collapses: Array = _events_of_type(sim.log, "collapsed")
+	t.check(collapses.size() > 0, "선체가 줄어 임계에 닿으면 붕괴한다 (파열 증가 없이)")
+	t.eq(int(collapses[0]["fracture"]), 40, "터진 파열량을 보고한다")
+	t.eq(player.fracture, 0, "붕괴 뒤 파열은 0")
+	# 파열이 0으로 초기화되므로 같은 파열로 두 번 터지지 않는다
+	t.eq(collapses.size(), 1, "한 번의 파열은 한 번만 터진다")
+
+	# 과열이 선체를 내려 붕괴를 유발하는 경우 — 붕괴 검사가 지속 피해 **뒤**에 있어야 한다
+	var oh: RefCounted = CombatSim.new()
+	var p2: RefCounted = _bare_ship("player", 30)
+	var e2: RefCounted = _bare_ship("enemy", 1000)
+	p2.add_part(_bare_part("weapon_1", 99.0))
+	e2.add_part(_bare_part("weapon_1", 99.0))
+	p2.fracture = 25
+	p2.add_overheat(20)
+	oh.setup(p2, e2, 1)
+	for i: int in 60:
+		if oh.finished:
+			break
+		oh.step()
+	t.check(_events_of_type(oh.log, "collapsed").size() > 0,
+		"과열이 선체를 내려도 그 틱에 붕괴를 잡는다")
+
+## 정지는 발동을 막지만 **트리거는 막지 않는다.**
+## 트리거까지 멈추면 숙주에 걸린 AUGMENT가 조용히 침묵한다.
+func _test_stasis_blocks_firing_not_triggers(t: RefCounted) -> void:
+	var sim: RefCounted = CombatSim.new()
+	var player: RefCounted = _bare_ship("player", 1000)
+	var enemy: RefCounted = _bare_ship("enemy", 1000)
+
+	var frozen: RefCounted = _bare_part("weapon_1", 1.0)
+	frozen.on_fire = [{"op": "deal_damage", "amount": 5}]
+	# 적이 발동할 때마다 자재를 얻는 트리거 — 정지 중에도 돌아야 한다.
+	# 트리거의 기본 범위는 자함이므로 적함 이벤트를 보려면 enemy_ship을 명시한다.
+	_add_trigger(frozen, {"on": "part_fired", "where": {"enemy_ship": true},
+		"do": [{"op": "gain_material", "amount": 1}]})
+	# **쿨타임이 찬 상태에서 얼려야 "막힌" 것이 된다.** 진행도 0에서 얼면
+	# 애초에 준비되지 않으므로 보고할 사건이 없다 (막힌 게 아니라 느린 것이다).
+	frozen.progress_units = frozen.cooldown_units
+	frozen.apply_stasis(K.secs_to_ticks(5.0))
+	player.add_part(frozen)
+
+	var ticker: RefCounted = _bare_part("weapon_1", 1.0)
+	ticker.on_fire = [{"op": "deal_damage", "amount": 1}]
+	enemy.add_part(ticker)
+
+	sim.setup(player, enemy, 1)
+	for i: int in 40:
+		sim.step()
+
+	var mine_fired: Array = []
+	for ev: Dictionary in _events_of_type(sim.log, "part_fired"):
+		if str(ev["ship"]) == "player":
+			mine_fired.append(ev)
+	t.eq(mine_fired.size(), 0, "정지된 파츠는 발동하지 않는다")
+
+	var blocked: Array = _events_of_type(sim.log, "part_fire_blocked")
+	t.check(blocked.size() > 0, "불발이 보고된다")
+	t.eq(str(blocked[0]["reason"]), "stasis", "사유가 stasis다")
+	t.eq(blocked.size(), 1, "같은 사유가 이어지는 동안 한 번만 보고된다")
+
+	t.check(player.material > 0,
+		"정지 중에도 트리거는 돈다 (자재 %d) — AUGMENT가 조용히 침묵하지 않는다" % player.material)
+
+	# 정지가 풀리면 다시 쏜다
+	for i: int in 200:
+		if sim.finished:
+			break
+		sim.step()
+	var later: Array = []
+	for ev: Dictionary in _events_of_type(sim.log, "part_fired"):
+		if str(ev["ship"]) == "player":
+			later.append(ev)
+	t.check(later.size() > 0, "정지가 풀리면 다시 발동한다")
 
 # --- 전투가 끝난다 ---
 

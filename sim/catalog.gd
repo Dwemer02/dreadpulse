@@ -197,6 +197,15 @@ func _validate_effects(pid: String, block: Array, where: String) -> String:
 		var selector: String = str(action.get("target", ""))
 		if selector != "" and not Targeting.SELECTORS.has(selector):
 			return "%s %s: 알 수 없는 셀렉터 \"%s\"" % [pid, where, selector]
+		# 적 파츠는 디버프만 겨냥할 수 있다. GDD §20이 직접 파괴기를 억제하고 있고,
+		# 적 파츠를 복구·강화한다는 것은 애초에 의미가 없다.
+		if Targeting.is_enemy_selector(selector) and Actions.OWN_ONLY_OPS.has(op):
+			return "%s %s: \"%s\"는 적 파츠를 대상으로 할 수 없다 (셀렉터 \"%s\")" \
+				% [pid, where, op, selector]
+		# 공격 타입은 화이트리스트다. 오타가 physical로 조용히 폴백하면
+		# 상성표가 통째로 무의미해진다.
+		if action.has("type") and not K.ATTACK_TYPES.has(str(action["type"])):
+			return "%s %s: 알 수 없는 공격 타입 \"%s\"" % [pid, where, str(action["type"])]
 		for key: String in Conditions.unknown_keys(action.get("where", {})):
 			return "%s %s: 알 수 없는 조건 \"%s\"" % [pid, where, key]
 		if action.has("do"):

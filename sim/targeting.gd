@@ -11,7 +11,20 @@ const SELECTORS: Array[String] = [
 	"self", "host", "linked",
 	"random_own_active", "slowest_own", "random_broken_own",
 	"all_own_active", "all_own_limited", "random_own_limited",
+	"random_enemy_active", "all_enemy_active", "slowest_enemy",
 ]
+
+## 적 함선의 파츠를 지목하는 셀렉터. **디버프 전용**이다 —
+## Corrosion 대상이 "개별 적 파츠"이고 정지·둔화가 적의 공급원을 겨냥하기 때문이다.
+##
+## `destroy_part`는 이 셀렉터를 쓸 수 없다. GDD §20이 직접 파괴기를 억제하고 있으며
+## (주요 파괴 원인은 파괴선과 발동 제한 소진이다), 카탈로그가 조합을 거부한다.
+const ENEMY_SELECTORS: Array[String] = [
+	"random_enemy_active", "all_enemy_active", "slowest_enemy",
+]
+
+static func is_enemy_selector(selector: String) -> bool:
+	return ENEMY_SELECTORS.has(selector)
 
 ## ctx: {own_ship, enemy_ship, part, rng}
 ## 항상 파츠 배열을 돌려준다. 대상이 없으면 빈 배열.
@@ -37,7 +50,20 @@ static func resolve(selector: String, ctx: Dictionary) -> Array:
 			return _pick_one(ship.broken_parts(), ctx["rng"])
 		"slowest_own":
 			return _slowest(ship)
+		"all_enemy_active":
+			return _foe(ctx).alive_parts() if _foe(ctx) != null else []
+		"random_enemy_active":
+			var foe: RefCounted = _foe(ctx)
+			return _pick_one(foe.alive_parts(), ctx["rng"]) if foe != null else []
+		"slowest_enemy":
+			var foe2: RefCounted = _foe(ctx)
+			return _slowest(foe2) if foe2 != null else []
 	return []
+
+## 적 함선. 단독 테스트에서 가짜 문맥이 enemy_ship을 안 넣는 경우가 있으므로
+## 없으면 null을 돌려주고 호출부가 빈 배열로 처리한다.
+static func _foe(ctx: Dictionary) -> RefCounted:
+	return ctx.get("enemy_ship", null)
 
 static func _linked(ship: RefCounted, owner: RefCounted) -> Array:
 	if owner == null or not ship.links.has(owner.slot_id):

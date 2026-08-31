@@ -3,6 +3,7 @@ extends RefCounted
 ## 세 개의 축을 갖는다 — 자재(유동성), 공명(패턴 안정도), 각 파츠의 발동 횟수(수명).
 
 const K = preload("res://sim/sim_const.gd")
+const Damage = preload("res://sim/damage.gd")
 
 var side: String = "player"          # "player" / "enemy"
 var frame_id: String = ""
@@ -13,6 +14,17 @@ var hull: int = 0
 var shield: int = 0
 var material: int = 0
 var resonance: int = 0
+
+## 선체 재질. Core 파츠가 정한다 (Frame이 아니다 — GDD §14).
+## 공격 타입 상성의 방어측 절반이 이 값에서 나온다.
+var hull_material: String = K.DEFAULT_HULL_MATERIAL
+
+## 파열. 누적되며 자연 감소하지 않는다. hull 이상이 되는 순간 Collapse.
+var fracture: int = 0
+
+## Corrosion 제거용 누적기. repair()가 **실제 회복량**을 여기 더하고,
+## combat_sim이 틱당 한 번 소진한다. 풀피에서 수리하면 실제 회복이 0이라 쌓이지 않는다.
+var pending_cleanse_repair: int = 0
 
 ## 공명 기본 규칙(발동 8회마다 +1)용 누적 카운터
 var fires_total: int = 0
@@ -87,25 +99,61 @@ func destructible_parts() -> Array:
 
 # --- 피해와 회복 ---
 
+## 타입을 명시하지 않은 피해. physical은 전부 ×1.0이므로 배율이 없는 것과 같다.
+## 경로는 하나뿐이다 — 두 갈래를 두면 반드시 어긋난다.
 func take_damage(amount: int) -> Dictionary:
-	if amount <= 0:
-		return {"absorbed": 0, "hull_damage": 0, "from": hull, "to": hull}
-	var absorbed: int = mini(shield, amount)
-	shield -= absorbed
-	var before: int = hull
-	hull = maxi(0, hull - (amount - absorbed))
-	return {"absorbed": absorbed, "hull_damage": before - hull, "from": before, "to": hull}
+	return take_typed_damage(amount, K.DEFAULT_ATTACK_TYPE)
 
-## 과열 전용 — 과열은 "선체 피해"이므로 보호막을 무시한다.
-func damage_hull_direct(amount: int) -> int:
-	var before: int = hull
-	hull = maxi(0, hull - maxi(0, amount))
-	return before - hull
+func take_typed_damage(amount: int, attack_type: String) -> Dictionary:
+	return Damage.apply(self, amount, attack_type)
 
 func repair(amount: int) -> int:
 	var before: int = hull
 	hull = mini(max_hull, hull + maxi(0, amount))
-	return hull - before
+	var healed: int = hull - before
+	# 실제로 회복된 만큼만 Corrosion 제거에 기여한다. 풀피 수리는 0이다.
+	pending_cleanse_repair += healed
+	return healed
+
+# --- 파열 / 붕괴 ---
+
+func add_fracture(amount: int) -> void:
+	fracture += maxi(0, amount)
+
+## Collapse 조건. 매 틱 검사한다 — 파열이 늘어서 닿을 수도 있지만
+## **선체가 줄어서 닿을 수도** 있기 때문이다. 파열 증가 시점만 보면
+## "맞아서 체력이 떨어져 터지는" 경우를 놓친다.
+func should_collapse() -> bool:
+	return fracture > 0 and fracture >= hull
+
+## Collapse를 터뜨린다. 현재 파열만큼 Energy 피해를 한 번에 주고 파열을 0으로 되돌린다.
+## 반환은 Damage.apply()의 결과 + {"fracture": 터진 양}.
+func collapse() -> Dictionary:
+	var amount: int = fracture
+	fracture = 0
+	var r: Dictionary = take_typed_damage(amount, "energy")
+	r["fracture"] = amount
+	return r
+
+# --- Corrosion 제거 ---
+
+## 누적된 실제 회복량을 소진해 제거할 중첩 수를 돌려준다.
+## 나머지는 누적기에 남는다 — 회복 7 + 회복 5 = 12가 되면 1을 제거해야 한다.
+func consume_cleanse_charges() -> int:
+	var charges: int = pending_cleanse_repair / K.REPAIR_PER_CORROSION_CLEANSE
+	pending_cleanse_repair -= charges * K.REPAIR_PER_CORROSION_CLEANSE
+	return charges
+
+## 중첩이 가장 많은 살아있는 파츠. 동령이면 슬롯 정의 순서 — 결정론 계약이다.
+## 없으면 null.
+func most_corroded_part() -> RefCounted:
+	var best: RefCounted = null
+	for p: RefCounted in parts:
+		if p.broken or p.corrosion_stacks <= 0:
+			continue
+		if best == null or p.corrosion_stacks > best.corrosion_stacks:
+			best = p
+	return best
 
 func add_shield(amount: int) -> void:
 	shield += maxi(0, amount)
@@ -171,7 +219,9 @@ func add_overheat(stacks: int) -> void:
 ## 소모해야 한다 — 먼저 깎아버리면 지속시간이 정확히 주기 경계에서 끝나는 경우
 ## (예: 100틱 지속 + 20틱 주기) 마지막 한 번의 적용이 통째로 사라진다.
 func advance_effects(tick: int) -> Dictionary:
-	var result: Dictionary = {"regen": 0, "overheat": 0}
+	var result: Dictionary = {
+		"regen": 0, "overheat": 0, "overheat_fired": false, "overheat_absorbed": 0,
+	}
 
 	if tick > 0 and tick % K.PERIOD_TICKS == 0:
 		var total: int = 0
@@ -182,7 +232,14 @@ func advance_effects(tick: int) -> Dictionary:
 		if total > 0:
 			result["regen"] = repair(total)
 		if overheat_stacks > 0:
-			result["overheat"] = damage_hull_direct(overheat_stacks)
+			# 과열은 Thermal 피해다. 보호막을 무시하지 않는다 —
+			# "Energy Shield로 Hull 보호"가 과열의 공용 대응책이기 때문이다.
+			# 실드가 전부 흡수해도 이번 틱에 과열이 작동한 것은 사실이므로
+			# 별도 플래그로 알린다. hull_damage만 보면 이벤트가 사라진다.
+			var r: Dictionary = take_typed_damage(overheat_stacks, "thermal")
+			result["overheat"] = int(r["hull_damage"])
+			result["overheat_absorbed"] = int(r["absorbed"])
+			result["overheat_fired"] = true
 			overheat_stacks -= 1
 
 	for entry: Dictionary in regen_entries:

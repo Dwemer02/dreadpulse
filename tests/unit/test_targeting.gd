@@ -1,6 +1,6 @@
 extends RefCounted
 
-const EXPECTED_CHECKS := 46
+const EXPECTED_CHECKS := 52
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -200,6 +200,15 @@ func _test_unknown(t: RefCounted) -> void:
 	var rng2 := RandomNumberGenerator.new()
 	rng2.seed = 1
 	var ctx2: Dictionary = _ctx(s2, s2.get_part("core"), rng2)
+	# 적 파츠 셀렉터가 생겼으므로 제네릭 검사에도 실제 적함이 필요하다.
+	# null을 그대로 두면 세 셀렉터가 빈 배열을 돌려주고, 그것이 "match 분기 누락"과
+	# 구별되지 않는다.
+	ctx2["enemy_ship"] = _ship()
 	for selector: String in Targeting.SELECTORS:
 		t.check(Targeting.resolve(selector, ctx2).size() > 0,
 			"셀렉터 '%s'가 유효한 문맥에서 빈 배열을 돌려준다 — match 분기 누락 의심" % selector)
+
+	# 적함이 없는 문맥에서도 죽지 않아야 한다 (단독 테스트가 enemy_ship을 안 넣는 경우)
+	for selector: String in Targeting.ENEMY_SELECTORS:
+		t.eq(Targeting.resolve(selector, _ctx(s2, s2.get_part("core"), rng2)).size(), 0,
+			"적함이 없으면 '%s'는 빈 배열이다 (크래시가 아니다)" % selector)

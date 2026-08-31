@@ -143,7 +143,29 @@ static func describe(e: Dictionary) -> String:
 		"overheat_applied":
 			return "과열 %d 부여" % int(e.get("stacks", 0))
 		"overheat_ticked":
-			return "과열 피해 %d (남은 %d)" % [int(e.get("damage", 0)), int(e.get("stacks", 0))]
+			var oh: String = "과열 피해 %d (남은 %d)" % [
+				int(e.get("damage", 0)), int(e.get("stacks", 0))]
+			if int(e.get("absorbed", 0)) > 0:
+				oh += " [보호막 %d 흡수]" % int(e.get("absorbed", 0))
+			return oh
+		"corrosion_applied":
+			return "%s 부식 +%d → %d" % [e.get("slot", "?"),
+				int(e.get("stacks", 0)), int(e.get("total", 0))]
+		"corrosion_ticked":
+			return "%s 부식 발동 피해 %d (중첩 %d 유지)" % [e.get("slot", "?"),
+				int(e.get("hull_damage", 0)), int(e.get("stacks", 0))]
+		"corrosion_cleansed":
+			return "%s 부식 −%d → 남은 %d (%s)" % [e.get("slot", "?"),
+				int(e.get("stacks", 0)), int(e.get("remaining", 0)), e.get("cause", "?")]
+		"fracture_applied":
+			return "파열 +%d → %d (선체 %d, 붕괴까지 %d)" % [
+				int(e.get("amount", 0)), int(e.get("total", 0)),
+				int(e.get("hull", 0)), int(e.get("until_collapse", 0))]
+		"collapsed":
+			return "붕괴! 파열 %d 폭발 → 선체 피해 %d" % [
+				int(e.get("fracture", 0)), int(e.get("hull_damage", 0))]
+		"stasis_applied":
+			return "%s 정지 (%s초)" % [e.get("slot", "?"), str(e.get("duration", 0))]
 		"speed_changed":
 			return "%s %s (%s초)" % [e.get("slot", "?"),
 				"가속" if str(e.get("state", "")) == "accelerated" else "둔화",

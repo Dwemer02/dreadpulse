@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 123
+const EXPECTED_CHECKS := 142
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -69,8 +69,99 @@ func run(t: RefCounted) -> void:
 	_test_where_skip(t)
 	_test_selector_shared_resolution(t)
 	_test_delay(t)
+	_test_status_ops(t)
+	_test_enemy_selectors(t)
 	_test_vocabulary(t)
 	t.done()
+
+## 상태이상 op 4종이 실제로 상태를 바꾸고 이벤트를 남기는지.
+func _test_status_ops(t: RefCounted) -> void:
+	var sim: RefCounted = FakeSim.new()
+	var own: RefCounted = _ship("player", 100)
+	var foe: RefCounted = _ship("enemy", 100)
+	var owner: RefCounted = _part("weapon_1")
+	own.add_part(owner)
+	var foe_part: RefCounted = _part("weapon_1")
+	foe.add_part(foe_part)
+	var ctx: Dictionary = _ctx(sim, own, foe, owner, _rng())
+
+	# 부식 — 적 파츠에 쌓인다
+	Actions.run_block([
+		{"op": "apply_corrosion", "target": "random_enemy_active", "stacks": 3},
+	], ctx)
+	t.eq(foe_part.corrosion_stacks, 3, "적 파츠에 부식이 쌓인다")
+	var ca: Array = sim.of_type("corrosion_applied")
+	t.eq(ca.size(), 1, "corrosion_applied 이벤트")
+	t.eq(str(ca[0]["ship"]), "enemy", "이벤트의 ship이 걸린 쪽이다 (부른 쪽이 아니다)")
+	t.eq(int(ca[0]["total"]), 3, "누적값을 함께 싣는다")
+
+	# 부식은 누적된다
+	Actions.run_block([
+		{"op": "apply_corrosion", "target": "all_enemy_active", "stacks": 2},
+	], ctx)
+	t.eq(foe_part.corrosion_stacks, 5, "부식은 누적된다")
+
+	# 명시적 제거 — 자기 파츠만
+	owner.corrosion_stacks = 4
+	Actions.run_block([{"op": "cleanse_corrosion", "target": "self", "stacks": 3}], ctx)
+	t.eq(owner.corrosion_stacks, 1, "cleanse_corrosion이 중첩을 깎는다")
+	Actions.run_block([{"op": "cleanse_corrosion", "target": "self", "stacks": 99}], ctx)
+	t.eq(owner.corrosion_stacks, 0, "남은 중첩보다 많이 요구해도 음수가 되지 않는다")
+	t.eq(sim.of_type("corrosion_cleansed").size(), 2, "제거 이벤트 2건")
+
+	# 중첩이 0이면 제거 이벤트를 만들지 않는다 (이벤트 스팸 방지)
+	var before_events: int = sim.of_type("corrosion_cleansed").size()
+	Actions.run_block([{"op": "cleanse_corrosion", "target": "self", "stacks": 5}], ctx)
+	t.eq(sim.of_type("corrosion_cleansed").size(), before_events,
+		"제거할 중첩이 없으면 이벤트를 남기지 않는다")
+
+	# 파열 — 적함에 누적되고 임계까지 남은 거리를 싣는다
+	Actions.run_block([{"op": "apply_fracture", "amount": 30}], ctx)
+	t.eq(foe.fracture, 30, "적함에 파열이 쌓인다")
+	var fa: Array = sim.of_type("fracture_applied")
+	t.eq(int(fa[0]["until_collapse"]), 70, "붕괴까지 남은 거리를 싣는다 (선체 100 - 파열 30)")
+
+	# 정지 — 초를 틱으로 환산한다
+	Actions.run_block([
+		{"op": "apply_stasis", "target": "random_enemy_active", "duration": 2.0},
+	], ctx)
+	t.eq(foe_part.stasis_ticks, K.secs_to_ticks(2.0), "정지가 틱으로 환산되어 걸린다")
+	t.eq(str(sim.of_type("stasis_applied")[0]["ship"]), "enemy", "정지 이벤트도 걸린 쪽이다")
+
+	# 0 이하 인자는 아무것도 하지 않는다
+	var quiet: RefCounted = FakeSim.new()
+	var ctx2: Dictionary = _ctx(quiet, own, foe, owner, _rng())
+	Actions.run_block([
+		{"op": "apply_corrosion", "target": "self", "stacks": 0},
+		{"op": "apply_fracture", "amount": 0},
+		{"op": "apply_stasis", "target": "self", "duration": 0.0},
+	], ctx2)
+	t.eq(quiet.events.size(), 0, "0 이하 인자는 이벤트를 남기지 않는다")
+	t.eq(owner.corrosion_stacks, 0, "부식도 그대로")
+
+## 적 파츠 셀렉터가 적함의 파츠를 돌려주는지. 자기 파츠를 잘못 집으면
+## 디버프가 자해가 되므로 방향을 명시적으로 확인한다.
+func _test_enemy_selectors(t: RefCounted) -> void:
+	var sim: RefCounted = FakeSim.new()
+	var own: RefCounted = _ship("player", 100)
+	var foe: RefCounted = _ship("enemy", 100)
+	var mine: RefCounted = _part("weapon_1")
+	own.add_part(mine)
+	var theirs: RefCounted = _part("weapon_2")
+	foe.add_part(theirs)
+	var ctx: Dictionary = _ctx(sim, own, foe, mine, _rng())
+
+	Actions.run_block([
+		{"op": "apply_stasis", "target": "all_enemy_active", "duration": 1.0},
+	], ctx)
+	t.check(theirs.is_stasised(), "적 파츠가 정지된다")
+	t.check(not mine.is_stasised(), "자기 파츠는 건드리지 않는다")
+
+	Actions.run_block([
+		{"op": "apply_corrosion", "target": "slowest_enemy", "stacks": 1},
+	], ctx)
+	t.eq(theirs.corrosion_stacks, 1, "slowest_enemy도 적함에서 고른다")
+	t.eq(mine.corrosion_stacks, 0, "자기 파츠는 그대로")
 
 func _test_damage_and_resources(t: RefCounted) -> void:
 	var sim: RefCounted = FakeSim.new()
@@ -477,7 +568,7 @@ func _test_delay(t: RefCounted) -> void:
 	t.check(alive_y.broken, "새로 파손된 다른 파츠(alive_y)는 건드리지 않는다")
 
 func _test_vocabulary(t: RefCounted) -> void:
-	t.eq(Actions.OPS.size(), 20, "op 어휘는 20종")
+	t.eq(Actions.OPS.size(), 24, "op 어휘는 24종 (상태이상 4종 추가)")
 	t.check(not Actions.OPS.has("apply_overload"), "삭제된 어휘(apply_overload)는 없다")
 	t.check(Actions.OPS.has("multi_fire"), "multi_fire는 어휘에 있다")
 	t.check(Actions.OPS.has("deal_damage"), "deal_damage는 어휘에 있다")

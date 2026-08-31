@@ -23,6 +23,41 @@ const MAX_COMBAT_TICKS: int = 2400  # 120초
 ## 재생·과열이 적용되는 주기 (1초)
 const PERIOD_TICKS: int = 20
 
+# --- 공격 / 방어 타입 (스펙 §21.1) ---
+
+## 배율은 정수 분수로 둔다. 부동소수는 드리프트를 만들고, 그것이 결정론을 깬다 —
+## 쿨타임 속도를 SPEED_NORMAL=2로 두는 것과 같은 이유다.
+## 분모 4. ×0.75 → 3, ×1.0 → 4, ×1.5 → 6.
+const TYPE_MULT_DENOM: int = 4
+
+const ATTACK_TYPES: Array[String] = ["physical", "thermal", "caustic", "energy"]
+## 방어 타입 3종. plating/biomass는 선체 재질(Core가 정한다), energy_shield는 그 위의 층.
+const DEFENSE_TYPES: Array[String] = ["plating", "biomass", "energy_shield"]
+## 선체 재질은 이 둘 중 하나다. energy_shield는 재질이 아니다.
+const HULL_MATERIALS: Array[String] = ["plating", "biomass"]
+
+## 타입을 명시하지 않은 피해. 전부 ×1.0이므로 상성이 없다 —
+## 타입 체계를 모르는 플레이어의 안전밸브이자, 기존 콘텐츠의 수치를 보존하는 기본값이다.
+const DEFAULT_ATTACK_TYPE: String = "physical"
+
+## 공격 타입 -> 방어 타입 -> 배율 분자. 하한은 0이 아니다 (GDD §3.4) —
+## 면역과 무효는 이 게임에 존재하지 않는다.
+const TYPE_MULT: Dictionary = {
+	"physical": {"plating": 4, "biomass": 4, "energy_shield": 4},
+	"thermal":  {"plating": 3, "biomass": 6, "energy_shield": 4},
+	"caustic":  {"plating": 6, "biomass": 4, "energy_shield": 3},
+	"energy":   {"plating": 4, "biomass": 3, "energy_shield": 6},
+}
+
+## 선체 재질 기본값. Core가 방어 타입 키워드를 갖지 않으면 이것으로 본다.
+const DEFAULT_HULL_MATERIAL: String = "plating"
+
+# --- 상태이상 (스펙 §21.2) ---
+
+## Corrosion 제거: 실제 회복 이만큼당 중첩 1. 풀피에서 수리해도 실제 회복이 0이므로
+## 제거되지 않는다. 초기 테스트값이다.
+const REPAIR_PER_CORROSION_CLEANSE: int = 10
+
 ## 쿨타임 진행 속도 유닛. 정수라서 드리프트가 없다. 스펙 §6.5
 const SPEED_NORMAL: int = 2
 const SPEED_ACCEL: int = 4   # 가속: 정확히 2배

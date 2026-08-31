@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 39
+const EXPECTED_CHECKS := 41
 
 const K = preload("res://sim/sim_const.gd")
 const Catalog = preload("res://sim/catalog.gd")
@@ -130,6 +130,36 @@ func _test_schema_errors(t: RefCounted) -> void:
 		    {"on": "part_fired", "where": {"overload_at_least": 2}, "do": []}] } }
 	], "inline")
 	t.eq(c3.errors.size(), 3, "삭제된 어휘를 쓴 파츠 3건이 잡힌다: %s" % str(c3.errors))
+
+	# 적 파츠 셀렉터는 디버프 전용이다. GDD §20이 직접 파괴기를 억제하고 있으므로
+	# destroy_part 같은 op이 적 파츠를 겨냥하는 것은 저작 시점에 막아야 한다.
+	var c4: RefCounted = Catalog.new()
+	c4.ingest_parts([
+		{ "id": "bad_enemy_destroy", "name": "x", "faction": "reclaimer", "base_role": "weapon",
+		  "active": { "cooldown": 1.0,
+		    "on_fire": [{"op": "destroy_part", "target": "random_enemy_active"}] } },
+		{ "id": "bad_enemy_restore", "name": "x", "faction": "reclaimer", "base_role": "weapon",
+		  "active": { "cooldown": 1.0,
+		    "on_fire": [{"op": "reinforce", "target": "all_enemy_active", "stacks": 1}] } },
+		# 공격 타입 오타가 physical로 조용히 폴백하면 상성표가 무의미해진다
+		{ "id": "bad_damage_type", "name": "x", "faction": "reclaimer", "base_role": "weapon",
+		  "active": { "cooldown": 1.0,
+		    "on_fire": [{"op": "deal_damage", "amount": 5, "type": "corrosive"}] } }
+	], "inline")
+	t.eq(c4.errors.size(), 3, "적 파츠 대상 위반 2건 + 타입 오타 1건: %s" % str(c4.errors))
+
+	# 디버프는 적 파츠를 겨냥해도 통과한다 — 금지가 과하게 걸리면 안 된다
+	var ok: RefCounted = Catalog.new()
+	ok.ingest_parts([
+		{ "id": "good_enemy_debuff", "name": "x", "faction": "viridia", "base_role": "weapon",
+		  "keywords": ["caustic"],
+		  "active": { "cooldown": 1.0, "on_fire": [
+		    {"op": "apply_corrosion", "target": "random_enemy_active", "stacks": 2},
+		    {"op": "apply_stasis", "target": "slowest_enemy", "duration": 1.0},
+		    {"op": "slow", "target": "all_enemy_active", "duration": 2.0},
+		    {"op": "deal_damage", "amount": 5, "type": "caustic"}] } }
+	], "inline")
+	t.check(ok.ok(), "디버프는 적 파츠를 겨냥할 수 있다: %s" % str(ok.errors))
 
 func _test_frame_schema_errors(t: RefCounted) -> void:
 	# 파츠에는 스키마 검증이 있는데 Frame에는 없으면, 망가진 Frame이 조용히 로드된다

@@ -106,7 +106,16 @@ func assemble(build: Dictionary, catalog: RefCounted, side: String) -> RefCounte
 				errors.append("%s: \"%s\"에는 augment 블록이 없다" % [slot_id, augment_id])
 				return null
 
-		ship.add_part(_make_part(catalog, slot_id, role, part_id, augment_id))
+		var made: RefCounted = _make_part(catalog, slot_id, role, part_id, augment_id)
+		ship.add_part(made)
+		# --- 선체 재질은 Core가 정한다 (GDD §14). Frame이 아니다. ---
+		# Core의 4층 방어 타입 키워드에서 읽는다. 없으면 기본값을 그대로 둔다 —
+		# 재질 키워드가 아직 없는 기존 콘텐츠가 그대로 돌아야 한다.
+		if made.base_role == "core":
+			for mat: String in K.HULL_MATERIALS:
+				if made.keywords.has(mat):
+					ship.hull_material = mat
+					break
 
 	# --- links 검증 (양방향) ---
 	for pair: Variant in build.get("links", []):

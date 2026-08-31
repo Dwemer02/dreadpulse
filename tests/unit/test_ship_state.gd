@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 67
+const EXPECTED_CHECKS := 71
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -52,12 +52,16 @@ func _test_damage(t: RefCounted) -> void:
 	q.repair(200)
 	t.eq(q.hull, 200, "수리는 최대 HP를 넘지 않는다")
 
-	# 과열은 보호막을 무시하고 선체를 직접 때린다
+	# 보호막을 우회하는 피해 경로는 존재하지 않는다.
+	# 옛 damage_hull_direct()가 과열 전용 우회로였고, "Energy Shield로 Hull 보호"가
+	# 과열의 공용 대응책이 되면서 제거됐다. 되살아나면 대응책이 무의미해진다.
+	t.check(not (_make_ship() as Object).has_method("damage_hull_direct"),
+		"보호막 우회 경로(damage_hull_direct)가 되살아나지 않았다")
 	var r2: RefCounted = _make_ship()
 	r2.shield = 50
-	r2.damage_hull_direct(10)
-	t.eq(r2.shield, 50, "과열은 보호막을 소모하지 않는다")
-	t.eq(r2.hull, 190, "과열은 선체를 직접 깎는다")
+	r2.take_typed_damage(10, "thermal")
+	t.check(r2.shield < 50, "타입 피해도 보호막을 먼저 소모한다")
+	t.eq(r2.hull, 200, "보호막이 남아 있으면 선체는 그대로다")
 
 	# 경계 — 0과 음수는 아무 것도 바꾸지 않는다
 	var r3: RefCounted = _make_ship()
@@ -130,14 +134,36 @@ func _test_regen_overheat(t: RefCounted) -> void:
 		healed += int(s.advance_effects(tick)["regen"])
 	t.eq(healed, 10, "재생 2(5초)는 총 10 회복한다")
 
-	# 과열 3 = 3 + 2 + 1 = 6 피해, 3초에 걸쳐
+	# 과열은 Thermal 피해다. 기본 재질이 plating이므로 배율은 3/4다.
+	# 중첩 3 → 3*3/4=2, 2 → 1, 1 → 0이지만 원래 단위로 1 남았으므로 하한 1. 총 4.
+	# (배율 전에는 3+2+1=6이었다. 이 숫자가 6으로 돌아가면 배율이 빠진 것이다.)
 	var q: RefCounted = _make_ship()
 	q.add_overheat(3)
 	var burned: int = 0
 	for tick: int in range(1, 121):
 		burned += int(q.advance_effects(tick)["overheat"])
-	t.eq(burned, 6, "과열 3은 3+2+1 = 6 피해")
-	t.eq(q.hull, 194, "선체 감소")
+	t.eq(burned, 4, "과열 3은 Thermal×장갑(3/4)을 타고 2+1+1 = 4 피해")
+	t.eq(q.hull, 196, "선체 감소")
+
+	# 생체 재질은 Thermal에 6/4이므로 같은 중첩이 더 아프다 — 상성이 실제로 걸리는지 확인
+	var bio: RefCounted = _make_ship()
+	bio.hull_material = "biomass"
+	bio.add_overheat(3)
+	var bio_burned: int = 0
+	for tick: int in range(1, 121):
+		bio_burned += int(bio.advance_effects(tick)["overheat"])
+	t.check(bio_burned > burned,
+		"생체는 Thermal에 약하므로 같은 과열이 장갑보다 더 아프다 (%d > %d)" % [bio_burned, burned])
+
+	# 보호막이 과열을 막는다 — "Energy Shield로 Hull 보호"가 과열의 공용 대응책이다.
+	# 배율 도입 전에는 damage_hull_direct로 보호막을 통째 무시했다.
+	var shielded: RefCounted = _make_ship()
+	shielded.shield = 50
+	shielded.add_overheat(3)
+	for tick: int in range(1, 121):
+		shielded.advance_effects(tick)
+	t.eq(shielded.hull, shielded.max_hull, "보호막이 있으면 과열이 선체에 닿지 않는다")
+	t.check(shielded.shield < 50, "대신 보호막이 깎인다")
 	t.eq(q.overheat_stacks, 0, "과열 소진")
 
 	# 영구 재생(PERMANENT)은 만료되지 않고 계속 적용된다

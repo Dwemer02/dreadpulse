@@ -36,6 +36,13 @@ var fires_remaining: int = K.UNLIMITED
 var fires_used: int = 0
 var last_fire_tick: int = -99999
 var reinforce_stacks: int = 0
+## 부식 중첩. 이 파츠가 발동할 때 중첩만큼 Caustic 피해를 **소유 함선**에 준다.
+## 발동해도 줄지 않고 자연 감소도 없다. 파손되면 사라진다.
+var corrosion_stacks: int = 0
+## 정지 남은 틱. 0보다 크면 쿨타임 진행과 발동이 멈춘다.
+## 파손과 달리 **트리거는 계속 돈다** — 그러지 않으면 숙주에 걸린 AUGMENT가
+## 조용히 침묵한다 (CLAUDE.md의 "조용히 죽는 효과").
+var stasis_ticks: int = 0
 ## 0 = 없음, K.PERMANENT = 영구, 그 외 = 남은 틱
 var indestructible_ticks: int = 0
 ## empower 스택. 각 원소가 damage_mult 하나. 발동 시 앞에서부터 소모한다.
@@ -54,9 +61,19 @@ func speed_units() -> int:
 		return K.SPEED_SLOW
 	return K.SPEED_NORMAL
 
+func is_stasised() -> bool:
+	return stasis_ticks > 0
+
 ## 한 틱 진행. 파손 상태면 쿨타임도 지속효과도 멈춘다.
+##
+## 정지 상태도 같다 — 다만 정지 자체의 남은 시간은 흘러야 하므로 그것만 먼저 깎는다.
+## 가속/둔화/파괴 불가 타이머는 함께 멈춘다: 정지가 "시간이 멈춘 상태"인데
+## 그 안에서 가속이 소모되면 정지가 오히려 이득이 된다.
 func advance() -> void:
 	if broken:
+		return
+	if stasis_ticks > 0:
+		stasis_ticks -= 1
 		return
 	progress_units += speed_units()
 	if accel_ticks > 0:
@@ -66,6 +83,19 @@ func advance() -> void:
 	if indestructible_ticks > 0:
 		indestructible_ticks -= 1
 
+func apply_stasis(ticks: int) -> void:
+	# 같은 종류는 시간 합산 — 가속/둔화와 같은 규칙이다.
+	if ticks > 0:
+		stasis_ticks += ticks
+
+## 쿨타임이 찼는가. **정지는 여기서 보지 않는다** — 일부러다.
+##
+## 정지된 파츠를 후보에서 빼버리면 _fire()에 도달하지 못해
+## part_fire_blocked가 방출되지 않고, 정지가 아무 보고 없이 조용히 발동을 막는다.
+## 후보로 올린 뒤 block_reason()이 "stasis"로 거절해야 이벤트 스트림에 남는다.
+##
+## 쿨타임 중간에 얼어붙은 파츠는 진행도가 멈추므로 애초에 준비되지 않는다.
+## 그것은 "막힌" 것이 아니라 "느린" 것이므로 보고할 사건이 없다 — 의미가 맞는다.
 func is_ready() -> bool:
 	return not broken and progress_units >= cooldown_units
 
@@ -121,6 +151,11 @@ func _apply_speed_effect(ticks: int, accelerating: bool) -> void:
 func block_reason(tick: int) -> String:
 	if broken:
 		return "broken"
+	# 정지는 강제 발동(fire_part)까지 막는다. 파손보다 먼저 볼 이유는 없지만
+	# 발동 상한보다는 먼저 봐야 한다 — 정지가 사유로 보고되지 않으면
+	# 왜 안 쏘는지 이벤트 스트림으로 알 수 없다.
+	if is_stasised():
+		return "stasis"
 	if tick - last_fire_tick < K.MIN_FIRE_TICKS:
 		return "rate_cap"
 	if fires_remaining == 0:
@@ -167,6 +202,10 @@ func try_break() -> String:
 		reinforce_stacks -= 1
 		return "reinforce"
 	broken = true
+	# 파손되면 부식 중첩이 사라진다 — 부식은 "발동할 때" 아픈 상태이고
+	# 파손된 파츠는 발동하지 않으므로, 남겨두면 복구했을 때 부활한다.
+	# 이것이 부식의 세 번째 제거 경로다 (수리 · 파손 · 실드 완화).
+	corrosion_stacks = 0
 	return "broken"
 
 ## 파손 해제 + 쿨타임 0 재시작 + 남은 횟수 초기화
@@ -175,6 +214,9 @@ func restore() -> void:
 	progress_units = 0
 	fires_remaining = fire_limit
 	last_block_reason = ""
+	# 정지는 파손이 풀릴 때 함께 풀린다. 파손 중에는 advance()가 통째로 멈춰
+	# stasis_ticks가 흐르지 않으므로, 남겨두면 복구 직후 다시 얼어 있다.
+	stasis_ticks = 0
 
 # --- 발동 횟수 ---
 

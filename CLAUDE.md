@@ -170,13 +170,27 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 |---|---|---|
 | 1 팩션 | `reclaimer` `viridia` `aeonic` `first` | 1개 필수 |
 | 2 슬롯 | `weapon` `defense` `system` `core` | `base_role`에서 자동 주입 |
-| 3 공격 타입 | `physical` `thermal` `corrosive` `energy` | 무기는 1개 필수 |
+| 3 공격 타입 | `physical` `thermal` `caustic` `energy` | 무기는 1개 필수 |
 | 4 방어 타입 | `plating` `biomass` `energy_shield` | 방어·코어에 해당 시 |
-| 5 효과 | `damage` `repair` `regen` `accelerate` `slow` `overheat` `fire_limit`<br>`destroy` `indestructible` `reinforce` `restore` `multi_fire` | 0개 이상 |
+| 5 효과 | `damage` `repair` `regen` `accelerate` `slow` `fire_limit`<br>`destroy` `indestructible` `reinforce` `restore` `multi_fire`<br>**상태이상** `overheat` `corrosion` `fracture` `stasis` | 0개 이상 |
 | 6 조작 | `charge`(=`reduce_cooldown`) · `amplify`(=`empower`) | 0개 이상 |
 | 7 자원 | `material` `resonance` | 해당 시 |
 
 `keywords: []`인 파츠는 저작 실수다 — 최소한 1·2층은 채워져야 한다.
+
+**공격 타입과 상태이상은 별개다.** `thermal` 피해를 준다고 `overheat`가 자동으로
+붙지 않는다. 상태이상은 `apply_overheat`/`apply_corrosion`/`apply_fracture`/`apply_stasis`가
+명시적으로 부여한다. 이 분리가 팩션의 메인/서브 타입 구조를 만든다 —
+서브 타입 팩션은 피해 타입은 쏘지만 그 상태이상의 적용기나 payoff가 없다.
+
+| 팩션 | 메인 | 서브 | 희소 | 상태이상 |
+|---|---|---|---|---|
+| Reclaimer | `thermal` | `caustic` | `energy` | `overheat` |
+| Viridia | `caustic` | `energy` | `thermal` | `corrosion` |
+| Aeonic | `energy` | `thermal` | `caustic` | `fracture` · `stasis` |
+
+`physical`은 순환 밖의 범용 안전망이다. 서브 타입은 상성표가 강제한다 —
+메인의 약점을 ×1.5로 뒤집는 타입이 정확히 하나이고 그것이 서브다.
 
 **제외·보류된 키워드.** `crit` 제거(The Bazaar와 유사, 복잡성).
 `shield` → `energy_shield`로 단일화. `link` 보류(정적 `links`만 존재).
@@ -227,7 +241,22 @@ Always start by running `--help` to discover available commands. Use the CLI whe
   소진·파괴 효과 전부에서 면제되며, Core는 영구 `indestructible`을 기본 보유한다.
 - **공격/방어 타입 배율의 하한은 0이 아니다.** 면역과 무효는 이 게임에 존재하지 않는다
   (GDD §3.4). `physical`은 상성이 없는 대신 페널티도 없다 — 타입 체계를 모르는
-  플레이어의 안전밸브다.
+  플레이어의 안전밸브다. 배율은 정수 4분수(`TYPE_MULT`, 분모 4)이며 부동소수를 쓰지 않는다.
+  정수 나눗셈이 1 미만을 0으로 깎는 것도 막는다 — 소액 다타가 무력화되면
+  사실상의 면역이 생긴다.
+- **한 번의 타격은 두 배율을 지난다.** 실드 배율로 실드를 깎고, 남은 몫을 **원래 단위로
+  환산한 뒤** 재질 배율로 선체에 넣는다. 환산을 빼면 실드 배율이 선체까지 새어
+  상성표가 무의미해진다. 계산은 `sim/damage.gd` 한 곳에만 둔다.
+- **보호막을 우회하는 피해 경로는 없다.** 옛 `damage_hull_direct()`는 제거됐다 —
+  `energy_shield`로 선체를 지키는 것이 과열의 공용 대응책이기 때문이다.
+- **붕괴는 매 틱 검사한다** (`combat_sim.step()` 5.5단계). 파열이 늘어서 닿을 수도 있지만
+  선체가 줄어서 닿을 수도 있다. 자리는 지속 피해 **뒤**, 파괴선 검사 **앞**이다.
+- **Stasis는 발동을 막고 트리거는 막지 않는다.** 트리거까지 멈추면 숙주에 걸린 AUGMENT가
+  조용히 침묵한다. 그리고 `is_ready()`는 정지를 보지 않는다 — 후보에서 빼면 `_fire()`에
+  도달하지 못해 `part_fire_blocked`가 방출되지 않고 정지가 조용히 발동을 막는다.
+- **적 파츠 셀렉터는 디버프 전용이다.** `random_enemy_active` 계열은
+  `Actions.OWN_ONLY_OPS`(파괴·복구·보강·강화·강제발동·부식제거)와 조합될 수 없다 —
+  카탈로그가 저작 시점에 거부한다 (GDD §20).
 - **선체 재질(`plating`/`biomass`)은 Core 파츠가 결정한다.** Frame이 아니다.
   같은 팩션 안에도 재질이 다른 Core가 존재해야 한다 — 그래야 상성이 팩션 단위가
   아니라 빌드 단위가 되고 §3.4가 지켜진다.

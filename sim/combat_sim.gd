@@ -102,10 +102,24 @@ func step() -> void:
 		if int(effects["regen"]) > 0:
 			_begin_chain()
 			emit("regen_ticked", ship.side, {"amount": effects["regen"]})
-		if int(effects["overheat"]) > 0:
+		# 실드가 전부 흡수해 hull_damage가 0이어도 과열은 작동했다.
+		# 그 틱을 이벤트에서 지우면 "왜 중첩이 줄었는가"를 복원할 수 없다.
+		if bool(effects["overheat_fired"]):
 			_begin_chain()
-			emit("overheat_ticked", ship.side,
-				{"damage": effects["overheat"], "stacks": ship.overheat_stacks})
+			emit("overheat_ticked", ship.side, {
+				"damage": effects["overheat"], "absorbed": effects["overheat_absorbed"],
+				"stacks": ship.overheat_stacks,
+			})
+	_drain_chain()
+
+	# 5.5. 붕괴 판정 + 부식 수리 제거
+	#
+	# 이 자리인 이유: 재생이 선체를 올린 **뒤**라야 임계점이 정확하고, 과열이 선체를
+	# 내린 **뒤**라야 그 틱의 붕괴를 놓치지 않으며, 붕괴 피해가 파괴선을 넘길 수 있으므로
+	# 파괴선 검사(6)보다 **앞**이어야 한다.
+	for ship: RefCounted in [player, enemy]:
+		_cleanse_corrosion_by_repair(ship)
+		_check_collapse(ship)
 	_drain_chain()
 
 	# 6. 파괴선 검사
@@ -203,6 +217,20 @@ func _fire(part: RefCounted, ship: RefCounted, cause: String) -> void:
 			"remaining": part.fires_remaining, "cause": "fired",
 		})
 
+	# 부식: 발동한 파츠에 중첩이 있으면 그만큼 Caustic 피해를 **소유 함선**에 준다.
+	# 중첩은 줄지 않는다 — "행동할수록 손해가 커지는 상태"가 핵심이기 때문이다.
+	# on_fire보다 먼저 넣는다: 이 피해로 선체가 줄어든 상태를 파츠 효과가 보게 해야
+	# "부식으로 죽어가면서 마지막 발동" 같은 상황이 정확히 계산된다.
+	if part.corrosion_stacks > 0:
+		var cr: Dictionary = ship.take_typed_damage(part.corrosion_stacks, "caustic")
+		emit("corrosion_ticked", ship.side, {
+			"slot": part.slot_id, "stacks": part.corrosion_stacks,
+			"hull_damage": cr["hull_damage"], "absorbed": cr["absorbed"],
+		})
+		if int(cr["hull_damage"]) > 0:
+			emit("hull_changed", ship.side,
+				{"from": cr["from"], "to": cr["to"], "ratio": ship.hull_ratio()})
+
 	# 공명 기본 규칙: 행동 누적 → 공명
 	if ship.register_fire_for_resonance() > 0:
 		emit("resonance_gained", ship.side,
@@ -254,6 +282,40 @@ func _run_scheduled() -> void:
 		var ctx: Dictionary = entry["ctx"]
 		ctx["tick"] = tick
 		Actions.apply(entry["action"], ctx, entry["resolved"])
+
+## 붕괴. 파열이 현재 선체를 따라잡으면 파열만큼 Energy 피해를 한 번에 주고 0으로 되돌린다.
+## 파열을 먼저 0으로 만들므로 한 틱에 두 번 터지지 않는다 (ship_state.collapse()).
+func _check_collapse(ship: RefCounted) -> void:
+	if not ship.should_collapse():
+		return
+	_begin_chain()
+	var r: Dictionary = ship.collapse()
+	emit("collapsed", ship.side, {
+		"fracture": r["fracture"], "hull_damage": r["hull_damage"],
+		"absorbed": r["absorbed"], "material_mult": r["material_mult"],
+	})
+	if int(r["hull_damage"]) > 0:
+		emit("hull_changed", ship.side,
+			{"from": r["from"], "to": r["to"], "ratio": ship.hull_ratio()})
+
+## 수리로 부식을 제거한다. 누적된 **실제 회복량**을 소진하며,
+## 중첩이 가장 많은 파츠부터 하나씩 깎는다 (동령이면 슬롯 정의 순서 — 결정론).
+##
+## 틱당 한 번만 도는 이유는 이벤트 방출 지점을 한 곳으로 모으기 위해서다.
+## repair op과 재생 틱이 둘 다 ship_state.repair()를 지나므로 두 경로가 자동으로 잡힌다.
+func _cleanse_corrosion_by_repair(ship: RefCounted) -> void:
+	var charges: int = ship.consume_cleanse_charges()
+	while charges > 0:
+		var target: RefCounted = ship.most_corroded_part()
+		if target == null:
+			break  # 제거할 중첩이 없으면 남은 charge는 버린다 (누적기에 되돌리지 않는다)
+		target.corrosion_stacks -= 1
+		_begin_chain()
+		emit("corrosion_cleansed", ship.side, {
+			"slot": target.slot_id, "stacks": 1,
+			"remaining": target.corrosion_stacks, "cause": "repair",
+		})
+		charges -= 1
 
 func _check_thresholds(ship: RefCounted) -> void:
 	for threshold: Variant in ship.newly_crossed_thresholds():

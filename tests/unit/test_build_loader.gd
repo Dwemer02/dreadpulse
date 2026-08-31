@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신할 것
-const EXPECTED_CHECKS := 71
+const EXPECTED_CHECKS := 76
 
 const K = preload("res://sim/sim_const.gd")
 const Catalog = preload("res://sim/catalog.gd")
@@ -49,7 +49,45 @@ func run(t: RefCounted) -> void:
 	_test_relic_overflow(t)
 	_test_relic_modifiers(t)
 	_test_file_load(t)
+	_test_hull_material_from_core(t)
 	t.done()
+
+## 선체 재질은 Core 파츠가 정한다 (GDD §14). Frame이 아니다.
+func _test_hull_material_from_core(t: RefCounted) -> void:
+	# 재질 키워드가 없는 Core는 기본값을 남긴다 — 기존 콘텐츠가 그대로 돌아야 한다
+	var loader: RefCounted = BuildLoader.new()
+	var plain: RefCounted = loader.assemble(_base_build(), _catalog(), "player")
+	t.eq(plain.hull_material, K.DEFAULT_HULL_MATERIAL,
+		"Core에 재질 키워드가 없으면 기본값(%s)" % K.DEFAULT_HULL_MATERIAL)
+
+	# biomass Core를 넣으면 함선 재질이 바뀐다 — 코어 교체가 몸을 바꾼다
+	var c: RefCounted = _catalog()
+	c.ingest_parts([
+		{ "id": "bio_core", "name": "생체 코어", "faction": "viridia", "base_role": "core",
+		  "keywords": ["biomass"], "active": { "cooldown": 8.0,
+		    "on_fire": [{"op": "gain_resonance", "amount": 1}] } }
+	], "inline")
+	var b: Dictionary = _base_build()
+	b["slots"]["core"] = { "part": "bio_core" }
+	var loader2: RefCounted = BuildLoader.new()
+	var bio: RefCounted = loader2.assemble(b, c, "player")
+	t.check(bio != null, "생체 코어 빌드가 조립된다: %s" % str(loader2.errors))
+	t.eq(bio.hull_material, "biomass", "Core의 재질 키워드가 함선 재질이 된다")
+
+	# 재질은 Core만 정한다. 방어 파츠가 재질 키워드를 가져도 함선 재질은 안 바뀐다 —
+	# 그러지 않으면 슬롯 하나로 상성이 뒤집혀 §14의 "코어가 빌드 방향을 정한다"가 무너진다.
+	c.ingest_parts([
+		{ "id": "bio_plate", "name": "생체 장갑", "faction": "viridia", "base_role": "defense",
+		  "keywords": ["biomass"], "active": { "cooldown": 5.0,
+		    "on_fire": [{"op": "repair", "amount": 5}] } }
+	], "inline")
+	var b2: Dictionary = _base_build()
+	b2["slots"]["defense_1"] = { "part": "bio_plate" }
+	var loader3: RefCounted = BuildLoader.new()
+	var mixed: RefCounted = loader3.assemble(b2, c, "player")
+	t.check(mixed != null, "조립된다: %s" % str(loader3.errors))
+	t.eq(mixed.hull_material, K.DEFAULT_HULL_MATERIAL,
+		"Core가 아닌 파츠의 재질 키워드는 함선 재질을 바꾸지 않는다")
 
 func _test_happy_path(t: RefCounted) -> void:
 	var loader: RefCounted = BuildLoader.new()

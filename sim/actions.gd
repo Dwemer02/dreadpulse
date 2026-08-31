@@ -14,6 +14,15 @@ const OPS: Array[String] = [
 	"accelerate", "slow", "drain_fires", "restore_fires", "make_indestructible",
 	"reduce_cooldown", "destroy_part", "restore_part", "reinforce", "empower",
 	"gain_material", "spend_material", "gain_resonance", "fire_part", "multi_fire",
+	"apply_corrosion", "cleanse_corrosion", "apply_fracture", "apply_stasis",
+]
+
+## 적 파츠 셀렉터를 쓸 수 없는 op. 디버프만 적 파츠를 겨냥할 수 있다 —
+## GDD §20이 직접 파괴기를 억제하고 있으므로 파괴·복구·강화는 자기 함선 전용이다.
+## catalog.gd가 저작 시점에 조합을 거부한다.
+const OWN_ONLY_OPS: Array[String] = [
+	"destroy_part", "restore_part", "restore_fires", "reinforce", "empower",
+	"make_indestructible", "fire_part", "cleanse_corrosion",
 ]
 
 ## do 블록 하나를 실행한다.
@@ -42,6 +51,16 @@ static func run_action(action: Dictionary, ctx: Dictionary, resolved: Dictionary
 		ctx["sim"].schedule(K.secs_to_ticks(float(action["delay"])), deferred, ctx, resolved)
 		return
 	apply(action, ctx, resolved)
+
+## 파츠가 어느 함선 소속인지. 적 파츠 셀렉터가 생겼으므로 이벤트의 ship 필드를
+## 소유자로 정확히 실어야 한다 — 그러지 않으면 소비자가 "누구에게 걸린 부식인가"를
+## 복원할 수 없다.
+static func _side_of(part: RefCounted, own: RefCounted, foe: RefCounted) -> String:
+	if own != null and own.get_part(part.slot_id) == part:
+		return own.side
+	if foe != null:
+		return foe.side
+	return own.side if own != null else ""
 
 static func _targets(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> Array:
 	var selector: String = str(action.get("target", ""))
@@ -83,9 +102,12 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 	match op:
 		"deal_damage":
 			var amount: int = int(round(int(action.get("amount", 0)) * float(ctx.get("damage_mult", 1.0))))
-			var r: Dictionary = foe.take_damage(amount)
+			var dtype: String = str(action.get("type", K.DEFAULT_ATTACK_TYPE))
+			var r: Dictionary = foe.take_typed_damage(amount, dtype)
 			sim.emit("damage_dealt", own.side, {
-				"target_ship": foe.side, "amount": amount,
+				"target_ship": foe.side, "amount": amount, "damage_type": dtype,
+				"hull_damage": r["hull_damage"],
+				"shield_mult": r["shield_mult"], "material_mult": r["material_mult"],
 				"absorbed": r["absorbed"], "source_slot": owner_slot,
 			})
 			if int(r["absorbed"]) > 0:
@@ -115,6 +137,51 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 			var stacks: int = int(action.get("stacks", 0))
 			foe.add_overheat(stacks)
 			sim.emit("overheat_applied", foe.side, {"stacks": stacks})
+
+		"apply_corrosion":
+			var corr: int = maxi(0, int(action.get("stacks", 0)))
+			if corr > 0:
+				for target: RefCounted in _targets(action, ctx, resolved):
+					target.corrosion_stacks += corr
+					sim.emit("corrosion_applied", _side_of(target, own, foe), {
+						"slot": target.slot_id, "stacks": corr,
+						"total": target.corrosion_stacks, "source_slot": owner_slot,
+					})
+
+		"cleanse_corrosion":
+			var cleansed: int = maxi(0, int(action.get("stacks", 0)))
+			if cleansed > 0:
+				for target: RefCounted in _targets(action, ctx, resolved):
+					var actual: int = mini(cleansed, target.corrosion_stacks)
+					if actual <= 0:
+						continue
+					target.corrosion_stacks -= actual
+					sim.emit("corrosion_cleansed", _side_of(target, own, foe), {
+						"slot": target.slot_id, "stacks": actual,
+						"remaining": target.corrosion_stacks, "cause": "effect",
+					})
+
+		"apply_fracture":
+			var frac: int = maxi(0, int(action.get("amount", 0)))
+			if frac > 0:
+				foe.add_fracture(frac)
+				# 임계점까지 남은 거리를 함께 실어야 이벤트가 자기서술적이다 —
+				# "파열 12"만 보면 언제 터질지 알 수 없다.
+				sim.emit("fracture_applied", foe.side, {
+					"amount": frac, "total": foe.fracture,
+					"hull": foe.hull, "until_collapse": maxi(0, foe.hull - foe.fracture),
+					"source_slot": owner_slot,
+				})
+
+		"apply_stasis":
+			var st_ticks: int = K.secs_to_ticks(float(action.get("duration", 0.0)))
+			if st_ticks > 0:
+				for target: RefCounted in _targets(action, ctx, resolved):
+					target.apply_stasis(st_ticks)
+					sim.emit("stasis_applied", _side_of(target, own, foe), {
+						"slot": target.slot_id, "duration": action.get("duration", 0.0),
+						"remaining_ticks": target.stasis_ticks, "source_slot": owner_slot,
+					})
 
 		"accelerate", "slow":
 			var ticks2: int = K.secs_to_ticks(float(action.get("duration", 0.0)))
