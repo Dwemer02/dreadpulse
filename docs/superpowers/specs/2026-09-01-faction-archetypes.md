@@ -25,12 +25,12 @@
 | 팩션 | 아키타입 | 핵심 키워드 | 핵심 사이클 | 순수 팩션 병목 | 대표 혼종 |
 |---|---|---|---|---|---|
 | Reclaimer | **용광로 포화사격** | Thermal / Overheat / Material / Multi-fire | 자재 소비 → 다중사격 → 과열 → 자재 일부 회수 | 자재 환급과 과열 적층이 손익분기점에 약간 못 미침 | Aeonic 항성 과열 |
-| Reclaimer | **산성 회수** | Caustic / Corrosion / Material / Charge | 부식된 적 파츠 발동 → 부식 피해 → 자재 → 산성 무기 충전 | Corrosion 적용량·증폭 능력 부족 | Viridia 부식 대사 |
+| Reclaimer | **산성 회수** | Caustic / Corrosion / Material / Charge | 부식된 적 파츠 발동 → 부식 피해 → 자재 → 산성 무기 충전 | Corrosion 적용량 부족 | Viridia 부식 대사 |
 | Reclaimer | **해체 순환** | Destroy / Material / Restore / Charge | 아군 파츠 파괴 → 자재 → 충전/복구 → 재파괴 | Restore가 Destroy보다 느림 | Viridia 재생/복구 계열 |
 | Viridia | **부식 대사** | Caustic / Corrosion / Regen / Resonance | Corrosion 피해 → Repair/Regen → Resonance → Corrosion 강화 | 적 행동 의존 + 공명 성장 느림 | Reclaimer 산성 회수 |
 | Viridia | **생체 방전** | Energy / Fracture / Charge / Regen | Regen → 빠른 Energy 발동 → Fracture 누적 | Fracture는 잘 쌓지만 Collapse 결정력이 약함 | Aeonic 예정된 붕괴 |
-| Viridia | **성숙 공명** | Regen / Repair / Resonance / Amplify | 반복 회복 → 공명 → 증폭/다중발동 → 더 빠른 성장 | 엔진 완성까지 시간이 오래 걸림 | Aeonic Charge 계열 |
-| Aeonic | **예정된 붕괴** | Energy / Fracture / Damage / Amplify | Fracture↑ + 적 Hull↓ → Collapse → Charge/Amplify | Collapse 간격이 길고 지속 적용 빈도가 낮음 | Viridia 생체 방전 |
+| Viridia | **성숙 공명** | Regen / Repair / Resonance / Multi-fire | 반복 회복 → 공명 → 다중발동 → 더 빠른 성장 | 엔진 완성까지 시간이 오래 걸림 | Aeonic Charge 계열 |
+| Aeonic | **예정된 붕괴** | Energy / Fracture / Damage / Charge | Fracture↑ + 적 Hull↓ → Collapse → Charge | Collapse 간격이 길고 지속 적용 빈도가 낮음 | Viridia 생체 방전 |
 | Aeonic | **항성 과열** | Thermal / Overheat / Charge / Multi-fire | 큰 충전 → 순간 대량 과열 → 긴 공백 → 다음 Burst | Burst 사이에 Overheat가 자연 감소 | Reclaimer 용광로 포화사격 |
 | Aeonic | **시간 성약** | Charge / Stasis / Fire_limit / Resonance | 미래 발동 선차입 → Fire Limit 소진 → 다음 파츠 충전 | 강력하지만 유한하며 장기전에서 출력 감소 | Reclaimer 해체 순환 |
 
@@ -89,7 +89,7 @@
 이것이 [상태이상 스펙](2026-08-30-status-effects-design.md) §7.2의
 **"빠진 한 조각은 상태이상의 적용기 또는 payoff다"** 가 실제로 나타나는 형태다.
 
-- Reclaimer 산성 회수는 Caustic 피해를 쏘지만 **Corrosion 적용량·증폭이 부족하다** →
+- Reclaimer 산성 회수는 Caustic 피해를 쏘지만 **Corrosion 적용량이 부족하다** →
   Viridia 부식 대사가 그 조각을 준다
 - Viridia 생체 방전은 Fracture를 잘 쌓지만 **Collapse 결정력이 없다** →
   Aeonic 예정된 붕괴가 그 조각을 준다
@@ -107,30 +107,37 @@
 9종이 인용한 메커니즘을 코드와 대조했다. **이벤트와 op은 전부 실재한다** —
 `overheat_applied` `overheat_ticked` `corrosion_applied` `corrosion_ticked`
 `fracture_applied` `collapsed` `stasis_applied` `multi_fire` `reduce_cooldown`
-`empower` `gain_resonance` `restore_part` `destroy_part` `drain_fires`.
+`gain_resonance` `restore_part` `destroy_part` `drain_fires`.
 
 파츠 저작에 들어가기 전에 알아야 할 것 넷을 남긴다.
 
-### 4.1 `Amplify`가 피해 배율만 지원한다 — 성숙 공명의 절반이 막힌다
+### 4.1 `Amplify`는 제거했다 — 성장은 파츠 수치로 표현한다
 
-`sim/actions.gd`의 `empower`는 `damage_mult`만 받는다.
+**결정:** `amplify` 키워드와 `empower` op을 **코드에서 삭제**했다.
+런타임 피해 배율 스택을 두지 않고, 성장은 **파츠가 가진 수치 자체를 키우는 것**으로
+표현한다.
 
-**성숙 공명**의 사이클은 "공명 → 증폭/다중발동 → **더 빠른 성장**"인데,
-성장의 대상이 회복량·생산량·쿨타임이라면 현재 op으로 표현되지 않는다.
-피해 배율만으로 성숙 공명을 만들면 결국 딜링 빌드가 되어
-"버티고 반복하며 성장한다"는 Viridia 정체성과 어긋난다.
+`empower`가 `damage_mult`만 지원해 성숙 공명의 "더 빠른 성장"을 담지 못한다는 것이
+원래 지적이었는데, 확장하는 대신 개념을 없애는 쪽을 골랐다.
+잘못 들어간 키워드였다.
 
-**판단 기준:** 회복·생산·쿨타임 성장이 **2종 이상의 파츠**에서 필요해질 때
-`empower`를 확장한다 (CLAUDE.md의 op 추가 규칙). 성숙 공명 하나로는 부족하다.
+**성숙 공명의 사이클에서 `Amplify`를 뺀다.**
+`반복 회복 → 공명 → 다중발동 → 더 빠른 성장`으로 읽는다 —
+성장은 공명 임계에 따라 파츠의 수치가 커지는 형태로 표현한다.
 
-### 4.2 `Stasis` 해제 수단이 없다 — 시간 성약의 대가 관리
+부수 효과: `deal_damage`의 `damage_mult` 문맥이 함께 사라져
+피해 계산이 `amount` 하나로 단순해졌다.
 
-`apply_stasis`는 있으나 걷어내는 op이 없다.
+### 4.2 `Stasis` 해제는 파츠 기능으로 — 범용 op은 만들지 않는다
 
-**시간 성약**이 자기 파츠에 정지를 걸어 비용을 치르는 형태라면 해제 수단이 필요하다.
-적에게만 거는 형태라면 필요 없다. 파츠를 실제로 설계할 때 방향을 먼저 정한다.
+**결정:** 정지는 강력한 효과이므로 **일부 파츠가 자기 기능으로 해제**한다.
+누구나 쓸 수 있는 범용 해제 옵션은 두지 않는다.
 
-### 4.3 적함 이벤트를 잡는 트리거는 `enemy_ship`을 명시해야 한다
+따라서 이것은 설계 공백이 아니다. 해제가 필요한 첫 파츠를 만들 때
+op을 추가하되, 그때도 **희소하게** 유지한다 — 범용 해제가 존재하면
+정지의 무게가 사라진다.
+
+### 4.3 적함 이벤트를 잡는 트리거는 `enemy_ship`을 명시해야 한다 — 검증 완료
 
 **산성 회수**의 "부식된 적 파츠 발동 → 부식 피해 → 자재"와
 **부식 대사**의 "Corrosion 피해 → Repair/Regen"이 여기 걸린다.
@@ -139,8 +146,18 @@
 `sim/trigger_engine.gd`의 기본 범위는 자함이므로,
 `where: { "enemy_ship": true }`를 명시하지 않으면 **트리거가 조용히 안 돈다.**
 
-두 아키타입의 핵심 고리가 전부 이 형태이므로, 저작 실수가 나면
-"왜 자재가 안 들어오지"로 나타나고 원인을 찾기 어렵다.
+**동작을 테스트로 확인했다** (`tests/unit/test_combat_sim.gd`의
+`_test_enemy_scoped_status_triggers`). 세 가지를 어서션한다:
+
+| 확인 | 결과 |
+|---|---|
+| `enemy_ship: true`가 있으면 적함의 `corrosion_ticked`를 잡는가 | ✅ 잡는다 |
+| 같은 트리거에서 `enemy_ship`만 빼면 어떻게 되는가 | **조용히 안 돈다.** 이벤트는 똑같이 나는데 트리거만 침묵한다 |
+| `overheat_ticked` 등 다른 상태이상 이벤트도 같은 규칙인가 | ✅ 같다 |
+
+두 번째 줄이 이 테스트의 존재 이유다 — 실패가 에러가 아니라 **침묵**으로
+나타나므로, 저작 실수가 "왜 자재가 안 들어오지"로만 보이고 원인을 찾기 어렵다.
+파츠를 만들 때 적함 이벤트를 읽는 트리거는 반드시 이 조건을 붙인다.
 
 ### 4.4 부식 제거는 "부식이 걸린 함선의 수리"만 해당한다
 
@@ -166,11 +183,24 @@
 
 ---
 
-## 6. 다음 단계
+## 6. 다음 단계 — 팩션별 1종씩 먼저 검증한다
 
-1. 아키타입 하나를 골라 **파츠 3~4종**을 설계하고 배치로 병목이 실제로 나타나는지 본다
-2. 그 결과로 §5의 "병목의 강도"를 수치로 정한다
-3. 나머지 8종을 같은 방식으로 채운다
+**결정:** 9종을 다 만들지 않고 **팩션마다 아키타입 하나씩, 총 3종**을 골라
+파츠를 설계하고 배치로 돌린다.
 
-한 팩션을 통째로 채우는 것보다 **아키타입 하나를 끝까지 검증**하는 편이 낫다 —
-병목의 강도가 틀리면 9종을 전부 다시 만져야 하기 때문이다.
+이 3종이면 검증하고 싶은 것이 전부 걸린다.
+
+| 무엇을 보는가 | 왜 3종이면 되는가 |
+|---|---|
+| 병목의 강도 | 각 팩션에서 하나씩 재면 팩션 간 비교가 성립한다 |
+| 혼종 짝의 작동 | 서로 다른 팩션의 3종이라 §3의 거울짝 중 최소 하나가 실제로 맺어진다 |
+| 상태이상 3종 전부 | 팩션당 하나씩 고르면 Overheat·Corrosion·Fracture가 자연히 다 들어간다 |
+| 상성표 | 세 팩션의 재질과 메인 타입이 전부 등장한다 |
+
+한 팩션을 통째로 채우는 것보다 낫다 — 팩션 안에서만 재면
+**병목의 강도가 팩션 간에 맞는지**를 알 수 없기 때문이다.
+
+9종 중 어느 3종을 고를지는 정하지 않았다. 다만 **각 팩션의 메인 공격
+(용광로 포화사격 · 부식 대사 · 예정된 붕괴)** 이 기본 후보다 —
+셋이 서로의 거울짝이 아니라 각자 다른 상태이상을 쓰므로 간섭이 적고,
+"메인 타입은 팩션 단독으로 완성된다"는 §7.2의 원칙을 직접 시험한다.

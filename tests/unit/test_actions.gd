@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 142
+const EXPECTED_CHECKS := 137
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -170,17 +170,17 @@ func _test_damage_and_resources(t: RefCounted) -> void:
 	foe.shield = 10
 	var owner: RefCounted = _part("weapon_1")
 	own.add_part(owner)
-	var ctx: Dictionary = _ctx(sim, own, foe, owner, _rng(), {"damage_mult": 2.0})
+	var ctx: Dictionary = _ctx(sim, own, foe, owner, _rng())
 
 	Actions.run_block([{"op": "deal_damage", "amount": 20}], ctx)
 	var dmg_events: Array = sim.of_type("damage_dealt")
 	t.eq(dmg_events.size(), 1, "deal_damage 이벤트 1건")
-	t.eq(dmg_events[0]["amount"], 40, "damage_mult 2.0이 amount에 곱해진다 (20*2=40)")
+	t.eq(dmg_events[0]["amount"], 20, "amount가 그대로 실린다 (런타임 배율 없음)")
 	t.eq(dmg_events[0]["absorbed"], 10, "보호막 10 흡수")
 	t.eq(dmg_events[0]["target_ship"], "enemy", "대상 함선 기록")
 	t.eq(dmg_events[0]["source_slot"], "weapon_1", "발동 파츠 슬롯 기록")
 	t.eq(foe.shield, 0, "보호막 소진")
-	t.eq(foe.hull, 20, "나머지 30이 선체로 (50-30=20)")
+	t.eq(foe.hull, 40, "보호막 10을 뺀 나머지 10이 선체로 (50-10=40)")
 
 	var absorb_events: Array = sim.of_type("shield_absorbed")
 	t.eq(absorb_events.size(), 1, "보호막 흡수 이벤트")
@@ -189,13 +189,9 @@ func _test_damage_and_resources(t: RefCounted) -> void:
 	var hull_events: Array = sim.of_type("hull_changed")
 	t.eq(hull_events.size(), 1, "선체 변화 이벤트")
 	t.eq(hull_events[0]["from"], 50, "변화 전 선체")
-	t.eq(hull_events[0]["to"], 20, "변화 후 선체")
-	t.near(hull_events[0]["ratio"], 0.4, "선체 비율 기록", 0.0001)
+	t.eq(hull_events[0]["to"], 40, "변화 후 선체")
+	t.near(hull_events[0]["ratio"], 0.8, "선체 비율 기록", 0.0001)
 
-	# damage_mult가 ctx에 없으면 기본 1.0
-	var ctx2: Dictionary = _ctx(sim, own, foe, owner, _rng())
-	Actions.run_block([{"op": "deal_damage", "amount": 5}], ctx2)
-	t.eq(sim.of_type("damage_dealt")[1]["amount"], 5, "damage_mult 미지정이면 기본 1.0 (그대로 5)")
 
 	Actions.run_block([{"op": "gain_shield", "amount": 15}], ctx)
 	t.eq(own.shield, 15, "gain_shield가 보호막을 늘린다")
@@ -363,16 +359,6 @@ func _test_part_manipulation(t: RefCounted) -> void:
 	t.check(not target3.broken, "restore_part가 파손을 해제한다")
 	t.eq(target3.progress_units, 0, "복구되면 쿨타임이 0으로 리셋된다")
 	t.eq(sim.of_type("part_restored").size(), 1, "part_restored 이벤트")
-
-	# empower
-	var target5: RefCounted = _part("weapon_5")
-	own.add_part(target5)
-	Actions.run_block([{"op": "empower", "target": "self", "damage_mult": 2.0, "stacks": 2}],
-		_ctx(sim, own, null, target5, _rng()))
-	t.eq(target5.empower_stacks.size(), 2, "스택 수만큼 쌓인다")
-	t.eq(target5.take_empower(), 2.0, "발동 시 배율을 소모한다 (1)")
-	t.eq(target5.take_empower(), 2.0, "발동 시 배율을 소모한다 (2)")
-	t.eq(target5.take_empower(), 1.0, "스택 소진 후에는 기본 배율 1.0")
 
 func _test_defense_priority(t: RefCounted) -> void:
 	var sim: RefCounted = FakeSim.new()
@@ -568,7 +554,7 @@ func _test_delay(t: RefCounted) -> void:
 	t.check(alive_y.broken, "새로 파손된 다른 파츠(alive_y)는 건드리지 않는다")
 
 func _test_vocabulary(t: RefCounted) -> void:
-	t.eq(Actions.OPS.size(), 24, "op 어휘는 24종 (상태이상 4종 추가)")
+	t.eq(Actions.OPS.size(), 23, "op 어휘는 23종 (상태이상 4종 추가, empower 제거)")
 	t.check(not Actions.OPS.has("apply_overload"), "삭제된 어휘(apply_overload)는 없다")
 	t.check(Actions.OPS.has("multi_fire"), "multi_fire는 어휘에 있다")
 	t.check(Actions.OPS.has("deal_damage"), "deal_damage는 어휘에 있다")

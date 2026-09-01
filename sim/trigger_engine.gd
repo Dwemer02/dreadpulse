@@ -75,7 +75,6 @@ static func _run_list(triggers: Array, fires: Array, accums: Variant,
 			"event": event, "tick": sim.tick, "rng": sim.rng,
 			"source_part": source_part,
 			"accum": accum, "accum_prev": accum_prev,
-			"damage_mult": 1.0,
 		}
 		# where는 원본 그대로 넘긴다 — Dictionary도 null도 아닌 저작 실수는
 		# conditions.gd가 이미 fail-closed(거짓)로 처리한다.

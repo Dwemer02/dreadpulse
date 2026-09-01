@@ -204,7 +204,6 @@ func _fire(part: RefCounted, ship: RefCounted, cause: String) -> void:
 			"slot": part.slot_id, "amount": cost, "total": ship.material, "sink": "cost",
 		})
 
-	var damage_mult: float = part.take_empower()
 	part.consume_fire(tick)
 
 	emit("part_fired", ship.side, {
@@ -239,7 +238,7 @@ func _fire(part: RefCounted, ship: RefCounted, cause: String) -> void:
 
 	Actions.run_block(part.on_fire, {
 		"sim": self, "own_ship": ship, "enemy_ship": foe, "part": part,
-		"rng": rng, "event": {}, "tick": tick, "damage_mult": damage_mult,
+		"rng": rng, "event": {}, "tick": tick,
 	})
 
 	# 이번 발동으로 0이 되었으면 효과를 실행한 뒤 파손된다

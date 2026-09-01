@@ -173,7 +173,7 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 | 3 공격 타입 | `physical` `thermal` `caustic` `energy` | 무기는 1개 필수 |
 | 4 방어 타입 | `plating` `biomass` `energy_shield` | 방어·코어에 해당 시 |
 | 5 효과 | `damage` `repair` `regen` `accelerate` `slow` `fire_limit`<br>`destroy` `indestructible` `reinforce` `restore` `multi_fire`<br>**상태이상** `overheat` `corrosion` `fracture` `stasis` | 0개 이상 |
-| 6 조작 | `charge`(=`reduce_cooldown`) · `amplify`(=`empower`) | 0개 이상 |
+| 6 조작 | `charge`(=`reduce_cooldown`) | 0개 이상 |
 | 7 자원 | `material` `resonance` | 해당 시 |
 
 `keywords: []`인 파츠는 저작 실수다 — 최소한 1·2층은 채워져야 한다.
@@ -194,6 +194,7 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 
 **제외·보류된 키워드.** `crit` 제거(The Bazaar와 유사, 복잡성).
 `shield` → `energy_shield`로 단일화. `link` 보류(정적 `links`만 존재).
+`amplify`/`empower` 제거(런타임 배율 스택 대신 파츠 수치 자체를 키운다).
 `resonate` 공진 보류(오토체스류 문법). 되살리기 전에
 `docs/superpowers/specs/2026-08-30-keyword-system-design.md` §6을 읽을 것.
 

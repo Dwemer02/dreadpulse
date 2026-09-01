@@ -13,6 +13,7 @@
 > | 3층 `corrosive` | **`caustic`** 으로 개칭. `부식/Corrosion`은 이제 상태이상의 이름이다 |
 > | "적 파츠 지목 셀렉터를 추가하지 않는다" | **철회.** Corrosion 대상이 "개별 적 파츠"이므로 디버프 전용 셀렉터 3종을 추가했다 |
 > | 5층 `overheat`의 팩션 배정 (Aeonic) | **Reclaimer로 정정.** Thermal이 Reclaimer 메인이다 |
+> | 6층 `amplify` 증폭 | **제거.** `empower` op과 함께 코드에서 삭제했다 — 성장은 파츠 수치로 표현한다 |
 
 ---
 
@@ -45,6 +46,7 @@ GDD §21·§25–27의 키워드 정의를 코드와 대조한 결과, 파츠를
 ### 문제 3 — op은 도는데 이름이 없는 것이 5개
 
 `reduce_cooldown` · `empower` · `fire_part` · `gain_material` · `gain_resonance`.
+(`empower`는 이후 제거됐다 — 성장을 파츠 수치로 표현하기로 했다.)
 
 전부 `sim/actions.gd`에서 실제로 실행되지만 §21 키워드 목록에 대응하는 항목이 없다.
 플레이어에게 보여줄 이름이 없다는 뜻이고, 트리거 저작 시 `source_keyword`로
@@ -68,13 +70,13 @@ GDD §21·§25–27의 키워드 정의를 코드와 대조한 결과, 파츠를
 | **3 · 공격 타입** | `physical` `thermal` `caustic` `energy` | 4 | **신규** |
 | **4 · 방어 타입** | `plating` `biomass` `energy_shield` | 3 | **신규** (`energy_shield`는 기존 shield 정식화) |
 | **5 · 효과** | `damage` `repair` `regen` `accelerate` `slow` `overheat` `fire_limit` `destroy` `indestructible` `reinforce` `restore` `multi_fire` | 12 | §21에서 `치명타` 제거, `보호막`은 4층 흡수, `연결` 보류 |
-| **6 · 명명** | `charge` 충전(=`reduce_cooldown`) · `amplify` 증폭(=`empower`) | 2 | **신규 명명** (신규 개념 아님) |
+| **6 · 명명** | `charge` 충전(=`reduce_cooldown`) | 1 | **신규 명명** (신규 개념 아님). `amplify`는 이후 제거됐다 |
 | **7 · 자원** | `material` `resonance` | 2 | **신규 명명** |
 
-**총 31종.**
+**총 30종.** (`amplify` 제거 후. 최초 기록은 31종이었다.)
 
 학습 부담은 그 숫자보다 훨씬 작다. 1·2층 8개는 이미 데이터에 있는 것을 노출하는 것이고,
-6층 2개는 이미 도는 코드에 이름을 붙이는 것이다.
+6층 1개는 이미 도는 코드에 이름을 붙이는 것이다.
 **플레이어가 새로 배울 개념은 3·4층 7개 + 7층 2개 = 9개다.**
 
 ### 1.1 정리 근거 두 가지
@@ -279,7 +281,6 @@ Reclaimer 코어 다수가 `plating`이되 생체 이식 코어는 `biomass`인 
 | 순수 팩션 보상 | `공진` 보류로 §57의 "순수 팩션 = 같은 키워드 밀도 높음"에 **보상 장치가 없다** | 타입 커버리지는 혼종의 이점만 설명한다. 오토체스류 문법을 피하면서 순수 빌드를 보상할 다른 장치가 필요하다 |
 | 배율 수치 | ×1.5 / ×1.0 / ×0.75는 플레이스홀더 | 배치 리포트의 검증 지표 5종이 깨지는지로 판단 |
 | 재질별 코어 분포 | 팩션마다 어떤 코어가 `plating`이고 어떤 코어가 `biomass`인지 | 코어 파츠를 실제로 설계할 때 정한다. §3.2의 밸런스 조치가 실효를 갖는 지점이다 |
-| `amplify` 확장 | 현재 `empower`는 `damage_mult`만 지원한다 (`actions.gd:197`) | 쿨타임·생산 성장이 **2종 이상의 파츠**에서 필요해질 때만 확장한다 (CLAUDE.md의 op 추가 규칙) |
 
 ---
 

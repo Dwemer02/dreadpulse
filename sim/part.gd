@@ -45,8 +45,6 @@ var corrosion_stacks: int = 0
 var stasis_ticks: int = 0
 ## 0 = 없음, K.PERMANENT = 영구, 그 외 = 남은 틱
 var indestructible_ticks: int = 0
-## empower 스택. 각 원소가 damage_mult 하나. 발동 시 앞에서부터 소모한다.
-var empower_stacks: Array[float] = []
 var broken: bool = false
 ## 마지막으로 방출한 불발 사유. 같은 사유가 매 틱 반복될 때 이벤트 스팸을 막는다.
 ## 발동에 성공하거나 복구되면 비운다 — 다시 막히면 새 사건으로 보고해야 하기 때문이다.
@@ -170,12 +168,6 @@ func consume_fire(tick: int) -> void:
 		progress_units -= cooldown_units
 	if fires_remaining != K.UNLIMITED:
 		fires_remaining = maxi(0, fires_remaining - 1)
-
-## 이번 발동에 적용할 피해 배율. empower 스택을 하나 소모한다.
-func take_empower() -> float:
-	if empower_stacks.is_empty():
-		return 1.0
-	return empower_stacks.pop_front()
 
 func has_keyword(kw: String) -> bool:
 	return keywords.has(kw)

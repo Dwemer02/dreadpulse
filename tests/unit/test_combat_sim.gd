@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신할 것
-const EXPECTED_CHECKS := 87
+const EXPECTED_CHECKS := 92
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -105,8 +105,78 @@ func run(t: RefCounted) -> void:
 	_test_corrosion_on_fire(t)
 	_test_collapse_in_tick(t)
 	_test_stasis_blocks_firing_not_triggers(t)
+	_test_enemy_scoped_status_triggers(t)
 	_test_determinism(t)
 	t.done()
+
+## 적함에서 일어나는 상태이상 이벤트를 트리거로 잡을 수 있는가.
+##
+## 산성 회수와 부식 대사 아키타입의 핵심 고리가 전부 이 형태다 —
+## "부식된 적 파츠가 발동 → 자재" 처럼 **적함 이벤트에 반응**한다.
+##
+## 트리거의 기본 범위는 자함이므로(`trigger_engine._matches`)
+## `where: {enemy_ship: true}`를 빠뜨리면 트리거가 **조용히 안 돈다.**
+## 저작 실수가 "왜 자재가 안 들어오지"로만 나타나 원인을 찾기 어렵다.
+## 그래서 두 방향을 모두 어서션한다 — 되는 것과 안 되는 것.
+func _test_enemy_scoped_status_triggers(t: RefCounted) -> void:
+	# 적 파츠에 부식을 심어두고, 그 파츠가 발동할 때 내가 자재를 얻는다
+	var sim: RefCounted = CombatSim.new()
+	var player: RefCounted = _bare_ship("player", 1000)
+	var enemy: RefCounted = _bare_ship("enemy", 1000)
+
+	var watcher: RefCounted = _bare_part("weapon_1", 99.0)
+	_add_trigger(watcher, {"on": "corrosion_ticked", "where": {"enemy_ship": true},
+		"do": [{"op": "gain_material", "amount": 3}]})
+	player.add_part(watcher)
+
+	var corroded: RefCounted = _bare_part("weapon_1", 1.0)
+	corroded.on_fire = [{"op": "deal_damage", "amount": 1}]
+	corroded.corrosion_stacks = 4
+	enemy.add_part(corroded)
+
+	sim.setup(player, enemy, 1)
+	for i: int in 60:
+		sim.step()
+
+	t.check(_events_of_type(sim.log, "corrosion_ticked").size() > 0, "적 파츠가 부식 피해를 받는다")
+	t.check(player.material > 0,
+		"enemy_ship을 명시하면 적함의 corrosion_ticked를 잡는다 (자재 %d)" % player.material)
+
+	# 같은 트리거에서 enemy_ship만 빼면 아무것도 안 잡힌다 — 조용한 실패의 형태
+	var silent: RefCounted = CombatSim.new()
+	var p2: RefCounted = _bare_ship("player", 1000)
+	var e2: RefCounted = _bare_ship("enemy", 1000)
+	var w2: RefCounted = _bare_part("weapon_1", 99.0)
+	_add_trigger(w2, {"on": "corrosion_ticked",
+		"do": [{"op": "gain_material", "amount": 3}]})
+	p2.add_part(w2)
+	var c2: RefCounted = _bare_part("weapon_1", 1.0)
+	c2.on_fire = [{"op": "deal_damage", "amount": 1}]
+	c2.corrosion_stacks = 4
+	e2.add_part(c2)
+	silent.setup(p2, e2, 1)
+	for i: int in 60:
+		silent.step()
+	t.check(_events_of_type(silent.log, "corrosion_ticked").size() > 0, "이벤트는 똑같이 난다")
+	t.eq(p2.material, 0,
+		"enemy_ship을 빠뜨리면 같은 트리거가 조용히 안 돈다 — 파츠 저작 시 주의")
+
+	# collapsed / overheat_ticked 도 같은 규칙을 따른다.
+	# 적함에서 나는 상태이상 이벤트 전반이 enemy_ship을 요구한다는 것을 확인한다.
+	var oh: RefCounted = CombatSim.new()
+	var p3: RefCounted = _bare_ship("player", 1000)
+	var e3: RefCounted = _bare_ship("enemy", 1000)
+	var w3: RefCounted = _bare_part("weapon_1", 99.0)
+	_add_trigger(w3, {"on": "overheat_ticked", "where": {"enemy_ship": true},
+		"do": [{"op": "gain_resonance", "amount": 1}]})
+	p3.add_part(w3)
+	e3.add_part(_bare_part("weapon_1", 99.0))
+	e3.add_overheat(5)
+	oh.setup(p3, e3, 1)
+	for i: int in 60:
+		oh.step()
+	t.check(p3.resonance > 0,
+		"적함의 overheat_ticked도 같은 방식으로 잡힌다 (공명 %d)" % p3.resonance)
 
 # --- 상태이상 통합 (틱 순서와 맞물리는 부분) ---
 
@@ -526,7 +596,7 @@ func _test_delay_schedule(t: RefCounted) -> void:
 
 	var ctx: Dictionary = {
 		"sim": sim, "own_ship": player, "enemy_ship": enemy, "part": only_limited,
-		"rng": sim.rng, "event": {}, "tick": sim.tick, "damage_mult": 1.0,
+		"rng": sim.rng, "event": {}, "tick": sim.tick,
 	}
 	# 예약 시점엔 all_own_limited 후보가 only_limited 하나뿐이다.
 	Actions.run_block(

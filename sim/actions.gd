@@ -12,7 +12,7 @@ const Conditions = preload("res://sim/conditions.gd")
 const OPS: Array[String] = [
 	"deal_damage", "gain_shield", "repair", "apply_regen", "apply_overheat",
 	"accelerate", "slow", "drain_fires", "restore_fires", "make_indestructible",
-	"reduce_cooldown", "destroy_part", "restore_part", "reinforce", "empower",
+	"reduce_cooldown", "destroy_part", "restore_part", "reinforce",
 	"gain_material", "spend_material", "gain_resonance", "fire_part", "multi_fire",
 	"apply_corrosion", "cleanse_corrosion", "apply_fracture", "apply_stasis",
 ]
@@ -21,7 +21,7 @@ const OPS: Array[String] = [
 ## GDD §20이 직접 파괴기를 억제하고 있으므로 파괴·복구·강화는 자기 함선 전용이다.
 ## catalog.gd가 저작 시점에 조합을 거부한다.
 const OWN_ONLY_OPS: Array[String] = [
-	"destroy_part", "restore_part", "restore_fires", "reinforce", "empower",
+	"destroy_part", "restore_part", "restore_fires", "reinforce",
 	"make_indestructible", "fire_part", "cleanse_corrosion",
 ]
 
@@ -101,7 +101,7 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 
 	match op:
 		"deal_damage":
-			var amount: int = int(round(int(action.get("amount", 0)) * float(ctx.get("damage_mult", 1.0))))
+			var amount: int = int(action.get("amount", 0))
 			var dtype: String = str(action.get("type", K.DEFAULT_ATTACK_TYPE))
 			var r: Dictionary = foe.take_typed_damage(amount, dtype)
 			sim.emit("damage_dealt", own.side, {
@@ -260,13 +260,6 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 				target.reinforce_stacks += stacks2
 				sim.emit("reinforce_gained", own.side,
 					{"slot": target.slot_id, "stacks": target.reinforce_stacks})
-
-		"empower":
-			var mult: float = float(action.get("damage_mult", 1.0))
-			var count: int = int(action.get("stacks", 1))
-			for target: RefCounted in _targets(action, ctx, resolved):
-				for i: int in count:
-					target.empower_stacks.append(mult)
 
 		"gain_material":
 			var gained2: int = own.gain_material(int(action.get("amount", 0)))

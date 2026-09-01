@@ -2,7 +2,7 @@ extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너가 대조해 서브테스트 중단을 잡는다 —
 ## _test_* 안에서 에러가 나면 그 함수만 중단되고 run()은 정상 종료하기 때문이다.
-const EXPECTED_CHECKS := 47
+const EXPECTED_CHECKS := 41
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -24,7 +24,6 @@ func run(t: RefCounted) -> void:
 	_test_rate_cap(t)
 	_test_fire_limit(t)
 	_test_broken_stops_everything(t)
-	_test_empower(t)
 	t.done()
 
 func _test_cooldown(t: RefCounted) -> void:
@@ -169,16 +168,4 @@ func _test_broken_stops_everything(t: RefCounted) -> void:
 	t.eq(p.accel_ticks, accel, "파손 파츠는 가속 지속시간도 멈춘다")
 	t.check(not p.is_ready(), "파손 파츠는 준비 상태가 될 수 없다")
 
-func _test_empower(t: RefCounted) -> void:
-	# empower 스택은 넣은 순서대로 하나씩 소모된다
-	var p: RefCounted = _make(1.0)
-	t.near(p.take_empower(), 1.0, "스택이 없으면 1.0배")
-
-	p.empower_stacks.append(1.5)
-	p.empower_stacks.append(2.0)
-	t.near(p.take_empower(), 1.5, "먼저 넣은 스택이 먼저 나온다")
-	t.eq(p.empower_stacks.size(), 1, "한 스택 소모")
-	t.near(p.take_empower(), 2.0, "다음 스택")
-	t.eq(p.empower_stacks.size(), 0, "전부 소모")
-	t.near(p.take_empower(), 1.0, "소진 후에는 다시 1.0배")
 
