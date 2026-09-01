@@ -5,6 +5,7 @@
   "relic_slots": 1,
   "thresholds": [0.75, 0.50, 0.25],
   "slots": [
+    { "id": "core",      "role": "core"     },
     { "id": "weapon_1",  "role": "weapon"   },
     { "id": "defense_1", "role": "defense"  },
     { "id": "flex_1",    "role": "flexible" },

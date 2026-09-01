@@ -4,6 +4,7 @@
   "frame": "pool_frame",
   "relic": null,
   "slots": {
+    "core":      { "part": "foundry_core" },
     "weapon_1":  { "part": "rotary_incinerator",   "augment": "scrap_autocannon" },
     "defense_1": { "part": "field_welder" },
     "flex_1":    { "part": "incandescent_crusher", "augment": "scrap_compactor" },

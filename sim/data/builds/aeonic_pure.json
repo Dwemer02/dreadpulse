@@ -4,6 +4,7 @@
   "frame": "pool_frame",
   "relic": null,
   "slots": {
+    "core":      { "part": "phase_core" },
     "weapon_1":  { "part": "helios_lance" },
     "defense_1": { "part": "phase_barrier" },
     "flex_1":    { "part": "solar_reflector", "augment": "photon_lance" },

@@ -165,6 +165,20 @@
             "do": [ { "op": "grow", "target": "host", "stat": "aug_damage", "amount": 1 } ] }
         ]
       }
+    },
+    {
+      "_note": "CORE. 재질 biomass — 세 팩션 중 유일하다. 초당 1 회복은 재생(regen) 경로라 repaired 이벤트를 내지 않는다. 그래서 신경 다발·성장 포대의 Repair 카운터를 공짜로 돌리지 않는다.",
+      "id": "symbiotic_core",
+      "name": "공생 심핵",
+      "faction": "viridia",
+      "base_role": "core",
+      "keywords": ["biomass", "regen"],
+      "active": {
+        "triggers": [
+          { "on": "combat_start",
+            "do": [ { "op": "apply_regen", "amount": 1, "duration": -1 } ] }
+        ]
+      }
     }
   ]
 }

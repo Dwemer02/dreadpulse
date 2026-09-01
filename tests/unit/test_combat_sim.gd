@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신할 것
-const EXPECTED_CHECKS := 103
+const EXPECTED_CHECKS := 107
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -109,6 +109,7 @@ func run(t: RefCounted) -> void:
 	_test_determinism(t)
 	_test_multi_fire_timing(t)
 	_test_passive_part(t)
+	_test_regen_does_not_trigger_repair(t)
 	t.done()
 
 ## 적함에서 일어나는 상태이상 이벤트를 트리거로 잡을 수 있는가.
@@ -751,3 +752,39 @@ func _test_passive_part(t: RefCounted) -> void:
 	t.eq(passive_fires, 0, "패시브 파츠의 발동 이벤트는 하나도 없다")
 	t.eq(blocked, 0, "패시브 파츠는 불발로도 보고되지 않는다 — 막힌 게 아니라 안 쏘는 것이다")
 	t.check(player.material > 0, "패시브 파츠의 트리거는 정상으로 돈다")
+
+
+## 재생(regen)은 회복이지만 `repaired` 이벤트를 내지 않는다 — `regen_ticked`를 낸다.
+## 이 구분이 Viridia Core("초당 1 회복, repair를 트리거하지 않음")의 전제다.
+## 두 이벤트를 합치면 Core가 매초 공짜로 Repair 카운터를 돌려 신경 다발·성장 포대가
+## 아무 빌드에서나 최대 속도로 돈다.
+func _test_regen_does_not_trigger_repair(t: RefCounted) -> void:
+	var sim: RefCounted = CombatSim.new()
+	var player: RefCounted = _bare_ship("player", 100)
+	var enemy: RefCounted = _bare_ship("enemy", 10000)
+	player.hull = 50  # 실제 회복이 일어나려면 깎여 있어야 한다
+
+	# 관찰자: repaired를 세는 파츠. 실제 파츠(신경 다발)와 같은 형태다.
+	var watcher: RefCounted = _bare_part("system_1", 100.0, "system")
+	watcher.passive = true
+	watcher.cooldown_units = 0
+	_add_trigger(watcher, {"on": "repaired", "do": [{"op": "gain_material", "amount": 1}]})
+	player.add_part(watcher)
+
+	# Core처럼 전투 시작에 영구 재생을 건다
+	var core: RefCounted = _bare_part("core", 100.0, "core")
+	core.passive = true
+	core.cooldown_units = 0
+	_add_trigger(core, {"on": "combat_start",
+		"do": [{"op": "apply_regen", "amount": 1, "duration": -1.0}]})
+	player.add_part(core)
+
+	sim.setup(player, enemy, 1)
+	sim.setup_ready()  # combat_start를 방출해야 Core 트리거가 돈다
+	for i: int in 200:
+		sim.step()
+
+	t.check(sim.count_events("regen_ticked") > 0, "영구 재생이 실제로 돈다")
+	t.eq(sim.count_events("repaired"), 0, "재생은 repaired를 내지 않는다")
+	t.eq(player.material, 0, "따라서 repaired를 세는 파츠가 반응하지 않는다")
+	t.check(player.hull > 50, "그래도 선체는 실제로 회복된다 (%d)" % player.hull)

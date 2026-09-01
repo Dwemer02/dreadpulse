@@ -8,7 +8,7 @@ extends RefCounted
 ## 대신 "설계한 메커니즘이 실제 전투에서 실제로 일어나는가"를 검증한다.
 ## 조용히 죽는 효과(트리거가 영원히 안 도는 것)가 이 프로젝트의 주된 실패 양식이다.
 
-const EXPECTED_CHECKS := 53
+const EXPECTED_CHECKS := 59
 
 const K = preload("res://sim/sim_const.gd")
 const Catalog = preload("res://sim/catalog.gd")
@@ -23,6 +23,7 @@ func run(t: RefCounted) -> void:
 	_test_relic_validation(t)
 	_test_builds_assemble(t)
 	_test_part_coverage(t)
+	_test_core_sets_hull_material(t)
 	_test_smoke_combat(t)
 	_test_new_mechanics_actually_fire(t)
 	_test_chain_grouping(t)
@@ -34,7 +35,7 @@ func run(t: RefCounted) -> void:
 func _test_catalog_loads(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
 	t.check(c.ok(), "실제 카탈로그가 에러 없이 로드된다: %s" % str(c.errors))
-	t.eq(c.parts.size(), 21, "파츠 21종 (팩션당 7종)")
+	t.eq(c.parts.size(), 24, "파츠 24종 (팩션당 8종 — 7종 + Core)")
 	t.eq(c.relics.size(), 3, "Relic 3종")
 	t.eq(c.frames.size(), 2, "Frame 2종 (옛 픽스처용 + 테스트 풀용)")
 
@@ -47,8 +48,22 @@ func _test_catalog_loads(t: RefCounted) -> void:
 		if not (def["active"] as Dictionary).has("cooldown"):
 			passives += 1
 	for faction: String in FACTIONS:
-		t.eq(int(by_faction.get(faction, 0)), 7, "%s 파츠 7종" % faction)
-	t.eq(passives, 3, "패시브 변환기는 팩션당 하나씩 3종")
+		t.eq(int(by_faction.get(faction, 0)), 8, "%s 파츠 8종" % faction)
+	t.eq(passives, 6, "패시브 파츠 6종 — 변환기 3 + Core 3 (Core는 트리거만 갖는다)")
+
+	# 선체 재질은 Core가 정한다 (Frame이 아니다). Core가 재질 키워드를 갖지 않으면
+	# 조용히 기본값(plating)이 되어 상성표의 절반이 잠든다.
+	var materials: Dictionary = {}
+	for id: String in c.parts:
+		var def2: Dictionary = c.parts[id]
+		if str(def2["base_role"]) != "core":
+			continue
+		for mat: String in K.HULL_MATERIALS:
+			if (def2.get("keywords", []) as Array).has(mat):
+				materials[str(def2["faction"])] = mat
+	t.eq(materials.size(), 3, "Core 3종이 모두 선체 재질 키워드를 갖는다")
+	t.check(materials.values().has("biomass"),
+		"재질이 최소 두 종류로 갈린다 — 전부 plating이면 상성표가 잠든다")
 
 func _test_relic_validation(t: RefCounted) -> void:
 	# Relic 트리거의 어휘도 검증되어야 한다 — 안 그러면 오타 난 Relic이 조용히 죽는다.
@@ -67,7 +82,7 @@ func _test_builds_assemble(t: RefCounted) -> void:
 		t.check(prepared["sim"] != null, "%s 조립 성공: %s" % [id, str(prepared["errors"])])
 		if prepared["sim"] == null:
 			continue
-		t.eq(prepared["sim"].player.parts.size(), 5, "%s는 슬롯 5칸을 모두 채운다" % id)
+		t.eq(prepared["sim"].player.parts.size(), 6, "%s는 슬롯 6칸을 모두 채운다" % id)
 
 ## 풀의 모든 파츠가 어딘가에 쓰이는가, 그리고 각 팩션이 AUGMENT를 실제로 쓰는가.
 ## 쓰이지 않는 파츠는 전투에서 한 번도 검증되지 않는다.
@@ -95,6 +110,17 @@ func _test_part_coverage(t: RefCounted) -> void:
 	for faction: String in FACTIONS:
 		t.check(int(augment_by_faction.get(faction, 0)) > 0,
 			"%s 순수 빌드가 AUGMENT를 실제로 쓴다" % faction)
+
+## Core가 실제로 선체 재질을 정하는가. 조립된 함선에서 확인한다 —
+## JSON에 키워드를 적어도 build_loader가 읽지 않으면 조용히 기본값이 된다.
+func _test_core_sets_hull_material(t: RefCounted) -> void:
+	var c: RefCounted = Content.load_catalog()
+	var by_build: Dictionary = {}
+	for id: String in Content.build_ids():
+		by_build[id] = str(Content.prepare(c, id, id, 1)["sim"].player.hull_material)
+	t.eq(str(by_build.get("viridia_pure", "")), "biomass", "Viridia는 biomass 선체다")
+	t.eq(str(by_build.get("reclaimer_pure", "")), "plating", "Reclaimer는 plating 선체다")
+	t.eq(str(by_build.get("aeonic_pure", "")), "plating", "Aeonic은 plating 선체다")
 
 func _test_smoke_combat(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
@@ -146,6 +172,7 @@ func _test_new_mechanics_actually_fire(t: RefCounted) -> void:
 	t.check(seen.has("growth_changed"), "성장이 실제로 누적된다")
 	t.check(seen.has("stasis_applied"), "Stasis가 실제로 걸린다")
 	t.check(seen.has("overheat_ticked"), "과열 피해가 실제로 발생한다")
+	t.check(seen.has("regen_ticked"), "Viridia Core의 초당 재생이 실제로 돈다")
 	t.eq(passive_fires, 0, "패시브 변환기는 한 번도 스스로 발동하지 않는다")
 
 ## 이벤트의 슬롯이 패시브 파츠의 슬롯인가. 빌드 정의(정적)로만 판정한다.

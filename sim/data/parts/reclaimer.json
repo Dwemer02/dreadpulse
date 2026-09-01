@@ -158,6 +158,20 @@
             "do": [ { "op": "grow", "target": "host", "stat": "aug_thermal", "amount": 1 } ] }
         ]
       }
+    },
+    {
+      "_note": "CORE. 재질 plating. 해체 순환의 시작점 — 첫 파손을 자재로 바꾼다. 스스로 발동하지 않는 패시브다.",
+      "id": "foundry_core",
+      "name": "용광로 노심",
+      "faction": "reclaimer",
+      "base_role": "core",
+      "keywords": ["plating"],
+      "active": {
+        "triggers": [
+          { "on": "part_destroyed", "max_fires": 1,
+            "do": [ { "op": "gain_material", "amount": 5 } ] }
+        ]
+      }
     }
   ]
 }

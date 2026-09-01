@@ -161,6 +161,20 @@
             ] }
         ]
       }
+    },
+    {
+      "_note": "CORE. 재질 plating. 전투 시작 시의 큰 보호막 한 덩어리 — 위상 방벽이 쌓는 흐름과 달리 초반 한 번뿐이다.",
+      "id": "phase_core",
+      "name": "위상 노심",
+      "faction": "aeonic",
+      "base_role": "core",
+      "keywords": ["plating", "energy_shield"],
+      "active": {
+        "triggers": [
+          { "on": "combat_start",
+            "do": [ { "op": "gain_shield", "amount": 50 } ] }
+        ]
+      }
     }
   ]
 }
