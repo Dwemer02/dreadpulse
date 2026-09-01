@@ -85,13 +85,20 @@ func step() -> void:
 	_run_scheduled()
 
 	# 3. 발동 — 양측 후보를 모두 모은 뒤 슬롯 순서로 해소한다 (선공 편향 방지)
+	#
+	# Multi-fire 예약분이 쿨타임 발동보다 먼저다. 예약은 이미 "쏘기로 결정된" 발동이고,
+	# 발동 상한이 간격을 벌리고 있으므로 미루면 큐가 밀리기만 한다.
 	var candidates: Array = []
 	for ship: RefCounted in [player, enemy]:
 		for part: RefCounted in ship.parts:
+			if part.has_pending_fire(tick):
+				candidates.append({"part": part, "ship": ship, "cause": "multi_fire"})
+	for ship: RefCounted in [player, enemy]:
+		for part: RefCounted in ship.parts:
 			if part.is_ready():
-				candidates.append({"part": part, "ship": ship})
+				candidates.append({"part": part, "ship": ship, "cause": "cooldown"})
 	for candidate: Dictionary in candidates:
-		_fire(candidate["part"], candidate["ship"], "cooldown")
+		_fire(candidate["part"], candidate["ship"], str(candidate["cause"]))
 
 	# 4. 체인 소진
 	_drain_chain()
@@ -180,8 +187,15 @@ func _fire(part: RefCounted, ship: RefCounted, cause: String) -> void:
 		_begin_chain()
 	var foe: RefCounted = _other(ship)
 
+	# Multi-fire 반복은 같은 발동의 일부다. 슬롯 비용은 원본에서 이미 냈으므로
+	# 다시 청구하지 않는다 — 그러지 않으면 비용 있는 파츠에서 Multi-fire가
+	# "반복마다 재청구"라는 숨은 페널티가 된다.
+	var repeat: bool = cause == "multi_fire"
+	if repeat:
+		part.pending_fires = maxi(0, part.pending_fires - 1)
+
 	var reason: String = part.block_reason(tick)
-	if reason == "" and not ship.can_afford(part.cost):
+	if reason == "" and not repeat and not ship.can_afford(part.cost):
 		reason = "no_material"
 	if reason != "":
 		# 같은 사유가 이어지는 동안은 한 번만 보고한다. 쿨타임이 찬 파츠는 매 틱
@@ -197,7 +211,7 @@ func _fire(part: RefCounted, ship: RefCounted, cause: String) -> void:
 		return
 	part.last_block_reason = ""
 
-	var cost: int = int(part.cost.get("material", 0))
+	var cost: int = 0 if repeat else int(part.cost.get("material", 0))
 	if cost > 0:
 		ship.spend_material(cost)
 		emit("material_spent", ship.side, {
@@ -238,7 +252,7 @@ func _fire(part: RefCounted, ship: RefCounted, cause: String) -> void:
 
 	Actions.run_block(part.on_fire, {
 		"sim": self, "own_ship": ship, "enemy_ship": foe, "part": part,
-		"rng": rng, "event": {}, "tick": tick,
+		"rng": rng, "event": {}, "tick": tick, "fire_cause": cause,
 	})
 
 	# 이번 발동으로 0이 되었으면 효과를 실행한 뒤 파손된다

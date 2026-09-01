@@ -161,6 +161,7 @@ func _make_part(catalog: RefCounted, slot_id: String, role: String,
 	p.faction = spec["faction"]
 	p.keywords = spec["keywords"]
 	p.augment_id = spec["augment_id"]
+	p.passive = bool(spec.get("passive", false))
 	p.cooldown_units = spec["cooldown_units"]
 	p.cost = spec["cost"]
 	p.on_fire = spec["on_fire"]

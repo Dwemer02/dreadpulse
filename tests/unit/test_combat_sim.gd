@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신할 것
-const EXPECTED_CHECKS := 92
+const EXPECTED_CHECKS := 103
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -107,6 +107,8 @@ func run(t: RefCounted) -> void:
 	_test_stasis_blocks_firing_not_triggers(t)
 	_test_enemy_scoped_status_triggers(t)
 	_test_determinism(t)
+	_test_multi_fire_timing(t)
+	_test_passive_part(t)
 	t.done()
 
 ## 적함에서 일어나는 상태이상 이벤트를 트리거로 잡을 수 있는가.
@@ -666,3 +668,86 @@ func _test_determinism(t: RefCounted) -> void:
 	t.check(streams[0] != streams[1], "시드 %d와 %d는 다른 스트림을 낸다" % [seeds[0], seeds[1]])
 	t.check(streams[0] != streams[2], "시드 %d와 %d는 다른 스트림을 낸다" % [seeds[0], seeds[2]])
 	t.check(streams[1] != streams[2], "시드 %d와 %d는 다른 스트림을 낸다" % [seeds[1], seeds[2]])
+
+
+## Multi-fire는 **발동 전체를 다시 일으키고**, 그 반복은 초당 5회 상한이 벌린다.
+## 사용자 결정: "Multi-fire 5라면 1초 동안 진행되게 됨. 5회 상한은 시각적으로
+## 확인하기 위한 것" — 즉 즉시 5연발이 아니라 눈으로 따라갈 수 있는 간격이어야 한다.
+func _test_multi_fire_timing(t: RefCounted) -> void:
+	var sim: RefCounted = CombatSim.new()
+	var player: RefCounted = _bare_ship("player", 10000)
+	var enemy: RefCounted = _bare_ship("enemy", 10000)
+
+	# 쿨타임이 길어 자연 발동은 한 번뿐인 파츠. 나머지 발동은 전부 Multi-fire다.
+	var gun: RefCounted = _bare_part("weapon_1", 2.0)
+	gun.on_fire = [{"op": "multi_fire", "times": 4}]
+	# Augment가 붙었을 때처럼 part_fired를 구독하는 트리거를 얹는다.
+	_add_trigger(gun, {"on": "part_fired", "where": {"is_host": true},
+		"do": [{"op": "gain_material", "amount": 1}]})
+	player.add_part(gun)
+	sim.setup(player, enemy, 1)
+
+	# 첫 발동까지 돌린 뒤, 예약이 전부 빠질 만큼만 더 돌린다
+	for i: int in 60:
+		sim.step()
+
+	var fires: Array = []
+	for e: Dictionary in sim.log:
+		if str(e["type"]) == "part_fired" and str(e["slot"]) == "weapon_1":
+			fires.append(e)
+	t.eq(fires.size(), 5, "원본 1회 + 예약 4회 = 5회 발동한다")
+	t.eq(str(fires[0]["cause"]), "cooldown", "첫 발동은 쿨타임 발동")
+	t.eq(str(fires[1]["cause"]), "multi_fire", "반복 발동의 사유는 multi_fire")
+
+	# 간격이 발동 상한 이상인가 — 이것이 "1초 동안 진행된다"의 실체다
+	var min_gap: float = 999.0
+	for i: int in range(1, fires.size()):
+		min_gap = minf(min_gap, float(fires[i]["t"]) - float(fires[i - 1]["t"]))
+	t.check(min_gap >= K.ticks_to_secs(K.MIN_FIRE_TICKS) - 0.001,
+		"반복 사이 간격이 발동 상한(%.2f초) 이상이다 — 실측 %.2f초"
+			% [K.ticks_to_secs(K.MIN_FIRE_TICKS), min_gap])
+	t.check(float(fires[4]["t"]) - float(fires[0]["t"]) >= 0.8,
+		"4회 반복이 즉시가 아니라 시간에 걸쳐 진행된다")
+
+	# 발동 전체가 다시 일어나므로 트리거도 그만큼 반응한다
+	t.eq(player.material, 5, "part_fired를 구독한 트리거가 발동 횟수만큼 반응한다")
+
+	# 예약이 기하급수로 늘지 않는다 — 반복 발동 중에는 multi_fire가 다시 예약하지 않는다
+	t.eq(gun.pending_fires, 0, "예약이 전부 소진되고 다시 쌓이지 않는다")
+
+## 패시브 파츠는 스스로 발동하지 않는다. 슬롯은 차지하고 트리거는 돈다.
+func _test_passive_part(t: RefCounted) -> void:
+	var sim: RefCounted = CombatSim.new()
+	var player: RefCounted = _bare_ship("player", 10000)
+	var enemy: RefCounted = _bare_ship("enemy", 10000)
+
+	var gun: RefCounted = _bare_part("weapon_1", 2.0)
+	gun.on_fire = [{"op": "gain_resonance", "amount": 1}]
+	player.add_part(gun)
+
+	var converter: RefCounted = _bare_part("system_1", 0.0, "system")
+	converter.passive = true
+	converter.cooldown_units = 0
+	_add_trigger(converter, {"on": "part_fired", "do": [{"op": "gain_material", "amount": 2}]})
+	player.add_part(converter)
+
+	sim.setup(player, enemy, 1)
+	for i: int in 100:
+		sim.step()
+
+	for e: Dictionary in sim.log:
+		if str(e["type"]) == "part_fired":
+			t.check(str(e["slot"]) != "system_1", "패시브 파츠는 스스로 발동하지 않는다")
+			break
+	var passive_fires: int = 0
+	var blocked: int = 0
+	for e: Dictionary in sim.log:
+		if str(e.get("slot", "")) != "system_1":
+			continue
+		if str(e["type"]) == "part_fired":
+			passive_fires += 1
+		elif str(e["type"]) == "part_fire_blocked":
+			blocked += 1
+	t.eq(passive_fires, 0, "패시브 파츠의 발동 이벤트는 하나도 없다")
+	t.eq(blocked, 0, "패시브 파츠는 불발로도 보고되지 않는다 — 막힌 게 아니라 안 쏘는 것이다")
+	t.check(player.material > 0, "패시브 파츠의 트리거는 정상으로 돈다")

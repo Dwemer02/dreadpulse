@@ -1,6 +1,6 @@
 extends RefCounted
 
-const EXPECTED_CHECKS := 52
+const EXPECTED_CHECKS := 55
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -17,6 +17,9 @@ func _ship() -> RefCounted:
 		var p: RefCounted = Part.new()
 		p.slot_id = spec[0]
 		p.role = spec[1]
+		# Base Role은 슬롯 role과 별개 값이다. 역할 기반 셀렉터(all_own_weapons)가
+		# 이것을 보므로 픽스처도 채워야 한다.
+		p.base_role = spec[1]
 		p.part_id = "fx_" + spec[0]
 		p.cooldown_units = K.cooldown_to_units(2.0)
 		s.add_part(p)

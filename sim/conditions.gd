@@ -14,10 +14,37 @@ const CONDITIONS: Array[String] = [
 	"resonance_at_least", "material_at_least",
 	"before_seconds", "after_seconds",
 	"every_nth_fire", "every_nth_accumulated",
-	"is_host", "event_field", "source_faction", "source_keyword",
+	"every_nth_occurrence",
+	"is_host", "source_is_host", "event_field", "source_faction", "source_keyword",
 	"hull_below_ratio", "fires_remaining_at_most", "has_broken_own",
-	"own_ship", "enemy_ship",
+	"is_accelerated", "own_ship", "enemy_ship",
 ]
+
+## 이벤트 발생을 **세는** 조건. 나머지 조건이 전부 통과한 뒤에만 세야 한다 —
+## 먼저 세면 게이트(is_host 등)를 통과하지 못한 이벤트까지 누적되어
+## "숙주가 3회 수리할 때마다"가 조용히 "함선이 3회 수리할 때마다"로 바뀐다.
+## trigger_engine이 이 목록을 보고 평가 순서를 둘로 나눈다.
+const COUNTING_KEYS: Array[String] = ["every_nth_accumulated", "every_nth_occurrence"]
+
+## where에서 카운팅 조건 키를 찾는다. 없으면 빈 문자열. 둘 이상은 저작 실수다.
+static func counting_key(where: Variant) -> String:
+	if not (where is Dictionary):
+		return ""
+	for key: String in COUNTING_KEYS:
+		if (where as Dictionary).has(key):
+			return key
+	return ""
+
+## 카운팅 조건을 뺀 나머지 게이트. null(조건 없음)은 그대로 null.
+static func without_counting(where: Variant) -> Variant:
+	if not (where is Dictionary):
+		return where
+	var key: String = counting_key(where)
+	if key == "":
+		return where
+	var out: Dictionary = (where as Dictionary).duplicate()
+	out.erase(key)
+	return out
 
 ## ctx: {own_ship, enemy_ship, part, event, tick, source_part, accum, accum_prev}
 ## tick이 ctx에 없으면 0(전투 시작)으로 평가된다.
@@ -77,6 +104,20 @@ static func _one(key: String, value: Variant, ctx: Dictionary) -> bool:
 			var before: int = int(ctx.get("accum_prev", 0))
 			var after: int = int(ctx.get("accum", 0))
 			return (after / step) > (before / step)
+		"every_nth_occurrence":
+			# accum/accum_prev는 trigger_engine이 발생 횟수로 채운다.
+			var step2: int = int(value)
+			if step2 <= 0:
+				return false
+			return (int(ctx.get("accum", 0)) / step2) > (int(ctx.get("accum_prev", 0)) / step2)
+		"is_accelerated":
+			return (part != null and part.accel_ticks != 0) == bool(value)
+		"source_is_host":
+			# 상태이상 이벤트는 **맞은 쪽** 함선으로 방출된다. 그래서 슬롯만 비교하면
+			# 양쪽 함선이 같은 Frame을 쓸 때 이름이 겹쳐 엉뚱한 파츠를 숙주로 본다.
+			# source_ship까지 함께 봐야 한다.
+			var same_source: bool = part != null 				and str(event.get("source_slot", "")) == part.slot_id 				and str(event.get("source_ship", "")) == ship.side
+			return same_source == bool(value)
 		"is_host":
 			var same: bool = part != null \
 				and str(event.get("slot", "")) == part.slot_id \

@@ -11,6 +11,11 @@ const MIN_FIRE_TICKS: int = 4
 ## 체인 깊이 상한. 초과 시 chain_capped 이벤트. 스펙 §4.6
 const MAX_CHAIN_DEPTH: int = 12
 
+## 한 파츠가 동시에 쌓아둘 수 있는 Multi-fire 예약 상한.
+## 큐는 발동 상한(초당 5회)에 맞춰 빠지므로 12면 2.4초어치다.
+## 폭주 방지용 안전장치이지 밸런스 수치가 아니다.
+const MAX_PENDING_FIRES: int = 12
+
 ## 무제한 파츠가 drain_fires를 처음 맞을 때 확정되는 수명. 스펙 §4.5
 const DEFAULT_FIRE_LIMIT: int = 5
 

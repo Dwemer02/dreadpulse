@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 137
+const EXPECTED_CHECKS := 150
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -66,6 +66,7 @@ func run(t: RefCounted) -> void:
 	_test_part_manipulation(t)
 	_test_defense_priority(t)
 	_test_fire_part_and_multi_fire(t)
+	_test_growth(t)
 	_test_where_skip(t)
 	_test_selector_shared_resolution(t)
 	_test_delay(t)
@@ -328,14 +329,17 @@ func _test_part_manipulation(t: RefCounted) -> void:
 	t.check(target.is_indestructible(), "파괴 불가 상태가 된다")
 	t.eq(sim.of_type("indestructible_applied").size(), 1, "indestructible_applied 이벤트")
 
-	# reduce_cooldown — 상한 확인
+	# charge — 초 단위로 진행도를 밀고 상한에서 멈춘다
 	var target2: RefCounted = _part("weapon_2", "weapon", 4.0)
 	own.add_part(target2)
 	target2.progress_units = 0
-	Actions.run_block([{"op": "reduce_cooldown", "target": "self", "ratio": 0.5}],
+	Actions.run_block([{"op": "charge", "target": "self", "seconds": 2.0}],
 		_ctx(sim, own, null, target2, _rng()))
-	t.eq(target2.progress_units, int(round(target2.cooldown_units * 0.5)), "쿨타임 유닛의 50%만큼 진행")
-	Actions.run_block([{"op": "reduce_cooldown", "target": "self", "ratio": 2.0}],
+	t.eq(target2.progress_units, K.cooldown_to_units(2.0), "충전 2초 = 2초어치 진행")
+	t.eq(sim.of_type("charge_applied").size(), 1, "charge_applied 이벤트 — Aeonic이 이걸 구독한다")
+	t.eq(int(sim.of_type("charge_applied")[0]["gained_units"]), K.cooldown_to_units(2.0),
+		"실제로 밀린 양을 싣는다")
+	Actions.run_block([{"op": "charge", "target": "self", "seconds": 10.0}],
 		_ctx(sim, own, null, target2, _rng()))
 	t.eq(target2.progress_units, target2.cooldown_units, "진행도는 쿨타임 유닛을 넘지 않는다 (상한)")
 
@@ -412,42 +416,70 @@ func _test_fire_part_and_multi_fire(t: RefCounted) -> void:
 	t.eq(sim.forced[0]["cause"], "chain", "강제 발동 사유는 chain")
 	t.eq(sim.forced[0]["ship"], "player", "함선 소속 기록")
 
-	# multi_fire — do 블록이 있으면 그 블록을 n회
+	# multi_fire — 추가 발동을 예약한다. 즉시 실행하지 않는다.
+	# 실제 반복은 combat_sim의 틱 루프가 발동 상한에 맞춰 꺼낸다(test_combat_sim).
 	var owner2: RefCounted = _part("weapon_3")
 	own.add_part(owner2)
 	var ctx2: Dictionary = _ctx(sim, own, null, owner2, _rng())
-	Actions.run_block([{"op": "multi_fire", "times": 3,
-		"do": [{"op": "gain_material", "amount": 1}]}], ctx2)
-	t.eq(own.material, 3, "do 블록이 n회 반복된다")
-	t.eq(sim.of_type("material_gained").size(), 3, "반복 횟수만큼 이벤트")
+	Actions.run_block([{"op": "multi_fire", "times": 3}], ctx2)
+	t.eq(owner2.pending_fires, 3, "예약된 추가 발동 3회")
+	t.eq(sim.of_type("multi_fire_queued").size(), 1, "multi_fire_queued 이벤트")
 
-	# multi_fire — do가 없으면 소유 파츠의 on_fire를 반복한다
+	# 예약 상한 — 폭주 방지
+	Actions.run_block([{"op": "multi_fire", "times": 99}], ctx2)
+	t.eq(owner2.pending_fires, K.MAX_PENDING_FIRES, "예약은 상한을 넘지 않는다")
+
+	# cost_material — 자재가 모자라면 예약도 지불도 없다
 	var owner3: RefCounted = _part("weapon_4")
-	owner3.on_fire = [{"op": "gain_resonance", "amount": 1}]
 	own.add_part(owner3)
 	var ctx3: Dictionary = _ctx(sim, own, null, owner3, _rng())
-	Actions.run_block([{"op": "multi_fire", "times": 2}], ctx3)
-	t.eq(own.resonance, 2, "do 생략 시 소유 파츠의 on_fire가 반복된다")
-	t.eq(sim.of_type("resonance_gained").size(), 2, "반복 횟수만큼 이벤트")
+	own.material = 3
+	Actions.run_block([{"op": "multi_fire", "times": 1, "cost_material": 4}], ctx3)
+	t.eq(owner3.pending_fires, 0, "자재가 모자라면 예약하지 않는다")
+	t.eq(own.material, 3, "자재가 모자라면 지불도 없다")
+	own.material = 10
+	Actions.run_block([{"op": "multi_fire", "times": 1, "cost_material": 4}], ctx3)
+	t.eq(owner3.pending_fires, 1, "자재가 충분하면 예약한다")
+	t.eq(own.material, 6, "예약 비용을 지불한다")
 
-	# multi_fire는 발동 상한도 발동 횟수도 소모하지 않는다
-	owner3.fire_limit = 5
-	owner3.fires_remaining = 5
-	var before_fires: int = owner3.fires_remaining
-	var before_used: int = owner3.fires_used
-	var before_tick: int = owner3.last_fire_tick
-	Actions.run_block([{"op": "multi_fire", "times": 2}], ctx3)
-	t.eq(owner3.fires_remaining, before_fires, "multi_fire는 남은 발동 횟수를 소모하지 않는다")
-	t.eq(owner3.fires_used, before_used, "multi_fire는 발동 횟수 카운터를 올리지 않는다")
-	t.eq(owner3.last_fire_tick, before_tick, "multi_fire는 발동 상한 타이머를 건드리지 않는다")
-
-	# 무한 재귀 방어 — do 없이 on_fire가 자기 자신을 참조하는 multi_fire를 담고 있어도
-	# 유한 시간에 끝나야 한다 (계획서 원안에는 이 방어가 없었다)
+	# 반복 발동 중에는 아무 일도 하지 않는다 — 이 가드가 없으면 on_fire를 다시 도는
+	# 순간 큐가 기하급수로 늘어나고, cost_material도 반복마다 재청구된다.
 	var owner4: RefCounted = _part("weapon_5")
-	owner4.on_fire = [{"op": "multi_fire", "times": 1}]
-	var ctx4: Dictionary = _ctx(sim, own, null, owner4, _rng())
-	Actions.run_block([{"op": "multi_fire", "times": 1}], ctx4)
-	t.check(true, "자기 참조 multi_fire가 무한 재귀 없이 종료된다")
+	own.add_part(owner4)
+	var repeat_ctx: Dictionary = _ctx(sim, own, null, owner4, _rng())
+	repeat_ctx["fire_cause"] = "multi_fire"
+	own.material = 10
+	Actions.run_block([{"op": "multi_fire", "times": 2, "cost_material": 4}], repeat_ctx)
+	t.eq(owner4.pending_fires, 0, "반복 발동 중에는 추가 예약이 없다")
+	t.eq(own.material, 10, "반복 발동 중에는 비용도 재청구되지 않는다")
+
+func _test_growth(t: RefCounted) -> void:
+	var sim: RefCounted = FakeSim.new()
+	var own: RefCounted = _ship()
+	var foe: RefCounted = _ship()
+	foe.side = "enemy"
+	var owner: RefCounted = _part("weapon_1")
+	own.add_part(owner)
+	var ctx: Dictionary = _ctx(sim, own, foe, owner, _rng())
+
+	Actions.run_block([{"op": "grow", "target": "self", "stat": "damage", "amount": 2}], ctx)
+	t.eq(int(owner.growth.get("damage", 0)), 2, "성장이 누적된다")
+	t.eq(sim.of_type("growth_changed").size(), 1, "growth_changed 이벤트")
+
+	# 성장분이 실제 수치에 더해진다 — 이것이 옛 empower를 대신하는 자리다
+	t.eq(Actions.amount_of({"amount": 3, "plus_growth": "damage"}, ctx), 5,
+		"기본 수치에 성장분이 더해진다")
+	t.eq(Actions.amount_of({"amount": 3}, ctx), 3, "plus_growth가 없으면 그대로다")
+	t.eq(Actions.amount_of({"amount": 0, "plus_growth": "none"}, ctx), 0,
+		"없는 stat은 0으로 읽는다")
+
+	# 적 상태 적층 비례분은 성장과 다르다 — 지금 이 순간의 적 상태를 읽는다
+	foe.overheat_stacks = 4
+	t.eq(Actions.amount_of({"amount": 4, "plus_per_enemy_overheat": 1}, ctx), 8,
+		"적 과열 적층만큼 더해진다")
+	foe.overheat_stacks = 0
+	t.eq(Actions.amount_of({"amount": 4, "plus_per_enemy_overheat": 1}, ctx), 4,
+		"적층이 사라지면 함께 줄어든다 (성장과 다른 점)")
 
 func _test_where_skip(t: RefCounted) -> void:
 	var sim: RefCounted = FakeSim.new()
@@ -554,7 +586,10 @@ func _test_delay(t: RefCounted) -> void:
 	t.check(alive_y.broken, "새로 파손된 다른 파츠(alive_y)는 건드리지 않는다")
 
 func _test_vocabulary(t: RefCounted) -> void:
-	t.eq(Actions.OPS.size(), 23, "op 어휘는 23종 (상태이상 4종 추가, empower 제거)")
+	t.eq(Actions.OPS.size(), 24, "op 어휘는 24종 (charge·grow 추가, reduce_cooldown 제거)")
+	t.check(not Actions.OPS.has("reduce_cooldown"), "reduce_cooldown은 charge로 대체됐다")
+	t.check(Actions.OPS.has("charge"), "charge는 어휘에 있다")
+	t.check(Actions.OPS.has("grow"), "grow는 어휘에 있다")
 	t.check(not Actions.OPS.has("apply_overload"), "삭제된 어휘(apply_overload)는 없다")
 	t.check(Actions.OPS.has("multi_fire"), "multi_fire는 어휘에 있다")
 	t.check(Actions.OPS.has("deal_damage"), "deal_damage는 어휘에 있다")

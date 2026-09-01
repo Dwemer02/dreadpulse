@@ -1,6 +1,6 @@
 extends RefCounted
 
-const EXPECTED_CHECKS := 106
+const EXPECTED_CHECKS := 112
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -271,6 +271,7 @@ func _test_catalog_consistency(t: RefCounted) -> void:
 	p.fires_used = 3
 	p.fire_limit = 5
 	p.fires_remaining = 2
+	p.accel_ticks = 20
 
 	var s2: RefCounted = _ship()
 	# 두 번째 파츠를 파손시켜 has_broken_own을 만족시킨다 (weapon_1 자체는 온전해야
@@ -281,8 +282,9 @@ func _test_catalog_consistency(t: RefCounted) -> void:
 	broken_part.broken = true
 	s.add_part(broken_part)
 
+	# source_slot/source_ship은 상태이상 이벤트가 싣는 필드다 (source_is_host가 본다).
 	var own_event: Dictionary = {"ship": "player", "slot": "weapon_1", "faction": "reclaimer",
-		"cause": "x"}
+		"cause": "x", "source_slot": "weapon_1", "source_ship": "player"}
 	var own_ctx: Dictionary = _ctx(s, own_event, 700)
 	own_ctx["accum_prev"] = 8
 	own_ctx["accum"] = 12
@@ -297,7 +299,10 @@ func _test_catalog_consistency(t: RefCounted) -> void:
 		"after_seconds": 1.0,
 		"every_nth_fire": 3,
 		"every_nth_accumulated": {"field": "amount", "n": 10},
+		"every_nth_occurrence": 4,
 		"is_host": true,
+		"source_is_host": true,
+		"is_accelerated": true,
 		"event_field": {"field": "cause", "equals": "x"},
 		"source_faction": "reclaimer",
 		"source_keyword": "damage",

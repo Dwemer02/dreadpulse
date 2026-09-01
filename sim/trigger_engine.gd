@@ -49,17 +49,6 @@ static func _run_list(triggers: Array, fires: Array, accums: Variant,
 			continue
 
 		var where: Dictionary = _where_dict(trigger)
-		var accum_prev: int = 0
-		var accum: int = 0
-		if accums != null and where.has("every_nth_accumulated"):
-			var spec: Dictionary = where["every_nth_accumulated"]
-			var field: String = str(spec.get("field", "amount"))
-			accum_prev = int(accums[index])
-			accum = accum_prev + int(event.get(field, 0))
-			# 조건이 거짓이어도 누적은 계속된다 — 이벤트 스트림의 러닝 토탈이기 때문이다.
-			# (max_fires에 걸려 여기 도달하지 못한 트리거는 누적하지 않는다 — 그 트리거는
-			# 이후 무엇이 오든 다시는 발동할 수 없으므로 누적을 계속할 이유가 없다.)
-			accums[index] = accum
 
 		# source_part는 이벤트가 난 함선에서 찾아야 한다.
 		# 양쪽 함선이 같은 Frame을 쓰면 슬롯 이름이 동일하므로(core, weapon_1, ...),
@@ -74,12 +63,31 @@ static func _run_list(triggers: Array, fires: Array, accums: Variant,
 			"sim": sim, "own_ship": ship, "enemy_ship": foe, "part": owner,
 			"event": event, "tick": sim.tick, "rng": sim.rng,
 			"source_part": source_part,
-			"accum": accum, "accum_prev": accum_prev,
+			"accum": 0, "accum_prev": 0,
 		}
+
+		# 조건 평가는 두 단계다. 먼저 게이트(카운팅을 뺀 나머지)를 본다.
 		# where는 원본 그대로 넘긴다 — Dictionary도 null도 아닌 저작 실수는
 		# conditions.gd가 이미 fail-closed(거짓)로 처리한다.
-		if not Conditions.evaluate(trigger.get("where", null), ctx):
+		if not Conditions.evaluate(Conditions.without_counting(trigger.get("where", null)), ctx):
 			continue
+
+		# 게이트를 통과한 이벤트만 센다. 순서가 뒤집히면 "숙주가 3회 수리할 때마다"가
+		# 조용히 "함선이 3회 수리할 때마다"가 된다 — 조건은 거짓인데 카운터만 도는 것이다.
+		var counting: String = Conditions.counting_key(where)
+		if counting != "" and accums != null:
+			var step: int = 1
+			if counting == "every_nth_accumulated":
+				var spec: Dictionary = where[counting]
+				step = int(event.get(str(spec.get("field", "amount")), 0))
+			ctx["accum_prev"] = int(accums[index])
+			ctx["accum"] = int(accums[index]) + step
+			# 조건이 거짓이어도 누적은 계속된다 — 게이트를 통과한 이벤트의 러닝 토탈이다.
+			# (max_fires에 걸려 여기 도달하지 못한 트리거는 누적하지 않는다 — 그 트리거는
+			# 이후 무엇이 오든 다시는 발동할 수 없으므로 누적을 계속할 이유가 없다.)
+			accums[index] = int(ctx["accum"])
+			if not Conditions.evaluate({counting: where[counting]}, ctx):
+				continue
 
 		# 깊이 상한을 넘으면 실행하지 않고 흔적을 남긴다
 		if depth + 1 > K.MAX_CHAIN_DEPTH:

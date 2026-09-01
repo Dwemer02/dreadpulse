@@ -12,7 +12,7 @@ const Conditions = preload("res://sim/conditions.gd")
 const OPS: Array[String] = [
 	"deal_damage", "gain_shield", "repair", "apply_regen", "apply_overheat",
 	"accelerate", "slow", "drain_fires", "restore_fires", "make_indestructible",
-	"reduce_cooldown", "destroy_part", "restore_part", "reinforce",
+	"charge", "destroy_part", "restore_part", "reinforce", "grow",
 	"gain_material", "spend_material", "gain_resonance", "fire_part", "multi_fire",
 	"apply_corrosion", "cleanse_corrosion", "apply_fracture", "apply_stasis",
 ]
@@ -23,6 +23,7 @@ const OPS: Array[String] = [
 const OWN_ONLY_OPS: Array[String] = [
 	"destroy_part", "restore_part", "restore_fires", "reinforce",
 	"make_indestructible", "fire_part", "cleanse_corrosion",
+	"charge", "grow", "multi_fire",
 ]
 
 ## do 블록 하나를 실행한다.
@@ -39,6 +40,25 @@ static func resolve_selectors(block: Array, ctx: Dictionary) -> Dictionary:
 		if selector != "" and not out.has(selector):
 			out[selector] = Targeting.resolve(selector, ctx)
 	return out
+
+## 액션의 실효 수치. 기본값에 성장분과 적 상태 적층 비례분을 더한다.
+##
+## 성장(`plus_growth`)이 이 한 곳에 있는 이유: 옛 empower는 런타임 배율 스택이었고
+## 제거됐다. 대신 "파츠 수치 자체가 커진다"를 표현하려면 수치를 읽는 모든 자리가
+## 같은 규칙을 써야 한다 — 네 군데에 복사하면 반드시 어긋난다.
+##
+## `plus_per_enemy_overheat`는 성장과 다르다. 성장은 되돌아가지 않는 누적이고
+## 이쪽은 **지금 이 순간의** 적 상태를 읽는다 — 적층이 줄면 함께 줄어든다.
+static func amount_of(action: Dictionary, ctx: Dictionary, key: String = "amount") -> int:
+	var total: int = int(action.get(key, 0))
+	var owner: RefCounted = ctx.get("part", null)
+	if action.has("plus_growth") and owner != null:
+		total += int(owner.growth.get(str(action["plus_growth"]), 0))
+	if action.has("plus_per_enemy_overheat"):
+		var foe: RefCounted = ctx.get("enemy_ship", null)
+		if foe != null:
+			total += foe.overheat_stacks * int(action["plus_per_enemy_overheat"])
+	return maxi(0, total)
 
 static func run_action(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> void:
 	if action.has("where") and not Conditions.evaluate(action["where"], ctx):
@@ -101,7 +121,7 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 
 	match op:
 		"deal_damage":
-			var amount: int = int(action.get("amount", 0))
+			var amount: int = amount_of(action, ctx)
 			var dtype: String = str(action.get("type", K.DEFAULT_ATTACK_TYPE))
 			var r: Dictionary = foe.take_typed_damage(amount, dtype)
 			sim.emit("damage_dealt", own.side, {
@@ -117,26 +137,31 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 					{"from": r["from"], "to": r["to"], "ratio": foe.hull_ratio()})
 
 		"gain_shield":
-			var amount2: int = int(action.get("amount", 0))
+			var amount2: int = amount_of(action, ctx)
 			own.add_shield(amount2)
 			sim.emit("shield_gained", own.side, {"amount": amount2, "slot": owner_slot})
 
 		"repair":
-			var healed: int = own.repair(int(action.get("amount", 0)))
+			var healed: int = own.repair(amount_of(action, ctx))
 			if healed > 0:
 				sim.emit("repaired", own.side, {"amount": healed, "slot": owner_slot})
 
 		"apply_regen":
-			var amount3: int = int(action.get("amount", 0))
+			var amount3: int = amount_of(action, ctx)
 			var ticks: int = K.secs_to_ticks(float(action.get("duration", 0.0)))
 			own.add_regen(amount3, ticks)
 			sim.emit("regen_applied", own.side,
 				{"amount": amount3, "duration": action.get("duration", 0.0), "slot": owner_slot})
 
 		"apply_overheat":
-			var stacks: int = int(action.get("stacks", 0))
+			var stacks: int = amount_of(action, ctx, "stacks")
 			foe.add_overheat(stacks)
-			sim.emit("overheat_applied", foe.side, {"stacks": stacks})
+			# source_slot/source_ship이 없으면 "누가 부여했는가"를 복원할 수 없다 —
+			# 과열을 자기 경제로 바꾸는 변환기가 숙주를 가려내지 못한다.
+			sim.emit("overheat_applied", foe.side, {
+				"stacks": stacks, "total": foe.overheat_stacks,
+				"source_slot": owner_slot, "source_ship": own.side,
+			})
 
 		"apply_corrosion":
 			var corr: int = maxi(0, int(action.get("stacks", 0)))
@@ -145,7 +170,8 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 					target.corrosion_stacks += corr
 					sim.emit("corrosion_applied", _side_of(target, own, foe), {
 						"slot": target.slot_id, "stacks": corr,
-						"total": target.corrosion_stacks, "source_slot": owner_slot,
+						"total": target.corrosion_stacks,
+						"source_slot": owner_slot, "source_ship": own.side,
 					})
 
 		"cleanse_corrosion":
@@ -170,7 +196,7 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 				sim.emit("fracture_applied", foe.side, {
 					"amount": frac, "total": foe.fracture,
 					"hull": foe.hull, "until_collapse": maxi(0, foe.hull - foe.fracture),
-					"source_slot": owner_slot,
+					"source_slot": owner_slot, "source_ship": own.side,
 				})
 
 		"apply_stasis":
@@ -180,7 +206,8 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 					target.apply_stasis(st_ticks)
 					sim.emit("stasis_applied", _side_of(target, own, foe), {
 						"slot": target.slot_id, "duration": action.get("duration", 0.0),
-						"remaining_ticks": target.stasis_ticks, "source_slot": owner_slot,
+						"remaining_ticks": target.stasis_ticks,
+						"source_slot": owner_slot, "source_ship": own.side,
 					})
 
 		"accelerate", "slow":
@@ -236,11 +263,36 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 					"slot": target.slot_id, "duration": action.get("duration", 0.0),
 				})
 
-		"reduce_cooldown":
-			var ratio: float = float(action.get("ratio", 0.0))
-			for target: RefCounted in _targets(action, ctx, resolved):
-				var delta: int = int(round(target.cooldown_units * ratio))
-				target.progress_units = mini(target.cooldown_units, target.progress_units + delta)
+		"charge":
+			# 충전은 쿨타임 진행도를 즉시 미는 것이다 (GDD §21.3). 가속이 일정 시간
+			# 진행 **속도**를 바꾸는 것이라면 충전은 지금 이 순간의 **진행도**를 민다.
+			#
+			# 반드시 이벤트로 남긴다. Aeonic의 성장·변환 파츠가 "충전을 받는 순간"을
+			# 구독하기 때문이다 — 이벤트가 없으면 그 루프 전체가 조용히 성립하지 않는다.
+			var push: int = K.secs_to_ticks(float(action.get("seconds", 0.0))) * K.SPEED_NORMAL
+			if push > 0:
+				for target: RefCounted in _targets(action, ctx, resolved):
+					var before_units: int = target.progress_units
+					target.progress_units = mini(target.cooldown_units,
+						target.progress_units + push)
+					sim.emit("charge_applied", _side_of(target, own, foe), {
+						"slot": target.slot_id, "seconds": action.get("seconds", 0.0),
+						"gained_units": target.progress_units - before_units,
+						"source_slot": owner_slot, "source_ship": own.side,
+					})
+
+		"grow":
+			# 이번 전투 동안 파츠의 수치 자체를 키운다. amount_of()가 읽는다.
+			var stat: String = str(action.get("stat", ""))
+			var by: int = int(action.get("amount", 0))
+			if stat != "" and by != 0:
+				for target: RefCounted in _targets(action, ctx, resolved):
+					target.growth[stat] = int(target.growth.get(stat, 0)) + by
+					sim.emit("growth_changed", _side_of(target, own, foe), {
+						"slot": target.slot_id, "stat": stat, "amount": by,
+						"total": int(target.growth[stat]),
+						"source_slot": owner_slot,
+					})
 
 		"destroy_part":
 			for target: RefCounted in _targets(action, ctx, resolved):
@@ -289,19 +341,32 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 				sim.force_fire(target, own, "chain")
 
 		"multi_fire":
-			# do가 있으면 그 블록을, 없으면 소유 파츠의 on_fire를 반복한다.
-			# 발동 상한도 발동 횟수도 소모하지 않는다 — 한 발동 안의 반복이기 때문이다.
-			var times: int = int(action.get("times", 1))
-			var block: Array = action.get("do", [])
-			if block.is_empty() and owner != null:
-				block = owner.on_fire
-			# on_fire 안에 do 없는 multi_fire가 다시 들어있으면 owner.on_fire를 계속
-			# 되짚어 무한 재귀가 된다 (계획서 원안에는 이 방어가 없었다). 깊이를 ctx의
-			# 복사본에만 실어 형제 액션에 새지 않게 한다.
-			var depth: int = int(ctx.get("_multi_fire_depth", 0))
-			if depth >= K.MAX_CHAIN_DEPTH:
+			# Multi-fire는 **발동 전체를 다시 일으킨다** — part_fired가 다시 방출되고
+			# Augment와 트리거가 한 번 더 반응한다. 효과만 반복하면 "낮은 수치 +
+			# 높은 트리거 밀도"라는 정체성이 성립하지 않는다.
+			#
+			# 반복은 즉시 일어나지 않는다. 예약해 두고 **발동 상한(초당 5회)이 간격을
+			# 벌린다** — Multi-fire 5는 1초에 걸쳐 진행된다. 상한은 눈으로 따라갈 수
+			# 있게 만드는 장치이므로 여기에도 그대로 적용된다.
+			#
+			# 반복 발동 중에는 이 op이 아무 일도 하지 않는다. 그러지 않으면 on_fire를
+			# 다시 도는 순간 큐가 기하급수로 늘어난다. cost_material도 이 가드 덕분에
+			# 원본 발동에서 한 번만 지불된다.
+			if str(ctx.get("fire_cause", "")) == "multi_fire":
 				return
-			var inner_ctx: Dictionary = ctx.duplicate()
-			inner_ctx["_multi_fire_depth"] = depth + 1
-			for i: int in times:
-				run_block(block, inner_ctx)
+			var times: int = maxi(0, int(action.get("times", 1)))
+			if times == 0 or owner == null:
+				return
+			var price: int = int(action.get("cost_material", 0))
+			if price > 0:
+				if own.material < price:
+					return
+				own.spend_material(price)
+				sim.emit("material_spent", own.side, {
+					"slot": owner_slot, "amount": price,
+					"total": own.material, "sink": "multi_fire",
+				})
+			owner.pending_fires = mini(K.MAX_PENDING_FIRES, owner.pending_fires + times)
+			sim.emit("multi_fire_queued", own.side, {
+				"slot": owner.slot_id, "times": times, "pending": owner.pending_fires,
+			})

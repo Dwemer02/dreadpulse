@@ -104,8 +104,15 @@ func _validate_part(def: Variant) -> String:
 	var active: Variant = def["active"]
 	if not (active is Dictionary):
 		return "%s: active가 Dictionary가 아니다" % pid
-	if float(active.get("cooldown", 0.0)) <= 0.0:
-		return "%s: active.cooldown이 0 이하다" % pid
+	# 쿨타임이 없으면 **패시브 파츠**다 — 스스로 발동하지 않고 트리거로만 작동한다.
+	# "단독으로는 아무것도 하지 않는" 변환기 계열이 이것이다.
+	if active.has("cooldown"):
+		if float(active["cooldown"]) <= 0.0:
+			return "%s: active.cooldown이 0 이하다" % pid
+	elif not (active.get("on_fire", []) as Array).is_empty():
+		# 쿨타임이 없는데 on_fire가 있으면 그 블록은 영원히 실행되지 않는다.
+		# 조용히 죽는 대신 저작 시점에 거부한다.
+		return "%s: 쿨타임 없는 패시브 파츠는 on_fire를 가질 수 없다 (영원히 실행되지 않는다)" % pid
 	var problem: String = _validate_effects(pid, active.get("on_fire", []), "active.on_fire")
 	if problem != "":
 		return problem
@@ -146,7 +153,8 @@ func merge(part_id: String, augment_id: String) -> Dictionary:
 		"faction": host["faction"],
 		"base_role": str(host["base_role"]),
 		"keywords": keywords,
-		"cooldown_units": K.cooldown_to_units(float(active["cooldown"])),
+		"passive": not active.has("cooldown"),
+		"cooldown_units": K.cooldown_to_units(float(active.get("cooldown", 0.0))),
 		"fire_limit": int(active.get("fire_limit", K.UNLIMITED)),
 		"cost": (active.get("cost", {}) as Dictionary).duplicate(true),
 		"on_fire": (active.get("on_fire", []) as Array).duplicate(true),

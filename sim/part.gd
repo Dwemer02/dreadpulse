@@ -18,6 +18,10 @@ var keywords: Array[String] = []
 var augment_id: String = ""
 
 # --- 발동 규칙 (catalog가 채움) ---
+## 쿨타임을 갖지 않는 파츠. 스스로 발동하지 않고 트리거로만 작동한다 —
+## "단독으로는 아무것도 하지 않는" 변환기 계열이 이것이다.
+## 슬롯은 차지하며 파괴선·상태이상의 대상도 된다.
+var passive: bool = false
 var cooldown_units: int = 0
 var cost: Dictionary = {}
 var on_fire: Array = []
@@ -45,6 +49,12 @@ var corrosion_stacks: int = 0
 var stasis_ticks: int = 0
 ## 0 = 없음, K.PERMANENT = 영구, 그 외 = 남은 틱
 var indestructible_ticks: int = 0
+## 이번 전투 동안 누적된 수치 성장. stat 이름 -> 누적값.
+## 옛 empower(런타임 배율 스택)를 대신한다 — 배율이 아니라 **파츠 수치 자체**가 커진다.
+## 전투마다 파츠를 새로 만들므로 초기화 지점이 따로 없다.
+var growth: Dictionary = {}
+## Multi-fire가 예약한 추가 발동 수. 발동 상한(초당 5회)이 간격을 벌린다.
+var pending_fires: int = 0
 var broken: bool = false
 ## 마지막으로 방출한 불발 사유. 같은 사유가 매 틱 반복될 때 이벤트 스팸을 막는다.
 ## 발동에 성공하거나 복구되면 비운다 — 다시 막히면 새 사건으로 보고해야 하기 때문이다.
@@ -95,7 +105,13 @@ func apply_stasis(ticks: int) -> void:
 ## 쿨타임 중간에 얼어붙은 파츠는 진행도가 멈추므로 애초에 준비되지 않는다.
 ## 그것은 "막힌" 것이 아니라 "느린" 것이므로 보고할 사건이 없다 — 의미가 맞는다.
 func is_ready() -> bool:
-	return not broken and progress_units >= cooldown_units
+	return not broken and not passive and progress_units >= cooldown_units
+
+## Multi-fire가 예약한 추가 발동을 지금 쏠 수 있는가.
+## 막힌 사유는 보고하지 않는다 — 큐가 시간에 걸쳐 빠지는 것은 "막힌" 상태가 아니라
+## 설계된 간격이다. 불발 이벤트로 보고하면 Multi-fire 한 번에 로그가 뒤덮인다.
+func has_pending_fire(tick: int) -> bool:
+	return pending_fires > 0 and block_reason(tick) == ""
 
 # --- 가속 / 둔화 ---
 
@@ -194,6 +210,8 @@ func try_break() -> String:
 		reinforce_stacks -= 1
 		return "reinforce"
 	broken = true
+	# 예약된 추가 발동도 함께 사라진다. 남겨두면 복구 직후 옛 Multi-fire가 되살아난다.
+	pending_fires = 0
 	# 파손되면 부식 중첩이 사라진다 — 부식은 "발동할 때" 아픈 상태이고
 	# 파손된 파츠는 발동하지 않으므로, 남겨두면 복구했을 때 부활한다.
 	# 이것이 부식의 세 번째 제거 경로다 (수리 · 파손 · 실드 완화).
@@ -203,6 +221,7 @@ func try_break() -> String:
 ## 파손 해제 + 쿨타임 0 재시작 + 남은 횟수 초기화
 func restore() -> void:
 	broken = false
+	pending_fires = 0
 	progress_units = 0
 	fires_remaining = fire_limit
 	last_block_reason = ""

@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 64
+const EXPECTED_CHECKS := 72
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -98,6 +98,8 @@ func run(t: RefCounted) -> void:
 	_test_is_host(t)
 	_test_max_fires(t)
 	_test_every_nth_accumulated(t)
+	_test_every_nth_occurrence(t)
+	_test_counting_runs_after_gate(t)
 	_test_max_fires_freezes_accumulation(t)
 	_test_chain_depth_cap(t)
 	_test_chain_depth_propagation(t)
@@ -205,6 +207,54 @@ func _test_every_nth_accumulated(t: RefCounted) -> void:
 	TriggerEngine.dispatch(_event("resource_tick", "player", {"amount": 6}), [player, enemy], sim)
 	t.eq(part.trigger_accum[0], 18, "누적 18 — 조건이 거짓이어도 누적은 계속된다")
 	t.eq(part.trigger_fires[0], 1, "12->18은 새 배수를 넘지 않아 발동하지 않는다")
+
+## every_nth_occurrence는 값을 합산하지 않고 **발생 횟수**를 센다.
+## "실제 Repair가 3회 발생할 때마다" 같은 조건이 이것을 쓴다 —
+## every_nth_accumulated로는 수리량이 합산되어 전혀 다른 뜻이 된다.
+func _test_every_nth_occurrence(t: RefCounted) -> void:
+	var player: RefCounted = _ship("player")
+	var enemy: RefCounted = _ship("enemy")
+	var part: RefCounted = _part("weapon_1")
+	_add_trigger(part, _trig("repaired", _gain_material_do(1), {"every_nth_occurrence": 3}))
+	player.add_part(part)
+	var sim: RefCounted = FakeSim.new()
+
+	for i: int in 2:
+		TriggerEngine.dispatch(_event("repaired", "player", {"amount": 50}), [player, enemy], sim)
+	t.eq(part.trigger_fires[0], 0, "2회로는 발동하지 않는다 — 수리량 100이 아니라 횟수를 센다")
+	TriggerEngine.dispatch(_event("repaired", "player", {"amount": 1}), [player, enemy], sim)
+	t.eq(part.trigger_fires[0], 1, "3회째에 발동한다 (수리량과 무관)")
+	for i: int in 3:
+		TriggerEngine.dispatch(_event("repaired", "player", {"amount": 1}), [player, enemy], sim)
+	t.eq(part.trigger_fires[0], 2, "다시 3회를 채우면 한 번 더 발동한다")
+
+## 카운팅 조건은 **나머지 조건이 전부 통과한 뒤에** 센다.
+## 먼저 세면 게이트를 통과하지 못한 이벤트까지 누적되어
+## "숙주가 2회 수리할 때마다"가 조용히 "함선이 2회 수리할 때마다"로 바뀐다.
+func _test_counting_runs_after_gate(t: RefCounted) -> void:
+	var player: RefCounted = _ship("player")
+	var enemy: RefCounted = _ship("enemy")
+	var host: RefCounted = _part("weapon_1")
+	_add_trigger(host, _trig("repaired", _gain_material_do(1),
+		{"is_host": true, "every_nth_occurrence": 2}))
+	player.add_part(host)
+	player.add_part(_part("defense_1"))
+	var sim: RefCounted = FakeSim.new()
+
+	# 숙주가 아닌 슬롯의 수리 — 게이트에서 걸러지므로 세어서도 안 된다
+	for i: int in 5:
+		TriggerEngine.dispatch(_event("repaired", "player", {"slot": "defense_1", "amount": 1}),
+			[player, enemy], sim)
+	t.eq(host.trigger_accum[0], 0, "게이트를 통과하지 못한 이벤트는 누적되지 않는다")
+	t.eq(host.trigger_fires[0], 0, "따라서 발동도 없다")
+
+	TriggerEngine.dispatch(_event("repaired", "player", {"slot": "weapon_1", "amount": 1}),
+		[player, enemy], sim)
+	t.eq(host.trigger_accum[0], 1, "숙주 이벤트만 센다")
+	t.eq(host.trigger_fires[0], 0, "1회로는 발동하지 않는다")
+	TriggerEngine.dispatch(_event("repaired", "player", {"slot": "weapon_1", "amount": 1}),
+		[player, enemy], sim)
+	t.eq(host.trigger_fires[0], 1, "숙주 수리 2회째에 발동한다")
 
 func _test_max_fires_freezes_accumulation(t: RefCounted) -> void:
 	var player: RefCounted = _ship("player")
