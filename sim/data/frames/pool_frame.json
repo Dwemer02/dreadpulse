@@ -1,0 +1,14 @@
+{
+  "id": "pool_frame",
+  "name": "테스트 풀 Frame",
+  "hull": 200,
+  "relic_slots": 1,
+  "thresholds": [0.75, 0.50, 0.25],
+  "slots": [
+    { "id": "weapon_1",  "role": "weapon"   },
+    { "id": "defense_1", "role": "defense"  },
+    { "id": "flex_1",    "role": "flexible" },
+    { "id": "flex_2",    "role": "flexible" },
+    { "id": "flex_3",    "role": "flexible" }
+  ]
+}

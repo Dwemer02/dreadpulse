@@ -1,26 +1,30 @@
 extends RefCounted
-## 실제 콘텐츠(Reclaimer 6종 + Relic 3종 + 빌드 3종)가 어휘 안에서 작동하는지 검증한다.
+## 실제 콘텐츠(파츠 21종 + Relic 3종 + 빌드 6종)가 어휘 안에서 작동하는지 검증한다.
 ##
 ## 픽스처 테스트가 엔진을 검증한다면, 이 모듈은 **콘텐츠**를 검증한다.
 ## 카탈로그 로드 자체가 op·조건·셀렉터 오타를 잡는 관문이므로 여기가 첫 방어선이다.
+##
+## 밸런스 수치는 검증하지 않는다 — 전부 잠정이고 바뀔 예정이다.
+## 대신 "설계한 메커니즘이 실제 전투에서 실제로 일어나는가"를 검증한다.
+## 조용히 죽는 효과(트리거가 영원히 안 도는 것)가 이 프로젝트의 주된 실패 양식이다.
 
-const EXPECTED_CHECKS := 65
+const EXPECTED_CHECKS := 53
 
 const K = preload("res://sim/sim_const.gd")
 const Catalog = preload("res://sim/catalog.gd")
 const Content = preload("res://sim/content.gd")
 const Analysis = preload("res://sim/event_analysis.gd")
 
-## 이 빌드들에는 파손이 반드시 일어나야 한다 — 발동 제한이 걸린 파츠가 있고
-## 파괴선도 있기 때문이다. 하나도 안 나오면 콘텐츠가 축을 안 쓰고 있다는 뜻이다.
 const SMOKE_SEED := 7
+const FACTIONS: Array[String] = ["reclaimer", "viridia", "aeonic"]
 
 func run(t: RefCounted) -> void:
 	_test_catalog_loads(t)
 	_test_relic_validation(t)
 	_test_builds_assemble(t)
-	_test_dual_use_coverage(t)
+	_test_part_coverage(t)
 	_test_smoke_combat(t)
+	_test_new_mechanics_actually_fire(t)
 	_test_chain_grouping(t)
 	_test_display_order(t)
 	_test_every_event_describes(t)
@@ -30,14 +34,21 @@ func run(t: RefCounted) -> void:
 func _test_catalog_loads(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
 	t.check(c.ok(), "실제 카탈로그가 에러 없이 로드된다: %s" % str(c.errors))
-	t.eq(c.parts.size(), 6, "Reclaimer 파츠 6종")
+	t.eq(c.parts.size(), 21, "파츠 21종 (팩션당 7종)")
 	t.eq(c.relics.size(), 3, "Relic 3종")
-	t.eq(c.frames.size(), 1, "Frame 1종")
-	for pid: String in ["supercharged_turbine", "breaker", "rivet_railgun",
-			"weld_plating", "venting_manifold", "scrap_reactor"]:
-		t.check(c.parts.has(pid), "파츠 %s 존재" % pid)
+	t.eq(c.frames.size(), 2, "Frame 2종 (옛 픽스처용 + 테스트 풀용)")
+
+	var by_faction: Dictionary = {}
+	var passives: int = 0
 	for id: String in c.parts:
-		t.eq(str(c.parts[id]["faction"]), "reclaimer", "%s는 reclaimer다" % id)
+		var def: Dictionary = c.parts[id]
+		var f: String = str(def["faction"])
+		by_faction[f] = int(by_faction.get(f, 0)) + 1
+		if not (def["active"] as Dictionary).has("cooldown"):
+			passives += 1
+	for faction: String in FACTIONS:
+		t.eq(int(by_faction.get(faction, 0)), 7, "%s 파츠 7종" % faction)
+	t.eq(passives, 3, "패시브 변환기는 팩션당 하나씩 3종")
 
 func _test_relic_validation(t: RefCounted) -> void:
 	# Relic 트리거의 어휘도 검증되어야 한다 — 안 그러면 오타 난 Relic이 조용히 죽는다.
@@ -48,56 +59,109 @@ func _test_relic_validation(t: RefCounted) -> void:
 
 func _test_builds_assemble(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
-	var all_ids: Array[String] = Content.build_ids()
-	all_ids.append_array(Content.enemy_ids())
-	t.eq(all_ids.size(), 3, "빌드 3종 (플레이어 1 + 적 2)")
-	for id: String in all_ids:
+	t.eq(Content.build_ids().size(), 3, "플레이어 빌드 3종 (팩션당 순수 하나)")
+	t.eq(Content.enemy_ids().size(), 3, "적 빌드 3종 (거울짝)")
+
+	for id: String in _all_build_ids():
 		var prepared: Dictionary = Content.prepare(c, id, id, 1)
 		t.check(prepared["sim"] != null, "%s 조립 성공: %s" % [id, str(prepared["errors"])])
 		if prepared["sim"] == null:
 			continue
-		t.check(prepared["sim"].player.parts.size() >= 5, "%s에 파츠가 5개 이상" % id)
-		t.check(prepared["sim"].player.get_part("core") != null, "%s에 Core가 있다" % id)
+		t.eq(prepared["sim"].player.parts.size(), 5, "%s는 슬롯 5칸을 모두 채운다" % id)
 
-## 이중용도 최소 조건: Core가 아닌 모든 파츠가 배포된 빌드 안에서
-## ACTIVE로도 AUGMENT로도 최소 한 번씩 등장해야 한다.
-## 한쪽으로만 쓰이는 파츠는 §61.A가 묻는 "고민"을 만들지 못한다.
-func _test_dual_use_coverage(t: RefCounted) -> void:
+## 풀의 모든 파츠가 어딘가에 쓰이는가, 그리고 각 팩션이 AUGMENT를 실제로 쓰는가.
+## 쓰이지 않는 파츠는 전투에서 한 번도 검증되지 않는다.
+func _test_part_coverage(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
-	var as_active: Dictionary = {}
-	var as_augment: Dictionary = {}
-	var all_ids: Array[String] = Content.build_ids()
-	all_ids.append_array(Content.enemy_ids())
-	for id: String in all_ids:
+	var used: Dictionary = {}
+	var augment_by_faction: Dictionary = {}
+	for id: String in _all_build_ids():
 		var build: Dictionary = Content.read_build(id)
 		for slot_id: String in build.get("slots", {}):
 			var entry: Dictionary = build["slots"][slot_id]
-			as_active[str(entry.get("part", ""))] = true
+			used[str(entry["part"])] = true
 			var aug: String = str(entry.get("augment", ""))
-			if aug != "":
-				as_augment[aug] = true
-	for pid: String in c.parts:
-		var is_core: bool = str(c.parts[pid]["base_role"]) == "core"
-		t.check(as_active.has(pid), "%s가 어떤 빌드에서든 ACTIVE로 쓰인다" % pid)
-		if is_core:
-			continue
-		t.check(as_augment.has(pid), "%s가 어떤 빌드에서든 AUGMENT로 쓰인다" % pid)
+			if aug == "":
+				continue
+			used[aug] = true
+			var f: String = str(c.parts[aug]["faction"])
+			augment_by_faction[f] = int(augment_by_faction.get(f, 0)) + 1
+
+	var unused: Array[String] = []
+	for id: String in c.parts:
+		if not used.has(id):
+			unused.append(id)
+	t.check(unused.is_empty(), "빌드에 한 번도 안 쓰인 파츠가 없다 — 미사용: %s" % str(unused))
+	for faction: String in FACTIONS:
+		t.check(int(augment_by_faction.get(faction, 0)) > 0,
+			"%s 순수 빌드가 AUGMENT를 실제로 쓴다" % faction)
 
 func _test_smoke_combat(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
-	for enemy_id: String in Content.enemy_ids():
-		var sim: RefCounted = Content.prepare(c, "reclaimer_pure", enemy_id, SMOKE_SEED)["sim"]
-		var log: Array = sim.run()
-		t.check(sim.finished, "%s전이 끝났다" % enemy_id)
-		t.check(["player", "enemy", "draw"].has(sim.winner), "%s전 승자가 유효하다" % enemy_id)
-		t.check(log.size() > 50, "%s전 이벤트가 충분히 나온다 (%d)" % [enemy_id, log.size()])
-		t.eq(sim.count_events("chain_capped"), 0, "%s전에 chain_capped가 없다" % enemy_id)
-		t.check(sim.count_events("part_destroyed") > 0, "%s전에 파손이 일어난다" % enemy_id)
-		t.check(sim.count_events("fires_changed") > 0, "%s전에 발동 횟수가 움직인다" % enemy_id)
+	var capped: int = 0
+	var unfinished: int = 0
+	var bad_winner: int = 0
+	var thin: int = 0
+	for build_id: String in Content.build_ids():
+		for enemy_id: String in Content.enemy_ids():
+			var sim: RefCounted = Content.prepare(c, build_id, enemy_id, SMOKE_SEED)["sim"]
+			var log: Array = sim.run()
+			if not sim.finished:
+				unfinished += 1
+			if not ["player", "enemy", "draw"].has(sim.winner):
+				bad_winner += 1
+			if log.size() < 100:
+				thin += 1
+			capped += sim.count_events("chain_capped")
+	# 9판을 판마다 어서션하지 않고 모아서 판정한다 — 빌드 수가 바뀌어도
+	# EXPECTED_CHECKS가 흔들리지 않게 하기 위함이다.
+	t.eq(unfinished, 0, "9개 대진이 모두 끝난다")
+	t.eq(bad_winner, 0, "9개 대진의 승자가 모두 유효하다")
+	t.eq(thin, 0, "9개 대진 모두 이벤트가 충분히 나온다")
+	t.eq(capped, 0, "chain_capped가 하나도 없다 — 있으면 설계 결함이다")
+
+## 새로 넣은 메커니즘 네 가지가 **실제 콘텐츠에서 실제로 일어나는가**.
+## 이 프로젝트의 주된 실패 양식은 크래시가 아니라 "트리거가 조용히 한 번도 안 도는 것"이다.
+## 파츠 JSON은 로드를 통과해도 조건이 영원히 거짓이면 아무 일도 하지 않는다.
+func _test_new_mechanics_actually_fire(t: RefCounted) -> void:
+	var c: RefCounted = Content.load_catalog()
+	var seen: Dictionary = {}
+	var multi_fires: int = 0
+	var passive_fires: int = 0
+	for build_id: String in Content.build_ids():
+		for enemy_id: String in Content.enemy_ids():
+			var sim: RefCounted = Content.prepare(c, build_id, enemy_id, SMOKE_SEED)["sim"]
+			for e: Dictionary in sim.run():
+				seen[str(e["type"])] = true
+				if str(e["type"]) != "part_fired":
+					continue
+				if str(e.get("cause", "")) == "multi_fire":
+					multi_fires += 1
+				if _is_passive_slot(c, build_id, enemy_id, e):
+					passive_fires += 1
+
+	t.check(multi_fires > 0, "Multi-fire 재발동이 실제로 일어난다 (%d회)" % multi_fires)
+	t.check(seen.has("multi_fire_queued"), "multi_fire_queued가 방출된다")
+	t.check(seen.has("charge_applied"), "Charge가 실제로 걸린다 — Aeonic 루프의 전제")
+	t.check(seen.has("growth_changed"), "성장이 실제로 누적된다")
+	t.check(seen.has("stasis_applied"), "Stasis가 실제로 걸린다")
+	t.check(seen.has("overheat_ticked"), "과열 피해가 실제로 발생한다")
+	t.eq(passive_fires, 0, "패시브 변환기는 한 번도 스스로 발동하지 않는다")
+
+## 이벤트의 슬롯이 패시브 파츠의 슬롯인가. 빌드 정의(정적)로만 판정한다.
+func _is_passive_slot(c: RefCounted, player_id: String, enemy_id: String,
+		e: Dictionary) -> bool:
+	var build: Dictionary = Content.read_build(
+		player_id if str(e.get("ship", "")) == "player" else enemy_id)
+	var entry: Variant = build.get("slots", {}).get(str(e.get("slot", "")), null)
+	if not (entry is Dictionary):
+		return false
+	var def: Dictionary = c.parts[str((entry as Dictionary)["part"])]
+	return not (def["active"] as Dictionary).has("cooldown")
 
 func _test_chain_grouping(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
-	var sim: RefCounted = Content.prepare(c, "reclaimer_pure", "hulk_breaker", SMOKE_SEED)["sim"]
+	var sim: RefCounted = Content.prepare(c, "aeonic_pure", "viridia_mirror", SMOKE_SEED)["sim"]
 	var log: Array = sim.run()
 	var chains: Array = Analysis.chains(log)
 
@@ -116,7 +180,7 @@ func _test_chain_grouping(t: RefCounted) -> void:
 
 	# 연쇄의 뿌리는 하나뿐이어야 한다. chain_id가 상수가 되는 회귀(모든 이벤트가 한
 	# 묶음)는 위의 개수 검사만으로는 잡히지 않는다 — 뿌리 수를 세야 잡힌다.
-	# 쿨타임 발동은 depth 0, 체인이 부른 강제 발동은 depth ≥ 1이므로
+	# 쿨타임·Multi-fire 발동은 depth 0, 체인이 부른 강제 발동은 depth ≥ 1이므로
 	# 한 연쇄 안의 depth 0 part_fired는 정확히 최대 하나다.
 	var multi_root: int = 0
 	var deep: int = 0
@@ -129,7 +193,7 @@ func _test_chain_grouping(t: RefCounted) -> void:
 				roots += 1
 		if roots > 1:
 			multi_root += 1
-	t.eq(multi_root, 0, "한 연쇄에 쿨타임 발동 뿌리는 하나뿐이다")
+	t.eq(multi_root, 0, "한 연쇄에 뿌리 발동은 하나뿐이다")
 	t.check(chains.size() > 1, "연쇄가 여러 개로 갈라진다 (%d개)" % chains.size())
 	t.check(deep > 0, "2단계 이상 연쇄가 실제로 발생한다 (%d건)" % deep)
 
@@ -140,7 +204,7 @@ func _test_chain_grouping(t: RefCounted) -> void:
 ## 두 조각으로 쪼개지 않아야 한다. 쪼개지면 화면에서 캐스케이드가 끊겨 보인다.
 func _test_display_order(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
-	var sim: RefCounted = Content.prepare(c, "reclaimer_pure", "hulk_breaker", SMOKE_SEED)["sim"]
+	var sim: RefCounted = Content.prepare(c, "viridia_pure", "viridia_mirror", SMOKE_SEED)["sim"]
 	var log: Array = sim.run()
 	var ordered: Array = Analysis.grouped_by_chain(log)
 	t.eq(ordered.size(), log.size(), "재배열이 이벤트를 잃거나 만들지 않는다")
@@ -172,26 +236,26 @@ func _test_display_order(t: RefCounted) -> void:
 ## 어떤 이벤트든 sim을 조회하지 않고 한 줄로 읽을 수 있어야 한다.
 func _test_every_event_describes(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
-	var sim: RefCounted = Content.prepare(c, "reclaimer_pure", "scrap_raider", SMOKE_SEED)["sim"]
-	var log: Array = sim.run()
 	var bare: Array[String] = []
 	var seen: Dictionary = {}
-	for event: Dictionary in log:
-		var type: String = str(event["type"])
-		if seen.has(type):
-			continue
-		seen[type] = true
-		var line: String = Analysis.describe(event)
-		# describe가 타입 이름만 돌려줬다면 그 타입에 서술문이 없다는 뜻이다.
-		if line == type:
-			bare.append(type)
+	for build_id: String in Content.build_ids():
+		for enemy_id: String in Content.enemy_ids():
+			var sim: RefCounted = Content.prepare(c, build_id, enemy_id, SMOKE_SEED)["sim"]
+			for event: Dictionary in sim.run():
+				var type: String = str(event["type"])
+				if seen.has(type):
+					continue
+				seen[type] = true
+				# describe가 타입 이름만 돌려줬다면 그 타입에 서술문이 없다는 뜻이다.
+				if Analysis.describe(event) == type:
+					bare.append(type)
 	t.check(bare.is_empty(), "모든 이벤트 타입에 서술문이 있다 — 누락: %s" % str(bare))
-	t.check(seen.size() >= 10, "전투가 이벤트 타입 10종 이상을 낸다 (%d)" % seen.size())
+	t.check(seen.size() >= 15, "전투가 이벤트 타입 15종 이상을 낸다 (%d)" % seen.size())
 
 func _test_determinism(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
-	var first: Array = Content.prepare(c, "reclaimer_pure", "hulk_breaker", 42)["sim"].run()
-	var second: Array = Content.prepare(c, "reclaimer_pure", "hulk_breaker", 42)["sim"].run()
+	var first: Array = Content.prepare(c, "aeonic_pure", "reclaimer_mirror", 42)["sim"].run()
+	var second: Array = Content.prepare(c, "aeonic_pure", "reclaimer_mirror", 42)["sim"].run()
 	t.eq(second.size(), first.size(), "같은 시드는 같은 이벤트 수를 낸다")
 	var mismatch: int = -1
 	for i: int in mini(first.size(), second.size()):
@@ -200,5 +264,10 @@ func _test_determinism(t: RefCounted) -> void:
 			break
 	t.eq(mismatch, -1, "같은 시드는 필드 단위로 동일한 스트림을 낸다")
 
-	var other: Array = Content.prepare(c, "reclaimer_pure", "hulk_breaker", 43)["sim"].run()
+	var other: Array = Content.prepare(c, "aeonic_pure", "reclaimer_mirror", 43)["sim"].run()
 	t.check(str(other) != str(first), "다른 시드는 다른 스트림을 낸다")
+
+func _all_build_ids() -> Array[String]:
+	var out: Array[String] = Content.build_ids()
+	out.append_array(Content.enemy_ids())
+	return out

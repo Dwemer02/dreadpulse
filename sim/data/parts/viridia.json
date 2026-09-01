@@ -1,0 +1,170 @@
+{
+  "_comment": "VIRIDIA — 재생 증식. 루프: Repair → 파츠 성장 → Accelerate → Repair 빈도 상승 → 더 빠른 성장. 성장축은 개별 생체기관의 수치 자체가 커지는 것이다.",
+  "parts": [
+    {
+      "_note": "Multi-fire를 전제로 처음부터 낮은 수치로 설계된 바닐라. 순수 DPS는 고철 기관포보다 낮지만 발동 전체가 두 번 일어나므로 Trigger·Augment 활용성이 높다.",
+      "id": "bone_spike_organ",
+      "name": "골침 발사기관",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "keywords": ["physical", "damage", "multi_fire"],
+      "active": {
+        "cooldown": 3.0,
+        "on_fire": [
+          { "op": "deal_damage", "type": "physical", "amount": 2 },
+          { "op": "multi_fire", "times": 1 }
+        ]
+      },
+      "augment": {
+        "add_keywords": ["physical", "damage"],
+        "triggers": [
+          { "on": "part_fired", "where": { "is_host": true },
+            "do": [ { "op": "deal_damage", "type": "physical", "amount": 1 } ] }
+        ]
+      }
+    },
+    {
+      "_note": "회복 효율은 낮지만 Repair 트리거를 자주 발생시키는 것이 장점이다.",
+      "id": "regen_sac",
+      "name": "재생낭",
+      "faction": "viridia",
+      "base_role": "defense",
+      "keywords": ["repair"],
+      "active": {
+        "cooldown": 2.0,
+        "on_fire": [
+          { "op": "repair", "amount": 1 }
+        ]
+      },
+      "augment": {
+        "add_keywords": ["repair"],
+        "triggers": [
+          { "on": "part_fired", "where": { "is_host": true },
+            "do": [ { "op": "repair", "amount": 1 } ] }
+        ]
+      }
+    },
+    {
+      "id": "nerve_accelerant",
+      "name": "신경 촉진기관",
+      "faction": "viridia",
+      "base_role": "system",
+      "keywords": ["accelerate"],
+      "active": {
+        "cooldown": 4.0,
+        "on_fire": [
+          { "op": "accelerate", "target": "random_other_own", "duration": 3.0 }
+        ]
+      },
+      "augment": {
+        "add_keywords": ["accelerate"],
+        "triggers": [
+          { "on": "part_fired", "where": { "is_host": true },
+            "do": [ { "op": "accelerate", "target": "random_other_own", "duration": 1.0 } ] }
+        ]
+      }
+    },
+    {
+      "_note": "재생 증식의 대표 성장 파츠. 초반에는 재생낭보다 현저히 약하지만 사이클이 돌면 크게 추월한다. Aeonic Charge와 특히 강하게 결합한다.",
+      "id": "proliferating_heart",
+      "name": "증식 심장",
+      "faction": "viridia",
+      "base_role": "defense",
+      "keywords": ["regen", "repair"],
+      "active": {
+        "cooldown": 3.0,
+        "on_fire": [
+          { "op": "repair", "amount": 1, "plus_growth": "repair" }
+        ],
+        "triggers": [
+          { "on": "repaired", "where": { "is_host": true },
+            "do": [ { "op": "grow", "target": "self", "stat": "repair", "amount": 1 } ] }
+        ]
+      },
+      "augment": {
+        "add_keywords": ["regen", "repair"],
+        "triggers": [
+          { "on": "combat_start",
+            "do": [ { "op": "grow", "target": "host", "stat": "aug_repair", "amount": 1 } ] },
+          { "on": "part_fired", "where": { "is_host": true },
+            "do": [ { "op": "repair", "amount": 0, "plus_growth": "aug_repair" } ] },
+          { "on": "repaired", "where": { "is_host": true },
+            "do": [ { "op": "grow", "target": "host", "stat": "aug_repair", "amount": 1 } ] }
+        ]
+      }
+    },
+    {
+      "_note": "패시브 변환기 — Repair를 Accelerate로 바꾼다. 재생낭처럼 빠른 Repair 파츠가 많을수록 가치가 올라간다.",
+      "id": "nerve_bundle",
+      "name": "신경 다발",
+      "faction": "viridia",
+      "base_role": "system",
+      "keywords": ["repair", "accelerate"],
+      "active": {
+        "triggers": [
+          { "on": "repaired", "where": { "every_nth_occurrence": 3 },
+            "do": [ { "op": "accelerate", "target": "slowest_other_own", "duration": 2.0 } ] }
+        ]
+      },
+      "augment": {
+        "add_keywords": ["accelerate"],
+        "triggers": [
+          { "on": "repaired", "where": { "is_host": true, "every_nth_occurrence": 2 },
+            "do": [ { "op": "accelerate", "target": "host", "duration": 2.0 } ] }
+        ]
+      }
+    },
+    {
+      "_note": "조건부 Multi-fire. 가속되지 않으면 평균 이하의 Defense지만 가속 엔진을 완성하면 높은 Repair 트리거 밀도를 낸다. 신경 다발과 맞물리면 Repair → Accelerate → Multi-fire → Repair 증가가 된다.",
+      "id": "layered_regen_membrane",
+      "name": "중층 재생막",
+      "faction": "viridia",
+      "base_role": "defense",
+      "keywords": ["regen", "repair", "multi_fire"],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          { "op": "repair", "amount": 2 },
+          { "op": "multi_fire", "times": 1, "where": { "is_accelerated": true } }
+        ]
+      },
+      "augment": {
+        "add_keywords": ["regen", "repair"],
+        "triggers": [
+          { "on": "part_fired", "where": { "is_host": true },
+            "do": [ { "op": "repair", "amount": 1 } ] }
+        ]
+      }
+    },
+    {
+      "_note": "생존 사이클을 공격력 성장으로 바꾼다. 골침이 높은 트리거 밀도라면 이쪽은 낮은 초기 성능 대신 성장 고점을 가진다.",
+      "id": "growth_battery",
+      "name": "성장 포대",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "keywords": ["physical", "damage"],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          { "op": "deal_damage", "type": "physical", "amount": 3, "plus_growth": "damage" }
+        ],
+        "triggers": [
+          { "on": "repaired", "where": { "every_nth_occurrence": 3 },
+            "do": [ { "op": "grow", "target": "self", "stat": "damage", "amount": 1 } ] }
+        ]
+      },
+      "augment": {
+        "add_keywords": ["physical", "damage"],
+        "triggers": [
+          { "on": "combat_start",
+            "do": [ { "op": "grow", "target": "host", "stat": "aug_damage", "amount": 1 } ] },
+          { "on": "part_fired", "where": { "is_host": true },
+            "do": [ { "op": "deal_damage", "type": "physical", "amount": 0,
+              "plus_growth": "aug_damage" } ] },
+          { "on": "repaired", "where": { "every_nth_occurrence": 4 },
+            "do": [ { "op": "grow", "target": "host", "stat": "aug_damage", "amount": 1 } ] }
+        ]
+      }
+    }
+  ]
+}

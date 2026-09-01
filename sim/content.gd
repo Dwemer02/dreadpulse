@@ -5,28 +5,41 @@ extends RefCounted
 ## 존재 이유다. 디렉터리를 훑지 않고 명시적 목록을 쓴다 — 나열 순서가 곧 배치 실행 순서
 ## (결정론 계약)이고, 내보낸 빌드에서 res:// 디렉터리 나열은 신뢰할 수 없기 때문이다.
 ##
-## Phase 0b 현재 **Reclaimer 한 팩션만** 구현되어 있다. Viridia / Aeonic은 보류 상태다.
+## 테스트용 파츠 풀 21종(팩션당 7종)이 들어 있다. 수치와 구성은 전부 잠정이다.
 
 const Catalog = preload("res://sim/catalog.gd")
 const BuildLoader = preload("res://sim/build_loader.gd")
 const CombatSim = preload("res://sim/combat_sim.gd")
 
-const FRAME_PATHS: Array[String] = ["res://sim/data/frames/standard_frame.json"]
-const PART_PATHS: Array[String] = ["res://sim/data/parts/reclaimer.json"]
+## standard_frame은 옛 픽스처(Core 슬롯 있음)가 계속 쓴다.
+## pool_frame은 테스트 풀 전용이다 — 이 풀에는 Core 파츠가 없어서 Core 슬롯도 없다.
+const FRAME_PATHS: Array[String] = [
+	"res://sim/data/frames/standard_frame.json",
+	"res://sim/data/frames/pool_frame.json",
+]
+const PART_PATHS: Array[String] = [
+	"res://sim/data/parts/reclaimer.json",
+	"res://sim/data/parts/viridia.json",
+	"res://sim/data/parts/aeonic.json",
+]
 const RELIC_PATHS: Array[String] = ["res://sim/data/relics/relics.json"]
 
 ## 구현된 팩션. 배치 리포트가 "측정 불가"를 정직하게 표시하는 데 쓴다.
-const IMPLEMENTED_FACTIONS: Array[String] = ["reclaimer"]
+const IMPLEMENTED_FACTIONS: Array[String] = ["reclaimer", "viridia", "aeonic"]
 
-## 플레이어 빌드 id -> 경로
+## 플레이어 빌드 id -> 경로. 팩션당 순수 빌드 하나씩.
 const BUILD_PATHS: Dictionary = {
 	"reclaimer_pure": "res://sim/data/builds/reclaimer_pure.json",
+	"viridia_pure": "res://sim/data/builds/viridia_pure.json",
+	"aeonic_pure": "res://sim/data/builds/aeonic_pure.json",
 }
 
 ## 적 빌드 id -> 경로. 적은 플레이어와 같은 ShipState에 고정 빌드를 얹은 것뿐이다.
+## 지금은 순수 빌드의 거울짝이다 — 파츠 자체를 보려는 것이지 적 설계를 보려는 것이 아니다.
 const ENEMY_PATHS: Dictionary = {
-	"scrap_raider": "res://sim/data/enemies/scrap_raider.json",
-	"hulk_breaker": "res://sim/data/enemies/hulk_breaker.json",
+	"reclaimer_mirror": "res://sim/data/enemies/reclaimer_mirror.json",
+	"viridia_mirror": "res://sim/data/enemies/viridia_mirror.json",
+	"aeonic_mirror": "res://sim/data/enemies/aeonic_mirror.json",
 }
 
 static func load_catalog() -> RefCounted:

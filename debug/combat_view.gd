@@ -285,6 +285,7 @@ func _model(build_id: String) -> Dictionary:
 			augment_name = str(_catalog.parts[augment_id]["name"])
 		model["slots"][slot_id] = {
 			"empty": false,
+			"passive": bool(spec.get("passive", false)),
 			"name": str(spec["part_name"]),
 			"augment": augment_name,
 			# cooldown_units는 초당 SPEED_NORMAL 유닛으로 쌓인다 (sim_const 참조)
@@ -341,9 +342,11 @@ func _build_cards() -> void:
 
 
 func _augment_text(slot: Dictionary) -> String:
-	if str(slot["augment"]) == "":
-		return "슬롯 전용"
-	return "+ %s" % slot["augment"]
+	if str(slot["augment"]) != "":
+		return "+ %s" % slot["augment"]
+	if bool(slot.get("passive", false)):
+		return "패시브 · 트리거 전용"
+	return "슬롯 전용"
 
 
 func _process(delta: float) -> void:
@@ -480,11 +483,19 @@ func _refresh_card(side: String, slot_id: String, slot: Dictionary) -> void:
 	var card: Dictionary = _cards.get("%s/%s" % [side, slot_id], {})
 	if card.is_empty() or slot.get("empty", false):
 		return
+	# 패시브 파츠는 쿨타임이 없다. 바를 0으로 두는 것이 "곧 터진다"를 잘못 읽히게 하는
+	# 것보다 낫다 — 이 파츠는 영원히 스스로 발동하지 않는다.
 	var bar: ProgressBar = card["bar"]
+	var passive: bool = bool(slot.get("passive", false))
 	var cooldown: float = float(slot["cooldown"])
-	bar.value = 0.0 if slot["broken"] else clampf((_clock - float(slot["last_fire"])) / maxf(0.01, cooldown), 0.0, 1.0)
+	if passive or slot["broken"] or cooldown <= 0.0:
+		bar.value = 0.0
+	else:
+		bar.value = clampf((_clock - float(slot["last_fire"])) / cooldown, 0.0, 1.0)
 
 	var badges: Array[String] = []
+	if passive:
+		badges.append("패시브")
 	if int(slot["fires"]) != K.UNLIMITED:
 		badges.append("발동 %d회" % int(slot["fires"]))
 	if int(slot["reinforce"]) > 0:

@@ -1,0 +1,13 @@
+{
+  "id": "viridia_mirror",
+  "name": "거울 — Viridia",
+  "frame": "pool_frame",
+  "relic": null,
+  "slots": {
+    "weapon_1":  { "part": "bone_spike_organ",       "augment": "regen_sac" },
+    "defense_1": { "part": "proliferating_heart" },
+    "flex_1":    { "part": "layered_regen_membrane", "augment": "growth_battery" },
+    "flex_2":    { "part": "nerve_accelerant" },
+    "flex_3":    { "part": "nerve_bundle" }
+  }
+}

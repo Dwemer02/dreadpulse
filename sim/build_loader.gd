@@ -31,11 +31,18 @@ func assemble(build: Dictionary, catalog: RefCounted, side: String) -> RefCounte
 	var slot_defs: Array = frame["slots"]
 
 	# --- Core 슬롯 검사 ---
+	# Frame이 Core 슬롯을 정의했다면 반드시 채워야 한다. 정의하지 않은 Frame도 있다 —
+	# Core 파츠가 아직 없는 테스트 풀이 그렇다. 그 경우 선체 재질은 기본값(plating)이고
+	# 영구 파괴 불가 파츠도 없다.
+	var has_core_slot: bool = false
 	var has_core: bool = false
 	for slot_def: Dictionary in slot_defs:
-		if str(slot_def["role"]) == "core" and slots.has(slot_def["id"]):
+		if str(slot_def["role"]) != "core":
+			continue
+		has_core_slot = true
+		if slots.has(slot_def["id"]):
 			has_core = true
-	if not has_core:
+	if has_core_slot and not has_core:
 		errors.append("Core 슬롯이 비어 있다")
 		return null
 

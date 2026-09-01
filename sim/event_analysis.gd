@@ -164,6 +164,15 @@ static func describe(e: Dictionary) -> String:
 		"collapsed":
 			return "붕괴! 파열 %d 폭발 → 선체 피해 %d" % [
 				int(e.get("fracture", 0)), int(e.get("hull_damage", 0))]
+		"charge_applied":
+			return "%s 충전 %s초 (진행 +%d)" % [e.get("slot", "?"),
+				str(e.get("seconds", 0)), int(e.get("gained_units", 0))]
+		"growth_changed":
+			return "%s 성장 %s %+d → %d" % [e.get("slot", "?"), e.get("stat", "?"),
+				int(e.get("amount", 0)), int(e.get("total", 0))]
+		"multi_fire_queued":
+			return "%s 추가 발동 %d회 예약 (대기 %d)" % [e.get("slot", "?"),
+				int(e.get("times", 0)), int(e.get("pending", 0))]
 		"stasis_applied":
 			return "%s 정지 (%s초)" % [e.get("slot", "?"), str(e.get("duration", 0))]
 		"speed_changed":

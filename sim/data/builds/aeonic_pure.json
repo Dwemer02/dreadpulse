@@ -1,0 +1,13 @@
+{
+  "id": "aeonic_pure",
+  "name": "Aeonic 순수 — 항성 과열",
+  "frame": "pool_frame",
+  "relic": null,
+  "slots": {
+    "weapon_1":  { "part": "helios_lance" },
+    "defense_1": { "part": "phase_barrier" },
+    "flex_1":    { "part": "solar_reflector", "augment": "photon_lance" },
+    "flex_2":    { "part": "causal_igniter",  "augment": "time_accelerator" },
+    "flex_3":    { "part": "eclipse_capacitor" }
+  }
+}
