@@ -298,6 +298,9 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 - 배치 검증: `godot --headless --path . --script res://tests/run_batch.gd`
 - 미니 런 리포트: `godot --headless --path . --script res://tests/run_mini.gd`
   (오토파일럿 60런. 완주율·노드별 벽·Tune 지표·파츠 선택률)
-- 눈으로 확인: Godot 에디터에서 F5 (메인 씬 = `res://debug/combat_view.tscn`)
+- **직접 플레이: Godot 에디터에서 F5** (메인 씬 = `res://debug/run_view.tscn`)
+  팩션·시드를 고르고 적 선택 → 보드 Tune → 전투 → Salvage 3택1을 6노드 반복한다.
+- 전투 1판만 관전: `res://debug/combat_view.tscn`을 에디터에서 열고 F6.
+  실시간 재생·속도 조절이 있다. 런 화면은 전투를 즉시 해소하고 로그만 보여준다.
 - 밸런스 수치는 전부 플레이스홀더다. 수치 변경은 자유롭되, 배치 리포트의 검증 지표
   5종(dual-use 균형 / 체인 가독성 / 파괴선 / 팩션 차이 / 혼종 밸런스)이 깨지는지 확인할 것.
