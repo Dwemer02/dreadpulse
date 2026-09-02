@@ -433,6 +433,10 @@ The First의 실패는 수렴 그 자체가 아니다.
 
 한 Run은 세계관 안에서 **ITERATION**이라고 불린다.
 
+> **아래 선형 나열은 [플레이 루프 및 런 진행 구조](superpowers/specs/2026-09-02-play-loop-and-run-structure.md)의
+> Sector 1–4 가지형 구조 + Faction Influence로 대체됐다.**
+> 경로 선택 자체가 어떤 팩션 파츠 풀과 적 환경에 노출될지를 정하는 드래프팅 행위가 된다.
+
 기본 구조:
 
 초기 조건 선택  
