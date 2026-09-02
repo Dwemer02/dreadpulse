@@ -37,7 +37,7 @@ func _test_catalog_loads(t: RefCounted) -> void:
 	t.check(c.ok(), "실제 카탈로그가 에러 없이 로드된다: %s" % str(c.errors))
 	t.eq(c.parts.size(), 24, "파츠 24종 (팩션당 8종 — 7종 + Core)")
 	t.eq(c.relics.size(), 3, "Relic 3종")
-	t.eq(c.frames.size(), 2, "Frame 2종 (옛 픽스처용 + 테스트 풀용)")
+	t.eq(c.frames.size(), 4, "Frame 4종 (픽스처용 · 테스트 풀 · 초반 적 · Boss)")
 
 	var by_faction: Dictionary = {}
 	var passives: int = 0

@@ -1,0 +1,16 @@
+{
+  "_comment": "초반 노드의 적 전용. pool_frame과 슬롯·파괴선이 같고 선체만 작다(120). 플레이어 선체는 200으로 고정하고 적 선체를 노드에 따라 120 → 200 → 320으로 올린다 — 4파츠 스타터의 화력으로 200 선체를 120초 안에 깎을 수 없어서 초반 전투가 전부 시간 초과로 끝나기 때문이다.",
+  "id": "skirmish_frame",
+  "name": "Skirmish Frame",
+  "hull": 120,
+  "relic_slots": 1,
+  "thresholds": [0.75, 0.50, 0.25],
+  "slots": [
+    { "id": "core",      "role": "core"     },
+    { "id": "weapon_1",  "role": "weapon"   },
+    { "id": "defense_1", "role": "defense"  },
+    { "id": "flex_1",    "role": "flexible" },
+    { "id": "flex_2",    "role": "flexible" },
+    { "id": "flex_3",    "role": "flexible" }
+  ]
+}

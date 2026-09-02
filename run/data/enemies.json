@@ -1,0 +1,263 @@
+{
+  "_comment": "적 프리셋. 플레이어와 완전히 같은 파츠·같은 규칙·같은 Frame을 쓴다 (Boss만 boss_frame). 적 전용 메커니즘은 없다 — 현재 시스템의 다른 조합을 보여주는 것이 목적이다. threat는 경로 선택 시점에 보이는 정보이고, 손으로 적는다: 파츠 키워드에서 자동 생성하면 '적이 실제로 무엇을 하는가'가 아니라 '어떤 키워드를 갖는가'가 나온다. 적 규모는 노드 위치에 맞춘다 — 플레이어는 노드 1에 파츠 4개, 노드 6에 9개를 갖는다. 규모를 고정하면 노드 1에서 4파츠 스타터가 6파츠 적에게 무조건 진다(실측 확인).",
+  "enemies": [
+    {
+      "id": "reclaimer_gunline",
+      "name": "Reclaimer Gunline",
+      "faction": "reclaimer",
+      "tier": "normal",
+      "frame": "skirmish_frame",
+      "threat": {
+        "material": "PLATING",
+        "tags": [
+          "PHYSICAL",
+          "FAST"
+        ]
+      },
+      "slots": {
+        "core": {
+          "part": "foundry_core"
+        },
+        "weapon_1": {
+          "part": "scrap_autocannon",
+          "augment": "scrap_autocannon"
+        },
+        "flex_1": {
+          "part": "scrap_compactor"
+        }
+      },
+      "_size": "노드 1 · 선체 120 · 파츠 4 — 회복 없음. 순수 화력으로 압박한다"
+    },
+    {
+      "id": "reclaimer_furnace",
+      "name": "Reclaimer Furnace",
+      "faction": "reclaimer",
+      "tier": "normal",
+      "frame": "pool_frame",
+      "threat": {
+        "material": "PLATING",
+        "tags": [
+          "THERMAL",
+          "OVERHEAT",
+          "SUSTAIN"
+        ]
+      },
+      "slots": {
+        "core": {
+          "part": "foundry_core"
+        },
+        "weapon_1": {
+          "part": "rotary_incinerator"
+        },
+        "defense_1": {
+          "part": "field_welder"
+        },
+        "flex_1": {
+          "part": "waste_heat_recovery"
+        },
+        "flex_2": {
+          "part": "scrap_compactor"
+        }
+      },
+      "_size": "노드 2·4 · 선체 200 · 파츠 5"
+    },
+    {
+      "id": "viridia_needle_swarm",
+      "name": "Viridia Needle Swarm",
+      "faction": "viridia",
+      "tier": "normal",
+      "frame": "skirmish_frame",
+      "threat": {
+        "material": "BIOMASS",
+        "tags": [
+          "MULTI-FIRE",
+          "TRIGGER DENSITY"
+        ]
+      },
+      "slots": {
+        "core": {
+          "part": "symbiotic_core"
+        },
+        "weapon_1": {
+          "part": "bone_spike_organ",
+          "augment": "bone_spike_organ"
+        },
+        "flex_1": {
+          "part": "nerve_accelerant"
+        }
+      },
+      "_size": "노드 1 · 선체 120 · 파츠 4 — Core 재생만. Multi-fire 밀도를 보여준다"
+    },
+    {
+      "id": "viridia_regenerator",
+      "name": "Viridia Regenerator",
+      "faction": "viridia",
+      "tier": "normal",
+      "frame": "pool_frame",
+      "threat": {
+        "material": "BIOMASS",
+        "tags": [
+          "SUSTAIN",
+          "GROWTH"
+        ]
+      },
+      "slots": {
+        "core": {
+          "part": "symbiotic_core"
+        },
+        "weapon_1": {
+          "part": "growth_battery"
+        },
+        "defense_1": {
+          "part": "proliferating_heart"
+        },
+        "flex_1": {
+          "part": "regen_sac"
+        },
+        "flex_2": {
+          "part": "nerve_bundle"
+        }
+      },
+      "_size": "노드 3·4 · 파츠 5"
+    },
+    {
+      "id": "aeonic_solar_lance",
+      "name": "Aeonic Solar Lance",
+      "faction": "aeonic",
+      "tier": "normal",
+      "frame": "pool_frame",
+      "threat": {
+        "material": "PLATING",
+        "tags": [
+          "CHARGE",
+          "THERMAL BURST"
+        ]
+      },
+      "slots": {
+        "core": {
+          "part": "phase_core"
+        },
+        "weapon_1": {
+          "part": "helios_lance"
+        },
+        "defense_1": {
+          "part": "phase_barrier"
+        },
+        "flex_1": {
+          "part": "causal_igniter"
+        },
+        "flex_2": {
+          "part": "eclipse_capacitor"
+        }
+      },
+      "_size": "노드 3 · 파츠 5"
+    },
+    {
+      "id": "aeonic_phase_fortress",
+      "name": "Aeonic Phase Fortress",
+      "faction": "aeonic",
+      "tier": "normal",
+      "frame": "pool_frame",
+      "threat": {
+        "material": "PLATING",
+        "tags": [
+          "ENERGY SHIELD",
+          "DEFENSIVE"
+        ]
+      },
+      "slots": {
+        "core": {
+          "part": "phase_core"
+        },
+        "weapon_1": {
+          "part": "photon_lance"
+        },
+        "defense_1": {
+          "part": "phase_barrier"
+        },
+        "flex_1": {
+          "part": "time_accelerator"
+        }
+      },
+      "_size": "노드 2·4 · 선체 200 · 파츠 4"
+    },
+    {
+      "_note": "Hybrid Elite. 역할은 난이도가 아니라 시연이다 — 플레이어가 아직 만들어보지 않았을 혼종을 보여준다. 루프: 압축기 자재 → 송풍 터빈이 모든 무기 가속 → 태양 반사경이 가속 중이므로 Multi-fire → Thermal+Overheat → 폐열 회수기가 Overheat를 자재로 회수.",
+      "id": "hybrid_elite_forge_star",
+      "name": "Forge Star (Hybrid Elite)",
+      "faction": "reclaimer",
+      "tier": "elite",
+      "frame": "pool_frame",
+      "threat": {
+        "material": "PLATING",
+        "tags": [
+          "HYBRID",
+          "THERMAL",
+          "MULTI-FIRE",
+          "MATERIAL"
+        ]
+      },
+      "slots": {
+        "core": {
+          "part": "foundry_core"
+        },
+        "weapon_1": {
+          "part": "solar_reflector",
+          "augment": "rotary_incinerator"
+        },
+        "defense_1": {
+          "part": "field_welder"
+        },
+        "flex_1": {
+          "part": "blast_turbine"
+        },
+        "flex_2": {
+          "part": "scrap_compactor"
+        },
+        "flex_3": {
+          "part": "waste_heat_recovery"
+        }
+      }
+    },
+    {
+      "_note": "Boss. 하드 카운터가 아니다 — 특정 타입 면역이나 빌드 봉쇄는 없다(GDD §3.4). 5개 축을 동시에 적당히 시험한다: Burst(헬리오스) / 지속(심핵 재생 + 골침) / 방어(재생막 + 위상 방벽) / 성장(성장 포대 + 증식 심장) / 템포(신경 촉진기관). 재질은 biomass — Thermal에 약하고 Energy에 강해 어느 쪽도 무력화되지 않는다. 슬롯은 6칸 그대로이고 강함은 선체(320)와 조합 밀도로만 만든다.",
+      "id": "boss_first_divergence",
+      "name": "The Divergence Warden (Boss)",
+      "faction": "viridia",
+      "tier": "boss",
+      "frame": "boss_frame",
+      "threat": {
+        "material": "BIOMASS",
+        "tags": [
+          "ALL-ROUND",
+          "BURST",
+          "GROWTH",
+          "DEFENSIVE"
+        ]
+      },
+      "slots": {
+        "core": {
+          "part": "symbiotic_core"
+        },
+        "weapon_1": {
+          "part": "helios_lance",
+          "augment": "photon_lance"
+        },
+        "defense_1": {
+          "part": "layered_regen_membrane"
+        },
+        "flex_1": {
+          "part": "growth_battery",
+          "augment": "proliferating_heart"
+        },
+        "flex_2": {
+          "part": "nerve_accelerant"
+        },
+        "flex_3": {
+          "part": "bone_spike_organ"
+        }
+      },
+      "_size": "노드 6 · 선체 320 · 파츠 8 — 플레이어는 9파츠로 도달한다. 파츠 10개 + 선체 320은 과했다(실측 승률 6.7%)"
+    }
+  ]
+}

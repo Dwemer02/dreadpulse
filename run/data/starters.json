@@ -1,0 +1,41 @@
+{
+  "_comment": "팩션별 스타터. 완성된 엔진이 아니라 바닐라 파츠 중심이다 — Core + 무기 하나 + 방어 하나 + System 하나. 프레임이 6슬롯인데 4파츠인 것은 의도된 것이다: 남은 2칸이 Salvage로 채워지는 성장 공간이다. 아키타입 핵심 파츠(변환기·성장·조건부 Multi-fire)는 전부 Salvage로만 얻는다.",
+  "starters": [
+    {
+      "id": "starter_reclaimer",
+      "name": "Reclaimer 스타터",
+      "faction": "reclaimer",
+      "frame": "pool_frame",
+      "slots": {
+        "core":      { "part": "foundry_core" },
+        "weapon_1":  { "part": "scrap_autocannon" },
+        "defense_1": { "part": "field_welder" },
+        "flex_1":    { "part": "scrap_compactor" }
+      }
+    },
+    {
+      "id": "starter_viridia",
+      "name": "Viridia 스타터",
+      "faction": "viridia",
+      "frame": "pool_frame",
+      "slots": {
+        "core":      { "part": "symbiotic_core" },
+        "weapon_1":  { "part": "bone_spike_organ" },
+        "defense_1": { "part": "regen_sac" },
+        "flex_1":    { "part": "nerve_accelerant" }
+      }
+    },
+    {
+      "id": "starter_aeonic",
+      "name": "Aeonic 스타터",
+      "faction": "aeonic",
+      "frame": "pool_frame",
+      "slots": {
+        "core":      { "part": "phase_core" },
+        "weapon_1":  { "part": "photon_lance" },
+        "defense_1": { "part": "phase_barrier" },
+        "flex_1":    { "part": "time_accelerator" }
+      }
+    }
+  ]
+}

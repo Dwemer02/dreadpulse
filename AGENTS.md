@@ -163,10 +163,40 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 
 - 구조: `iteration`(Run) · `build`/`pattern`(빌드) · `frame`(함선) · `part`(파츠) ·
   `active` / `augment` · `slot` · `role` · `link` · `relic`
-- 자원: `material` · `resonance` · `fire_limit`(파츠 발동 횟수)
-- 전투 키워드: `damage` `shield` `repair` `regen` `accelerate` `slow` `overheat`
-  `fire_limit` `destroy` `indestructible` `reinforce` `restore` `link` `multi_fire` `crit`
-- 팩션: `reclaimer` · `viridia` · `aeonic` · `first`
+
+**키워드는 7층이다** (GDD §21). 모든 파츠는 1층·2층을 반드시 갖는다.
+
+| 층 | 키워드 | 파츠당 |
+|---|---|---|
+| 1 팩션 | `reclaimer` `viridia` `aeonic` `first` | 1개 필수 |
+| 2 슬롯 | `weapon` `defense` `system` `core` | `base_role`에서 자동 주입 |
+| 3 공격 타입 | `physical` `thermal` `caustic` `energy` | 무기는 1개 필수 |
+| 4 방어 타입 | `plating` `biomass` `energy_shield` | 방어·코어에 해당 시 |
+| 5 효과 | `damage` `repair` `regen` `accelerate` `slow` `fire_limit`<br>`destroy` `indestructible` `reinforce` `restore` `multi_fire`<br>**상태이상** `overheat` `corrosion` `fracture` `stasis` | 0개 이상 |
+| 6 조작 | `charge`(=`reduce_cooldown`) | 0개 이상 |
+| 7 자원 | `material` `resonance` | 해당 시 |
+
+`keywords: []`인 파츠는 저작 실수다 — 최소한 1·2층은 채워져야 한다.
+
+**공격 타입과 상태이상은 별개다.** `thermal` 피해를 준다고 `overheat`가 자동으로
+붙지 않는다. 상태이상은 `apply_overheat`/`apply_corrosion`/`apply_fracture`/`apply_stasis`가
+명시적으로 부여한다. 이 분리가 팩션의 메인/서브 타입 구조를 만든다 —
+서브 타입 팩션은 피해 타입은 쏘지만 그 상태이상의 적용기나 payoff가 없다.
+
+| 팩션 | 메인 | 서브 | 희소 | 상태이상 |
+|---|---|---|---|---|
+| Reclaimer | `thermal` | `caustic` | `energy` | `overheat` |
+| Viridia | `caustic` | `energy` | `thermal` | `corrosion` |
+| Aeonic | `energy` | `thermal` | `caustic` | `fracture` · `stasis` |
+
+`physical`은 순환 밖의 범용 안전망이다. 서브 타입은 상성표가 강제한다 —
+메인의 약점을 ×1.5로 뒤집는 타입이 정확히 하나이고 그것이 서브다.
+
+**제외·보류된 키워드.** `crit` 제거(The Bazaar와 유사, 복잡성).
+`shield` → `energy_shield`로 단일화. `link` 보류(정적 `links`만 존재).
+`amplify`/`empower` 제거(런타임 배율 스택 대신 파츠 수치 자체를 키운다).
+`resonate` 공진 보류(오토체스류 문법). 되살리기 전에
+`docs/superpowers/specs/2026-08-30-keyword-system-design.md` §6을 읽을 것.
 
 **파츠는 코드에서 `part`다.** `component`는 UI 표시 문자열 전용이다 (GDD §41의 UI 용어는
 게임 내 The First 인터페이스 문구이지 코드 식별자가 아니다).
@@ -180,6 +210,18 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 
 ## 아키텍처 규칙
 
+- **계층은 넷이고 의존은 한 방향이다**: `sim/`(전투 1판) ← `run/`(런 1회) ←
+  `debug/`·`tests/`. `sim/`은 런이 존재하는지 모른다. 런 계층이 sim에 **데이터를
+  주입하는 방향**이어야 하고 그 반대가 되면 안 된다 (설계:
+  `docs/superpowers/specs/2026-09-02-mini-iteration-design.md` §3).
+  `run/`도 `sim/`과 같은 규약을 지킨다 — `RefCounted`만, `class_name` 금지, 주입 RNG만.
+- **런 계층은 검증을 다시 구현하지 않는다.** 역할 불일치·Core 누락·augment 블록 없음은
+  `build_loader.assemble()`이 이미 본다. 규칙이 두 곳에 있으면 반드시 어긋난다.
+- **RNG는 런과 전투 두 개다.** 런 RNG는 Salvage 후보와 적 선정에만, 전투 RNG는
+  파괴선·무작위 셀렉터에만 쓴다. 전투 시드는 런 시드에서 산술로 파생시킨다
+  (`hash()` 금지 — 엔진 버전에 따라 값이 달라져 리포트 간 비교가 깨진다).
+- **런의 Upgrade와 전투 중 `grow`는 다른 것이다.** `grow`는 전투가 끝나면 사라지고
+  Upgrade는 전투를 넘어 남는다. 저장 위치를 섞지 마라.
 - `res://sim/`은 **순수 로직 계층**이다. Node/씬/Engine 싱글톤(시간, 입력, 렌더)을
   참조하지 않는다. 모든 클래스는 `RefCounted` 기반이며 `class_name` 대신 `preload` const로 참조한다.
 - 모든 확률은 주입된 시드의 `RandomNumberGenerator`만 사용한다. 전역 `randf()`/`randi()`
@@ -210,6 +252,31 @@ Always start by running `--help` to discover available commands. Use the CLI whe
   `행동 누적 → 공명`(발동 8회마다 +1)이며, 공명을 직접 생성하는 효과는 희귀하게 유지한다.
 - 파괴선 75/50/25%는 처음 통과할 때만 작동한다. `indestructible` 파츠는 파괴선·발동 횟수
   소진·파괴 효과 전부에서 면제되며, Core는 영구 `indestructible`을 기본 보유한다.
+- **공격/방어 타입 배율의 하한은 0이 아니다.** 면역과 무효는 이 게임에 존재하지 않는다
+  (GDD §3.4). `physical`은 상성이 없는 대신 페널티도 없다 — 타입 체계를 모르는
+  플레이어의 안전밸브다. 배율은 정수 4분수(`TYPE_MULT`, 분모 4)이며 부동소수를 쓰지 않는다.
+  정수 나눗셈이 1 미만을 0으로 깎는 것도 막는다 — 소액 다타가 무력화되면
+  사실상의 면역이 생긴다.
+- **한 번의 타격은 두 배율을 지난다.** 실드 배율로 실드를 깎고, 남은 몫을 **원래 단위로
+  환산한 뒤** 재질 배율로 선체에 넣는다. 환산을 빼면 실드 배율이 선체까지 새어
+  상성표가 무의미해진다. 계산은 `sim/damage.gd` 한 곳에만 둔다.
+- **보호막을 우회하는 피해 경로는 없다.** 옛 `damage_hull_direct()`는 제거됐다 —
+  `energy_shield`로 선체를 지키는 것이 과열의 공용 대응책이기 때문이다.
+- **붕괴는 매 틱 검사한다** (`combat_sim.step()` 5.5단계). 파열이 늘어서 닿을 수도 있지만
+  선체가 줄어서 닿을 수도 있다. 자리는 지속 피해 **뒤**, 파괴선 검사 **앞**이다.
+- **Stasis는 발동을 막고 트리거는 막지 않는다.** 트리거까지 멈추면 숙주에 걸린 AUGMENT가
+  조용히 침묵한다. 그리고 `is_ready()`는 정지를 보지 않는다 — 후보에서 빼면 `_fire()`에
+  도달하지 못해 `part_fire_blocked`가 방출되지 않고 정지가 조용히 발동을 막는다.
+- **적 파츠 셀렉터는 디버프 전용이다.** `random_enemy_active` 계열은
+  `Actions.OWN_ONLY_OPS`(파괴·복구·보강·강화·강제발동·부식제거)와 조합될 수 없다 —
+  카탈로그가 저작 시점에 거부한다 (GDD §20).
+- **선체 재질(`plating`/`biomass`)은 Core 파츠가 결정한다.** Frame이 아니다.
+  같은 팩션 안에도 재질이 다른 Core가 존재해야 한다 — 그래야 상성이 팩션 단위가
+  아니라 빌드 단위가 되고 §3.4가 지켜진다.
+- **파츠의 `base_role`은 하나 고정이고 AUGMENT가 바꾸지 못한다.** 장착 판정은
+  `base_role`만 본다 (`build_loader.gd`). 2층 슬롯 키워드는 트리거 연결용이며,
+  AUGMENT로 `weapon`을 붙여도 슬롯은 그대로다. 슬롯 규칙을 깨는 것은 The First뿐이다.
+  `base_role`은 catalog가 `keywords`에 자동 주입하므로 JSON에 두 번 쓰지 마라.
 
 ## 이벤트 스트림 계약 (소비자가 알아야 할 것)
 
@@ -229,6 +296,8 @@ Always start by running `--help` to discover available commands. Use the CLI whe
   Godot을 직접 부르지 마라 — 래퍼가 어서션 실패와 SCRIPT ERROR를 **둘 다** 본다.
   모든 테스트 모듈은 `run()`이 `t.done()`으로 끝나고 `const EXPECTED_CHECKS := N`을 선언해야 한다.
 - 배치 검증: `godot --headless --path . --script res://tests/run_batch.gd`
+- 미니 런 리포트: `godot --headless --path . --script res://tests/run_mini.gd`
+  (오토파일럿 60런. 완주율·노드별 벽·Tune 지표·파츠 선택률)
 - 눈으로 확인: Godot 에디터에서 F5 (메인 씬 = `res://debug/combat_view.tscn`)
 - 밸런스 수치는 전부 플레이스홀더다. 수치 변경은 자유롭되, 배치 리포트의 검증 지표
   5종(dual-use 균형 / 체인 가독성 / 파괴선 / 팩션 차이 / 혼종 밸런스)이 깨지는지 확인할 것.

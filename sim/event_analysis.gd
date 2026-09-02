@@ -107,6 +107,72 @@ static func signature_ranking(log: Array, min_depth: int = 2) -> Array:
 		return a[0] < b[0])
 	return out
 
+## 한쪽 진영의 전투 요약. 이벤트 스트림만 읽는다.
+##
+## 런 계층의 지표(§10 전투 데이터)가 이 함수를 쓴다. sim 내부를 조회하지 않으므로
+## "소비자는 이벤트 스트림만 본다"는 계약을 지킨다 — 그래서 여기 있고 run/에 없다.
+##
+## 주의: damage / overheat 항목은 **이 진영이 낸 것**이다. 피해 이벤트는 공격자
+## 진영으로 방출되기 때문이다(damage_dealt의 ship은 때린 쪽이다). 반면 repaired ·
+## shield_gained는 맞는 쪽에서 나므로 같은 side가 자기 회복을 뜻한다.
+static func combat_summary(log: Array, side: String) -> Dictionary:
+	var out: Dictionary = {
+		"elapsed": 0.0, "winner": "",
+		"damage": 0, "damage_by_type": {}, "hull_damage": 0,
+		"repair": 0, "regen": 0, "shield_gained": 0,
+		"material_gained": 0, "material_spent": 0, "resonance": 0,
+		"overheat_applied": 0, "overheat_ticks": 0,
+		"multi_fires": 0, "accelerates": 0, "charges": 0,
+		"fires": 0, "parts_destroyed": 0, "parts_restored": 0,
+	}
+	for e: Dictionary in log:
+		var type: String = str(e["type"])
+		if type == "combat_end":
+			out["elapsed"] = float(e.get("elapsed", 0.0))
+			out["winner"] = str(e.get("winner", ""))
+			continue
+		if str(e.get("ship", "")) != side:
+			continue
+		match type:
+			"damage_dealt":
+				var dtype: String = str(e.get("damage_type", "physical"))
+				out["damage"] = int(out["damage"]) + int(e.get("amount", 0))
+				out["hull_damage"] = int(out["hull_damage"]) + int(e.get("hull_damage", 0))
+				out["damage_by_type"][dtype] = 					int((out["damage_by_type"] as Dictionary).get(dtype, 0)) + int(e.get("amount", 0))
+			"repaired":
+				out["repair"] = int(out["repair"]) + int(e.get("amount", 0))
+			"regen_ticked":
+				out["regen"] = int(out["regen"]) + int(e.get("amount", 0))
+			"shield_gained":
+				out["shield_gained"] = int(out["shield_gained"]) + int(e.get("amount", 0))
+			"material_gained":
+				out["material_gained"] = int(out["material_gained"]) + int(e.get("amount", 0))
+			"material_spent":
+				out["material_spent"] = int(out["material_spent"]) + int(e.get("amount", 0))
+			"resonance_gained":
+				out["resonance"] = int(e.get("total", 0))
+			"overheat_applied":
+				out["overheat_applied"] = int(out["overheat_applied"]) + int(e.get("stacks", 0))
+			"speed_changed":
+				if str(e.get("state", "")) == "accelerated":
+					out["accelerates"] = int(out["accelerates"]) + 1
+			"charge_applied":
+				out["charges"] = int(out["charges"]) + 1
+			"part_fired":
+				out["fires"] = int(out["fires"]) + 1
+				if str(e.get("cause", "")) == "multi_fire":
+					out["multi_fires"] = int(out["multi_fires"]) + 1
+			"part_destroyed":
+				out["parts_destroyed"] = int(out["parts_destroyed"]) + 1
+			"part_restored":
+				out["parts_restored"] = int(out["parts_restored"]) + 1
+	# 과열 틱은 **맞는 쪽**에서 방출된다. "내가 낸 과열 피해"를 세려면 상대 진영을 본다.
+	var foe: String = "enemy" if side == "player" else "player"
+	for e: Dictionary in log:
+		if str(e["type"]) == "overheat_ticked" and str(e.get("ship", "")) == foe:
+			out["overheat_ticks"] = int(out["overheat_ticks"]) + 1
+	return out
+
 ## 사람이 읽는 한 줄. 이벤트 하나만 보고 만든다.
 static func describe(e: Dictionary) -> String:
 	var type: String = str(e.get("type", ""))

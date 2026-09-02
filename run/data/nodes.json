@@ -1,0 +1,51 @@
+{
+  "_comment": "선형 6노드. 노드 1~4는 적 2종 중 택1이고, 두 후보는 '쉬운 쪽/어려운 쪽'이 아니라 다른 종류의 위험이다 — 그래야 선택이 난이도 조절이 아니라 Tune 방향의 선택이 된다. 6전투 안에 3팩션을 모두 만나도록 짰다. 노드 4가 앞선 적의 재출현인 것은 의도적이다: 같은 적을 다시 만났을 때 '이번엔 준비가 됐다'는 감각이 Build → Tune이 작동한다는 증거다. Aeonic 실드 함선을 노드 3으로 옮겼다 — 위상 노심의 시작 보호막 50은 스타터급 화력(초당 2)에는 25초짜리 무적이라, 노드 2에 두면 구조적 벽이 된다.",
+  "nodes": [
+    {
+      "index": 0,
+      "kind": "combat",
+      "options": [
+        "reclaimer_gunline",
+        "viridia_needle_swarm"
+      ]
+    },
+    {
+      "index": 1,
+      "kind": "combat",
+      "options": [
+        "reclaimer_furnace",
+        "viridia_regenerator"
+      ]
+    },
+    {
+      "index": 2,
+      "kind": "combat",
+      "options": [
+        "aeonic_solar_lance",
+        "aeonic_phase_fortress"
+      ]
+    },
+    {
+      "index": 3,
+      "kind": "combat",
+      "options": [
+        "reclaimer_furnace",
+        "viridia_regenerator"
+      ]
+    },
+    {
+      "index": 4,
+      "kind": "elite",
+      "options": [
+        "hybrid_elite_forge_star"
+      ]
+    },
+    {
+      "index": 5,
+      "kind": "boss",
+      "options": [
+        "boss_first_divergence"
+      ]
+    }
+  ]
+}

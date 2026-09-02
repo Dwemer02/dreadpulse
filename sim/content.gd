@@ -16,6 +16,8 @@ const CombatSim = preload("res://sim/combat_sim.gd")
 const FRAME_PATHS: Array[String] = [
 	"res://sim/data/frames/standard_frame.json",
 	"res://sim/data/frames/pool_frame.json",
+	"res://sim/data/frames/skirmish_frame.json",
+	"res://sim/data/frames/boss_frame.json",
 ]
 const PART_PATHS: Array[String] = [
 	"res://sim/data/parts/reclaimer.json",
@@ -79,7 +81,7 @@ static func read_build(id: String) -> Dictionary:
 		return {}
 	return BuildLoader.new().load_build(path)
 
-## 전투 하나를 조립한다. 실패하면 {"sim": null, "errors": [...]}.
+## 파일에 있는 빌드 id 두 개로 전투를 조립한다. 실패하면 {"sim": null, "errors": [...]}.
 ## 카탈로그는 호출자가 한 번만 로드해서 넘긴다 — 배치는 수천 판을 돌린다.
 static func prepare(catalog: RefCounted, player_id: String, enemy_id: String,
 		combat_seed: int) -> Dictionary:
@@ -89,10 +91,23 @@ static func prepare(catalog: RefCounted, player_id: String, enemy_id: String,
 	var enemy_path: String = path_for(enemy_id)
 	if enemy_path == "":
 		return {"sim": null, "errors": ["알 수 없는 빌드 id: %s" % enemy_id]}
-
 	var loader: RefCounted = BuildLoader.new()
-	var player: RefCounted = loader.assemble(loader.load_build(player_path), catalog, "player")
-	var enemy: RefCounted = loader.assemble(loader.load_build(enemy_path), catalog, "enemy")
+	return prepare_builds(catalog, loader.load_build(player_path),
+		loader.load_build(enemy_path), combat_seed)
+
+## 메모리에 있는 빌드 Dictionary 두 개로 전투를 조립한다.
+##
+## 런 계층이 쓰는 입구다. 런의 플레이어 보드는 파일이 아니라 인벤토리에서 매 전투
+## 새로 만들어지므로 경로를 거칠 수 없다. build_loader.assemble()이 이미 Dictionary를
+## 받으므로 이 함수는 얇다 — **엔진 로직은 여기 없다.**
+##
+## 검증도 assemble()에 맡긴다. 런 계층이 역할 불일치·Core 누락을 다시 검사하면
+## 규칙이 두 곳에 생기고 반드시 어긋난다.
+static func prepare_builds(catalog: RefCounted, player_build: Dictionary,
+		enemy_build: Dictionary, combat_seed: int) -> Dictionary:
+	var loader: RefCounted = BuildLoader.new()
+	var player: RefCounted = loader.assemble(player_build, catalog, "player")
+	var enemy: RefCounted = loader.assemble(enemy_build, catalog, "enemy")
 	if player == null or enemy == null:
 		return {"sim": null, "errors": loader.errors}
 

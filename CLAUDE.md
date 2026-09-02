@@ -210,6 +210,18 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 
 ## 아키텍처 규칙
 
+- **계층은 넷이고 의존은 한 방향이다**: `sim/`(전투 1판) ← `run/`(런 1회) ←
+  `debug/`·`tests/`. `sim/`은 런이 존재하는지 모른다. 런 계층이 sim에 **데이터를
+  주입하는 방향**이어야 하고 그 반대가 되면 안 된다 (설계:
+  `docs/superpowers/specs/2026-09-02-mini-iteration-design.md` §3).
+  `run/`도 `sim/`과 같은 규약을 지킨다 — `RefCounted`만, `class_name` 금지, 주입 RNG만.
+- **런 계층은 검증을 다시 구현하지 않는다.** 역할 불일치·Core 누락·augment 블록 없음은
+  `build_loader.assemble()`이 이미 본다. 규칙이 두 곳에 있으면 반드시 어긋난다.
+- **RNG는 런과 전투 두 개다.** 런 RNG는 Salvage 후보와 적 선정에만, 전투 RNG는
+  파괴선·무작위 셀렉터에만 쓴다. 전투 시드는 런 시드에서 산술로 파생시킨다
+  (`hash()` 금지 — 엔진 버전에 따라 값이 달라져 리포트 간 비교가 깨진다).
+- **런의 Upgrade와 전투 중 `grow`는 다른 것이다.** `grow`는 전투가 끝나면 사라지고
+  Upgrade는 전투를 넘어 남는다. 저장 위치를 섞지 마라.
 - `res://sim/`은 **순수 로직 계층**이다. Node/씬/Engine 싱글톤(시간, 입력, 렌더)을
   참조하지 않는다. 모든 클래스는 `RefCounted` 기반이며 `class_name` 대신 `preload` const로 참조한다.
 - 모든 확률은 주입된 시드의 `RandomNumberGenerator`만 사용한다. 전역 `randf()`/`randi()`
@@ -284,6 +296,8 @@ Always start by running `--help` to discover available commands. Use the CLI whe
   Godot을 직접 부르지 마라 — 래퍼가 어서션 실패와 SCRIPT ERROR를 **둘 다** 본다.
   모든 테스트 모듈은 `run()`이 `t.done()`으로 끝나고 `const EXPECTED_CHECKS := N`을 선언해야 한다.
 - 배치 검증: `godot --headless --path . --script res://tests/run_batch.gd`
+- 미니 런 리포트: `godot --headless --path . --script res://tests/run_mini.gd`
+  (오토파일럿 60런. 완주율·노드별 벽·Tune 지표·파츠 선택률)
 - 눈으로 확인: Godot 에디터에서 F5 (메인 씬 = `res://debug/combat_view.tscn`)
 - 밸런스 수치는 전부 플레이스홀더다. 수치 변경은 자유롭되, 배치 리포트의 검증 지표
   5종(dual-use 균형 / 체인 가독성 / 파괴선 / 팩션 차이 / 혼종 밸런스)이 깨지는지 확인할 것.
