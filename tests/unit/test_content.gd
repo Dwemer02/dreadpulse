@@ -8,12 +8,16 @@ extends RefCounted
 ## 대신 "설계한 메커니즘이 실제 전투에서 실제로 일어나는가"를 검증한다.
 ## 조용히 죽는 효과(트리거가 영원히 안 도는 것)가 이 프로젝트의 주된 실패 양식이다.
 
-const EXPECTED_CHECKS := 59
+const EXPECTED_CHECKS := 67
 
 const K = preload("res://sim/sim_const.gd")
 const Catalog = preload("res://sim/catalog.gd")
 const Content = preload("res://sim/content.gd")
 const Analysis = preload("res://sim/event_analysis.gd")
+const Actions = preload("res://sim/actions.gd")
+const Conditions = preload("res://sim/conditions.gd")
+const Targeting = preload("res://sim/targeting.gd")
+const PartText = preload("res://debug/part_text.gd")
 
 const SMOKE_SEED := 7
 const FACTIONS: Array[String] = ["reclaimer", "viridia", "aeonic"]
@@ -29,6 +33,8 @@ func run(t: RefCounted) -> void:
 	_test_chain_grouping(t)
 	_test_display_order(t)
 	_test_every_event_describes(t)
+	_test_part_text_covers_vocabulary(t)
+	_test_part_breakdown(t)
 	_test_determinism(t)
 	t.done()
 
@@ -278,6 +284,57 @@ func _test_every_event_describes(t: RefCounted) -> void:
 					bare.append(type)
 	t.check(bare.is_empty(), "모든 이벤트 타입에 서술문이 있다 — 누락: %s" % str(bare))
 	t.check(seen.size() >= 15, "전투가 이벤트 타입 15종 이상을 낸다 (%d)" % seen.size())
+
+## 게임 안 파츠 설명은 액션 블록에서 만들어진다 — 별도 설명 문구를 두면 파츠를
+## 고칠 때 두 곳을 고쳐야 하고 반드시 어긋나기 때문이다. 그 대가로 **어휘가 늘 때마다
+## part_text에 한 줄을 추가해야 하고**, 잊으면 파츠 설명에 구멍이 뚫린다.
+## 어휘 전체를 훑어 설명이 빠진 항목을 찾는다.
+func _test_part_text_covers_vocabulary(t: RefCounted) -> void:
+	var missing: Array[String] = []
+	for op: String in Actions.OPS:
+		if PartText.action_line({"op": op}).contains("설명 없음"):
+			missing.append("op:" + op)
+	for selector: String in Targeting.SELECTORS:
+		if PartText.action_line({"op": "accelerate", "target": selector}).contains("설명 없음"):
+			missing.append("selector:" + selector)
+	for cond: String in Conditions.CONDITIONS:
+		if PartText.condition_text({cond: 1}).contains("설명 없음"):
+			missing.append("condition:" + cond)
+	t.check(missing.is_empty(), "모든 어휘에 한국어 설명이 있다 — 누락: %s" % str(missing))
+
+	# 실제 콘텐츠 24종이 전부 설명 가능한가 (트리거의 on 이벤트까지)
+	var c: RefCounted = Content.load_catalog()
+	var broken: Array[String] = []
+	for id: String in c.parts:
+		var text: String = PartText.detail(c.parts[id])
+		if text.contains("설명 없음") or text == "":
+			broken.append(id)
+	t.check(broken.is_empty(), "파츠 24종의 설명문이 온전하다 — 문제: %s" % str(broken))
+	t.check(PartText.summary(c.parts["rotary_incinerator"]).contains("열 피해"),
+		"요약에 실제 효과가 들어간다")
+	t.check(PartText.detail(c.parts["scrap_autocannon"]).contains("AUGMENT"),
+		"전문에 AUGMENT 쪽도 들어간다 — 이중용도가 핵심이므로 한쪽만 보이면 선택을 못 한다")
+
+## 슬롯별 전투 기여 집계. 화면의 전투 결과표가 이 값을 쓴다.
+func _test_part_breakdown(t: RefCounted) -> void:
+	var c: RefCounted = Content.load_catalog()
+	var sim: RefCounted = Content.prepare(c, "reclaimer_pure", "viridia_mirror", SMOKE_SEED)["sim"]
+	var log: Array = sim.run()
+	var rows: Dictionary = Analysis.part_breakdown(log, "player")
+	t.check(not rows.is_empty(), "슬롯별 집계가 나온다")
+
+	var total_fires: int = 0
+	var total_damage: int = 0
+	var named: int = 0
+	for slot: String in rows:
+		total_fires += int((rows[slot] as Dictionary)["fires"])
+		total_damage += int((rows[slot] as Dictionary)["damage"])
+		if str((rows[slot] as Dictionary)["name"]) != "":
+			named += 1
+	var summary: Dictionary = Analysis.combat_summary(log, "player")
+	t.eq(total_fires, int(summary["fires"]), "슬롯별 발동 수의 합이 전체 발동 수와 같다")
+	t.eq(total_damage, int(summary["damage"]), "슬롯별 피해의 합이 전체 피해와 같다")
+	t.check(named > 0, "슬롯에 파츠 이름이 붙는다")
 
 func _test_determinism(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()

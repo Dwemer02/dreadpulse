@@ -4,25 +4,23 @@ extends Control
 ## 검증 질문("같은 21개 파츠로 매 런 다른 엔진을 만들고 조정하는 재미가 나는가")은
 ## 사람이 조작해야만 답이 나온다. 그래서 이 화면의 주인공은 **왼쪽 보드의 드롭다운**이다.
 ##
-## 설계 결정(설계 문서 §2 결정 2 = 안 B): 드래그 앤 드롭은 만들지 않는다.
-## 조립의 재미 대부분은 "무엇을 넣을지 고민하는 것"에서 오고 그 고민은 드롭다운으로도
-## 발생한다. 드래그가 없어서 재미가 없다면 그건 UI 문제이지 설계 문제가 아니다.
-##
-## 전투는 즉시 해소하고 로그를 보여준다 — 실시간 재생은
-## `debug/combat_view.tscn`이 이미 한다. 여기서 반복해야 할 것은 전투 관전이 아니라
-## 빌드 결정이므로 전투에 시간을 쓰지 않는다.
+## 화면은 UI 단계(`_ui_phase`)로 돈다. 런 상태 기계(`mini_iteration.state`)는 전투가
+## 끝나는 즉시 salvage로 넘어가지만, 화면은 그 사이에 **재생**과 **결과표**를 끼운다.
+## 두 단계를 분리하지 않으면 전투를 볼 시간이 없다.
 ##
 ## 아키텍처: 이 씬은 `run/`의 상태 기계를 조작하고 `sim/`의 이벤트 스트림을 읽는다.
 ## 규칙은 하나도 갖지 않는다 — 검증은 `mini_iteration.validate_board()`(즉
-## `build_loader.assemble()`)에 맡긴다.
+## `build_loader.assemble()`)에, 파츠 설명은 `debug/part_text.gd`에 맡긴다.
 
 const K = preload("res://sim/sim_const.gd")
 const Content = preload("res://sim/content.gd")
 const Analysis = preload("res://sim/event_analysis.gd")
+const PartText = preload("res://debug/part_text.gd")
 const RunContent = preload("res://run/run_content.gd")
 const Inventory = preload("res://run/inventory.gd")
 const MiniIteration = preload("res://run/mini_iteration.gd")
 
+const SPEEDS: Array[float] = [0.25, 1.0, 4.0]
 const PLAYER_COLOR := Color("7fb3ff")
 const ENEMY_COLOR := Color("ff9b7f")
 const DIM_COLOR := Color("6d7480")
@@ -33,18 +31,34 @@ var _catalog: RefCounted
 var _content: RefCounted
 var _it: RefCounted
 
+## 화면 단계: choose / tune / combat / result / salvage / final
+var _ui_phase: String = "choose"
+
+# --- 전투 재생 ---
+var _display: Array = []
+var _cursor: int = 0
+var _clock: float = 0.0
+var _speed: float = 1.0
+var _playing: bool = false
+var _last_chain: int = -1
+## side -> {hull, max_hull, shield, material, resonance}
+var _ships: Dictionary = {}
+## side/slot -> 발동 수 (재생 중 실시간으로 오른다)
+var _live_fires: Dictionary = {}
+var _live_broken: Dictionary = {}
+## 이번 프레임에 파츠 상태가 바뀌었는가. 보드 재구성 빈도를 줄인다.
+var _board_dirty: bool = false
+
 var _faction_pick: OptionButton
 var _seed_box: SpinBox
 var _progress: Label
 var _board_box: VBoxContainer
+var _inventory_box: VBoxContainer
 var _board_error: Label
 var _phase_title: Label
 var _phase_box: VBoxContainer
 var _log_text: RichTextLabel
 var _history_text: RichTextLabel
-
-## slot_id -> {active: OptionButton, augment: OptionButton}
-var _slot_controls: Dictionary = {}
 
 
 func _ready() -> void:
@@ -89,19 +103,19 @@ func _build_ui() -> void:
 
 	var frame: MarginContainer = MarginContainer.new()
 	frame.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_set_margin(frame, 10)
+	_set_margin(frame, 8)
 	add_child(frame)
 	var root: VBoxContainer = VBoxContainer.new()
-	root.add_theme_constant_override("separation", 8)
+	root.add_theme_constant_override("separation", 6)
 	frame.add_child(root)
 
 	root.add_child(_build_toolbar())
 
 	var columns: HBoxContainer = HBoxContainer.new()
-	columns.add_theme_constant_override("separation", 10)
+	columns.add_theme_constant_override("separation", 8)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(columns)
-	columns.add_child(_build_board_panel())
+	columns.add_child(_build_left_column())
 	columns.add_child(_build_phase_panel())
 	columns.add_child(_build_log_panel())
 
@@ -109,7 +123,6 @@ func _build_ui() -> void:
 func _build_toolbar() -> Control:
 	var bar: HBoxContainer = HBoxContainer.new()
 	bar.add_theme_constant_override("separation", 8)
-
 	bar.add_child(_label("FACTION", 12, DIM_COLOR))
 	_faction_pick = OptionButton.new()
 	for faction: String in _content.faction_ids():
@@ -136,13 +149,13 @@ func _build_toolbar() -> Control:
 	return bar
 
 
-## 왼쪽 — 내 보드. 이 화면의 주인공이다.
-func _build_board_panel() -> Control:
+## 왼쪽 — 보드와 인벤토리. 이 화면의 주인공이다.
+func _build_left_column() -> Control:
 	var panel: PanelContainer = PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", _box(Color("1c1f26")))
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.size_flags_stretch_ratio = 1.25
-	panel.custom_minimum_size.x = 340
+	panel.size_flags_stretch_ratio = 1.15
+	panel.custom_minimum_size.x = 330
 
 	var outer: VBoxContainer = VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 4)
@@ -156,19 +169,30 @@ func _build_board_panel() -> Control:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	outer.add_child(scroll)
+	var inner: VBoxContainer = VBoxContainer.new()
+	inner.add_theme_constant_override("separation", 6)
+	inner.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(inner)
+
 	_board_box = VBoxContainer.new()
-	_board_box.add_theme_constant_override("separation", 6)
+	_board_box.add_theme_constant_override("separation", 5)
 	_board_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(_board_box)
+	inner.add_child(_board_box)
+
+	inner.add_child(_label("", 6, DIM_COLOR))
+	inner.add_child(_label("INVENTORY — 미장착", 14, Color.WHITE))
+	_inventory_box = VBoxContainer.new()
+	_inventory_box.add_theme_constant_override("separation", 4)
+	_inventory_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inner.add_child(_inventory_box)
 	return panel
 
 
-## 가운데 — 단계별 화면. 적 선택 / 적 공개 / Salvage / 결과가 여기 뜬다.
 func _build_phase_panel() -> Control:
 	var panel: PanelContainer = PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", _box(Color("1c1f26")))
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.custom_minimum_size.x = 300
+	panel.custom_minimum_size.x = 320
 
 	var outer: VBoxContainer = VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 6)
@@ -187,26 +211,25 @@ func _build_phase_panel() -> Control:
 	return panel
 
 
-## 오른쪽 — 방금 전투의 Trigger Chain과 런 히스토리.
 func _build_log_panel() -> Control:
 	var panel: PanelContainer = PanelContainer.new()
 	panel.add_theme_stylebox_override("panel", _box(Color("1c1f26")))
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.custom_minimum_size.x = 330
+	panel.custom_minimum_size.x = 320
 
 	var outer: VBoxContainer = VBoxContainer.new()
 	outer.add_theme_constant_override("separation", 4)
 	panel.add_child(_pad(outer, 8))
-
-	outer.add_child(_label("RUN LOG", 15, Color.WHITE))
+	outer.add_child(_label("RUN LOG", 14, Color.WHITE))
 	_history_text = RichTextLabel.new()
 	_history_text.bbcode_enabled = true
-	_history_text.custom_minimum_size.y = 150
+	_history_text.custom_minimum_size.y = 130
 	outer.add_child(_history_text)
 
-	outer.add_child(_label("TRIGGER CHAIN (직전 전투)", 13, DIM_COLOR))
+	outer.add_child(_label("TRIGGER CHAIN", 13, DIM_COLOR))
 	_log_text = RichTextLabel.new()
 	_log_text.bbcode_enabled = true
+	_log_text.scroll_following = true
 	_log_text.selection_enabled = true
 	_log_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	outer.add_child(_log_text)
@@ -220,9 +243,12 @@ func _start_run() -> void:
 	_it.setup(_catalog, _content)
 	_log_text.clear()
 	_history_text.clear()
+	_playing = false
+	_display = []
 	if not _it.begin(_faction_pick.get_item_text(_faction_pick.selected), int(_seed_box.value)):
 		_phase_title.text = "런 시작 실패"
 		return
+	_ui_phase = "choose"
 	_refresh()
 
 
@@ -231,54 +257,68 @@ func _refresh() -> void:
 		mini(_it.node_index + 1, _content.node_count()), _content.node_count(),
 		_it.run.inventory.owned.size()]
 	_refresh_board()
+	_refresh_inventory()
 	_refresh_phase()
 	_refresh_history()
 
 
-# --- 보드 (Tune) ---
+# --- 보드 ---
 
 func _refresh_board() -> void:
-	for child: Node in _board_box.get_children():
-		child.queue_free()
-	_slot_controls.clear()
-
-	# Tune은 적을 고른 뒤에만 열린다. 그 전에는 보기만 한다 —
-	# "전투 직전에 그 위험에 맞게 Tune한다"는 3단계 공개의 3단계가 이것이다.
-	var editable: bool = _it.state == "tune"
+	_clear(_board_box)
+	# Tune은 적을 고른 뒤에만 열린다 — 3단계 정보 공개의 3단계가 이것이다.
+	var editable: bool = _ui_phase == "tune"
+	var live: bool = _ui_phase == "combat" or _ui_phase == "result"
 	for slot_def: Dictionary in _frame_slots():
-		_board_box.add_child(_build_slot_row(slot_def, editable))
-
+		_board_box.add_child(_build_slot_row(slot_def, editable, live))
 	var problems: Array[String] = _it.validate_board()
 	_board_error.text = "" if problems.is_empty() else "조립 불가 — %s" % problems[0]
 
 
-func _build_slot_row(slot_def: Dictionary, editable: bool) -> Control:
+func _build_slot_row(slot_def: Dictionary, editable: bool, live: bool) -> Control:
 	var slot_id: String = str(slot_def["id"])
-	var role: String = str(slot_def["role"])
 	var card: PanelContainer = PanelContainer.new()
 	card.add_theme_stylebox_override("panel", _box(Color("23272f")))
 	var box: VBoxContainer = VBoxContainer.new()
 	box.add_theme_constant_override("separation", 2)
 	card.add_child(_pad(box, 6))
-
-	box.add_child(_label("%s  (%s)" % [slot_id, role], 11, DIM_COLOR))
+	box.add_child(_label("%s  (%s)" % [slot_id, str(slot_def["role"])], 11, DIM_COLOR))
 
 	var entry: Dictionary = _it.run.inventory.board.get(slot_id, {})
 	var active_uid: int = int(entry.get("active", Inventory.NONE))
 	var augment_uid: int = int(entry.get("augment", Inventory.NONE))
+	var active_id: String = _it.run.inventory.part_id_of(active_uid)
 
-	var active_pick: OptionButton = _build_part_picker(
-		slot_id, role, active_uid, false, editable)
+	if live:
+		# 전투 중에는 드롭다운 대신 실시간 상태를 보여준다.
+		var key: String = "player/%s" % slot_id
+		var fires: int = int(_live_fires.get(key, 0))
+		var broken: bool = bool(_live_broken.get(key, false))
+		var head: Label = _label(active_id if active_id == "" else _name_of(active_id),
+			13, WARN_COLOR if broken else Color.WHITE)
+		_attach_tooltip(head, active_id)
+		box.add_child(head)
+		var augment_id: String = _it.run.inventory.part_id_of(augment_uid)
+		if augment_id != "":
+			var chip: Label = _label("+ %s" % _name_of(augment_id), 11, DIM_COLOR)
+			_attach_tooltip(chip, augment_id)
+			box.add_child(chip)
+		box.add_child(_label("발동 %d%s" % [fires, "   파손" if broken else ""], 12,
+			WARN_COLOR if broken else GOOD_COLOR))
+		return card
+
+	var active_pick: OptionButton = _build_part_picker(slot_id, str(slot_def["role"]),
+		active_uid, false, editable)
 	box.add_child(active_pick)
 	# Augment는 Active가 있어야만 고를 수 있다 — 숙주 없는 Augment는 존재하지 않는다.
-	var augment_pick: OptionButton = _build_part_picker(
-		slot_id, role, augment_uid, true, editable and active_uid != Inventory.NONE)
+	var augment_pick: OptionButton = _build_part_picker(slot_id, str(slot_def["role"]),
+		augment_uid, true, editable and active_uid != Inventory.NONE)
 	box.add_child(augment_pick)
-
-	if active_uid != Inventory.NONE:
-		box.add_child(_label(_part_line(_it.run.inventory.part_id_of(active_uid)), 11, DIM_COLOR))
-
-	_slot_controls[slot_id] = {"active": active_pick, "augment": augment_pick}
+	if active_id != "":
+		var line: Label = _label(PartText.summary(_def_of(active_id)), 11, DIM_COLOR)
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_attach_tooltip(line, active_id)
+		box.add_child(line)
 	return card
 
 
@@ -300,7 +340,7 @@ func _build_part_picker(slot_id: String, role: String, current_uid: int,
 	var selected: int = 0
 	for item: Dictionary in choices:
 		var pid: String = str(item["part_id"])
-		var def: Dictionary = _catalog.parts.get(pid, {})
+		var def: Dictionary = _def_of(pid)
 		if def.is_empty():
 			continue
 		if is_augment:
@@ -311,9 +351,12 @@ func _build_part_picker(slot_id: String, role: String, current_uid: int,
 		pick.add_item("%s  [%s]" % [str(def["name"]), str(def["base_role"])])
 		var idx: int = pick.item_count - 1
 		pick.set_item_metadata(idx, int(item["uid"]))
+		pick.set_item_tooltip(idx, PartText.detail(def))
 		if int(item["uid"]) == current_uid:
 			selected = idx
 	pick.select(selected)
+	if current_uid != Inventory.NONE:
+		pick.tooltip_text = PartText.detail(_def_of(_it.run.inventory.part_id_of(current_uid)))
 	pick.item_selected.connect(_on_slot_changed.bind(slot_id, is_augment, pick))
 	return pick
 
@@ -324,7 +367,6 @@ func _on_slot_changed(index: int, slot_id: String, is_augment: bool,
 	var entry: Dictionary = _it.run.inventory.board.get(slot_id, {})
 	var active_uid: int = int(entry.get("active", Inventory.NONE))
 	var augment_uid: int = int(entry.get("augment", Inventory.NONE))
-
 	if is_augment:
 		if active_uid != Inventory.NONE:
 			_it.run.inventory.place(slot_id, active_uid, uid)
@@ -332,47 +374,71 @@ func _on_slot_changed(index: int, slot_id: String, is_augment: bool,
 		_it.run.inventory.clear(slot_id)
 	else:
 		# Active를 바꿔도 Augment는 유지한다 — 교체하는 것은 숙주뿐이다.
-		# 새 Active가 그 Augment 자리에 있던 인스턴스면 place()가 알아서 떼낸다.
 		_it.run.inventory.place(slot_id, uid, augment_uid if augment_uid != uid else Inventory.NONE)
 	_refresh()
+
+
+# --- 인벤토리 ---
+
+func _refresh_inventory() -> void:
+	_clear(_inventory_box)
+	var unplaced: Array = _it.run.inventory.unplaced()
+	if unplaced.is_empty():
+		_inventory_box.add_child(_label("창고가 비었다 — 모든 파츠가 장착돼 있다", 11, DIM_COLOR))
+		return
+	for item: Dictionary in unplaced:
+		var pid: String = str(item["part_id"])
+		var def: Dictionary = _def_of(pid)
+		var card: PanelContainer = PanelContainer.new()
+		card.add_theme_stylebox_override("panel", _box(Color("20242b")))
+		var box: VBoxContainer = VBoxContainer.new()
+		box.add_theme_constant_override("separation", 1)
+		card.add_child(_pad(box, 5))
+		box.add_child(_label("%s  [%s]" % [str(def.get("name", pid)),
+			str(def.get("base_role", "?"))], 12, Color.WHITE))
+		var line: Label = _label(PartText.summary(def), 11, DIM_COLOR)
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		box.add_child(line)
+		_attach_tooltip(card, pid)
+		_inventory_box.add_child(card)
 
 
 # --- 단계별 화면 ---
 
 func _refresh_phase() -> void:
-	for child: Node in _phase_box.get_children():
-		child.queue_free()
-	match _it.state:
-		"choose_enemy":
+	_clear(_phase_box)
+	match _ui_phase:
+		"choose":
 			_phase_title.text = "적을 고른다 — 위험의 종류만 보인다"
 			_show_enemy_options()
 		"tune":
 			_phase_title.text = "적 전체 공개 — 보드를 고친 뒤 전투"
 			_show_reveal()
+		"combat":
+			_phase_title.text = "전투 재생 중"
+			_show_combat()
+		"result":
+			_phase_title.text = "전투 결과"
+			_show_result()
 		"salvage":
 			_phase_title.text = "SALVAGE — 3택 1"
 			_show_salvage()
-		"won":
-			_phase_title.text = "완주"
-			_phase_box.add_child(_label("6전투를 모두 이겼다.", 14, GOOD_COLOR))
-			_show_final()
-		"lost":
-			_phase_title.text = "패배 — 런 종료"
-			_show_final()
-		_:
-			_phase_title.text = "오류"
-			for e: String in _it.errors:
-				_phase_box.add_child(_label(e, 12, WARN_COLOR))
+		"final":
+			var won: bool = _it.state == "won"
+			_phase_title.text = "완주" if won else "패배 — 런 종료"
+			_phase_box.add_child(_label(
+				"6전투를 모두 이겼다." if won else "여기서 런이 끝난다.",
+				14, GOOD_COLOR if won else WARN_COLOR))
+			var again: Button = Button.new()
+			again.text = "같은 시드로 다시"
+			again.pressed.connect(_start_run)
+			_phase_box.add_child(again)
 
 
 func _show_enemy_options() -> void:
 	for option: Dictionary in _it.enemy_options():
 		var threat: Dictionary = option["threat"]
-		var card: PanelContainer = PanelContainer.new()
-		card.add_theme_stylebox_override("panel", _box(Color("23272f")))
-		var box: VBoxContainer = VBoxContainer.new()
-		box.add_theme_constant_override("separation", 2)
-		card.add_child(_pad(box, 6))
+		var box: VBoxContainer = _card_box()
 		box.add_child(_label(str(option["name"]), 14, ENEMY_COLOR))
 		box.add_child(_label("%s   %s" % [str(threat.get("material", "?")),
 			" / ".join(threat.get("tags", []))], 12, DIM_COLOR))
@@ -381,28 +447,31 @@ func _show_enemy_options() -> void:
 		pick.text = "이 적과 싸운다"
 		pick.pressed.connect(_on_choose.bind(str(option["id"])))
 		box.add_child(pick)
-		_phase_box.add_child(card)
 
 
 func _on_choose(id: String) -> void:
 	_it.choose_enemy(id)
+	_ui_phase = "tune"
 	_refresh()
 
 
 func _show_reveal() -> void:
 	var reveal: Dictionary = _it.enemy_reveal()
 	_phase_box.add_child(_label(str(reveal["name"]), 14, ENEMY_COLOR))
-	var threat: Dictionary = reveal["threat"]
-	_phase_box.add_child(_label("선체 재질 %s   프레임 %s"
-		% [str(threat.get("material", "?")), str(reveal["frame"])], 12, DIM_COLOR))
+	_phase_box.add_child(_label("선체 재질 %s · 선체 %d"
+		% [str((reveal["threat"] as Dictionary).get("material", "?")),
+			int((_catalog.frames[str(reveal["frame"])] as Dictionary)["hull"])], 12, DIM_COLOR))
 
 	var slots: Dictionary = reveal["slots"]
 	for slot_id: String in slots:
 		var entry: Dictionary = slots[slot_id]
-		var line: String = "%s: %s" % [slot_id, _name_of(str(entry.get("part", "")))]
+		var pid: String = str(entry.get("part", ""))
+		var line: String = "%s: %s" % [slot_id, _name_of(pid)]
 		if str(entry.get("augment", "")) != "":
 			line += "  + %s" % _name_of(str(entry["augment"]))
-		_phase_box.add_child(_label(line, 12, Color.WHITE))
+		var row: Label = _label(line, 12, Color.WHITE)
+		_attach_tooltip(row, pid)
+		_phase_box.add_child(row)
 
 	var problems: Array[String] = _it.validate_board()
 	var fight: Button = Button.new()
@@ -412,22 +481,230 @@ func _show_reveal() -> void:
 	_phase_box.add_child(fight)
 
 
+# --- 전투 재생 ---
+
 func _on_fight() -> void:
-	_it.fight()
-	_render_combat_log()
+	if not _it.fight():
+		return
+	# 전투는 이미 끝나 있다. 화면은 그 로그를 시계에 맞춰 흘려보낸다 —
+	# 같은 틱 안에서 연쇄별로 묶어 읽는다(CLAUDE.md 이벤트 스트림 계약).
+	_display = Analysis.grouped_by_chain(_it.last_log)
+	_cursor = 0
+	_clock = 0.0
+	_last_chain = -1
+	_playing = true
+	_log_text.clear()
+	_live_fires = {}
+	_live_broken = {}
+	_ships = {
+		"player": _ship_model(_it.run.frame_id),
+		"enemy": _ship_model(str(_it.enemy_reveal()["frame"])),
+	}
+	_ui_phase = "combat"
 	_refresh()
 
 
+func _ship_model(frame_id: String) -> Dictionary:
+	var hull: int = int((_catalog.frames[frame_id] as Dictionary)["hull"])
+	return {"hull": hull, "max_hull": hull, "shield": 0, "material": 0, "resonance": 0}
+
+
+func _process(delta: float) -> void:
+	if _ui_phase != "combat" or not _playing:
+		return
+	_clock += delta * _speed
+	_board_dirty = false
+	while _cursor < _display.size() and float(_display[_cursor]["t"]) <= _clock:
+		_consume(_display[_cursor])
+		_cursor += 1
+	if _cursor >= _display.size():
+		_playing = false
+		_ui_phase = "result"
+		_refresh()
+		return
+	# 보드는 파츠 상태가 실제로 바뀐 프레임에만 다시 그린다.
+	# 매 프레임 6칸을 재구성하면 4배속에서 프레임이 떨어진다.
+	if _board_dirty:
+		_refresh_board()
+	_refresh_combat_readout()
+
+
+## 이벤트 하나를 화면 상태에 반영한다. sim 내부를 조회하지 않는다 —
+## 여기 있는 모든 숫자는 로그에서 재구성한 것이다.
+func _consume(e: Dictionary) -> void:
+	_append_log_line(e)
+	var side: String = str(e.get("ship", ""))
+	if not _ships.has(side):
+		return
+	var ship: Dictionary = _ships[side]
+	var key: String = "%s/%s" % [side, str(e.get("slot", ""))]
+	match str(e["type"]):
+		"hull_changed": ship["hull"] = int(e["to"])
+		"repaired", "regen_ticked":
+			ship["hull"] = mini(int(ship["max_hull"]), int(ship["hull"]) + int(e["amount"]))
+		"overheat_ticked":
+			ship["hull"] = maxi(0, int(ship["hull"]) - int(e["damage"]))
+		"shield_gained": ship["shield"] = int(ship["shield"]) + int(e["amount"])
+		"shield_absorbed": ship["shield"] = maxi(0, int(ship["shield"]) - int(e["amount"]))
+		"material_gained", "material_spent": ship["material"] = int(e["total"])
+		"resonance_gained": ship["resonance"] = int(e["total"])
+		"part_fired":
+			_live_fires[key] = int(_live_fires.get(key, 0)) + 1
+			_board_dirty = true
+		"part_destroyed":
+			_live_broken[key] = true
+			_board_dirty = true
+		"part_restored":
+			_live_broken[key] = false
+			_board_dirty = true
+
+
+func _show_combat() -> void:
+	var bar: HBoxContainer = HBoxContainer.new()
+	bar.add_theme_constant_override("separation", 6)
+	var pause: Button = Button.new()
+	pause.text = "일시정지" if _playing else "재개"
+	pause.pressed.connect(_toggle_play)
+	bar.add_child(pause)
+	for speed: float in SPEEDS:
+		var b: Button = Button.new()
+		b.text = "%sx" % ("0.25" if speed < 1.0 else str(int(speed)))
+		b.toggle_mode = true
+		b.button_pressed = is_equal_approx(speed, _speed)
+		b.pressed.connect(_set_speed.bind(speed))
+		bar.add_child(b)
+	var skip: Button = Button.new()
+	skip.text = "건너뛰기"
+	skip.pressed.connect(_skip)
+	bar.add_child(skip)
+	_phase_box.add_child(bar)
+	_refresh_combat_readout()
+
+
+## 재생 중 매 프레임 갱신되는 부분. 노드를 다시 만들지 않고 텍스트만 고친다 —
+## 매 프레임 자식을 지웠다 만들면 프레임이 떨어진다.
+func _refresh_combat_readout() -> void:
+	var readout: Node = _phase_box.get_node_or_null("readout")
+	if readout == null:
+		var box: VBoxContainer = VBoxContainer.new()
+		box.name = "readout"
+		box.add_theme_constant_override("separation", 3)
+		for side: String in ["player", "enemy"]:
+			var bar: ProgressBar = ProgressBar.new()
+			bar.name = "%s_bar" % side
+			bar.show_percentage = false
+			bar.max_value = 1.0
+			bar.step = 0.0001
+			bar.custom_minimum_size.y = 14
+			bar.add_theme_stylebox_override("fill", _box(_side_color(side).darkened(0.25)))
+			box.add_child(_label(side.to_upper(), 12, _side_color(side)))
+			box.add_child(bar)
+			var stats: Label = _label("", 12, Color.WHITE)
+			stats.name = "%s_stats" % side
+			box.add_child(stats)
+		var clock: Label = _label("", 13, DIM_COLOR)
+		clock.name = "clock"
+		box.add_child(clock)
+		_phase_box.add_child(box)
+		readout = box
+	for side: String in ["player", "enemy"]:
+		var ship: Dictionary = _ships.get(side, {})
+		if ship.is_empty():
+			continue
+		var bar2: ProgressBar = readout.get_node("%s_bar" % side)
+		bar2.value = clampf(float(ship["hull"]) / maxf(1.0, float(ship["max_hull"])), 0.0, 1.0)
+		(readout.get_node("%s_stats" % side) as Label).text = \
+			"선체 %d/%d   실드 %d   자재 %d   공명 %d" % [
+				int(ship["hull"]), int(ship["max_hull"]), int(ship["shield"]),
+				int(ship["material"]), int(ship["resonance"])]
+	(readout.get_node("clock") as Label).text = "%.2f초" % _clock
+
+
+func _toggle_play() -> void:
+	_playing = not _playing
+	_refresh_phase()
+
+
+func _set_speed(speed: float) -> void:
+	_speed = speed
+	_refresh_phase()
+
+
+## 남은 이벤트를 한 번에 흘려보낸다. 결과만 보고 싶을 때.
+func _skip() -> void:
+	while _cursor < _display.size():
+		_consume(_display[_cursor])
+		_cursor += 1
+	_playing = false
+	_ui_phase = "result"
+	_refresh()
+
+
+# --- 전투 결과 ---
+
+func _show_result() -> void:
+	var summary: Dictionary = _it.last_summary
+	var won: bool = str(summary.get("winner", "")) == "player"
+	_phase_box.add_child(_label("승리" if won else "패배", 15, GOOD_COLOR if won else WARN_COLOR))
+	_phase_box.add_child(_label("%.1f초 · 피해 %d (선체 %d) · 수리 %d · 재생 %d · 보호막 %d"
+		% [float(summary.get("elapsed", 0.0)), int(summary.get("damage", 0)),
+			int(summary.get("hull_damage", 0)), int(summary.get("repair", 0)),
+			int(summary.get("regen", 0)), int(summary.get("shield_gained", 0))], 12, DIM_COLOR))
+	_phase_box.add_child(_label(
+		"자재 +%d/−%d · 과열 %d · Multi-fire %d · 가속 %d · 충전 %d · 총 발동 %d"
+		% [int(summary.get("material_gained", 0)), int(summary.get("material_spent", 0)),
+			int(summary.get("overheat_applied", 0)), int(summary.get("multi_fires", 0)),
+			int(summary.get("accelerates", 0)), int(summary.get("charges", 0)),
+			int(summary.get("fires", 0))], 12, DIM_COLOR))
+
+	for side: String in ["player", "enemy"]:
+		_phase_box.add_child(_label("", 6, DIM_COLOR))
+		_phase_box.add_child(_label(
+			"파츠별 — %s" % ("내 함선" if side == "player" else "적 함선"),
+			13, _side_color(side)))
+		_phase_box.add_child(_label(
+			"%-14s %4s %6s %5s %5s" % ["파츠", "발동", "피해", "수리", "자재"], 11, DIM_COLOR))
+		var rows: Dictionary = Analysis.part_breakdown(_it.last_log, side)
+		var names: Dictionary = _slot_names(side)
+		if rows.is_empty():
+			_phase_box.add_child(_label("  (기록 없음)", 11, DIM_COLOR))
+		for slot: String in rows:
+			var row: Dictionary = rows[slot]
+			# 이벤트의 part_name은 part_fired가 싣는다. 패시브 파츠는 발동하지 않으므로
+			# 비어 있다 — 빌드 정의에서 이름을 가져온다.
+			var name: String = str(row["name"])
+			if name == "":
+				name = str(names.get(slot, slot))
+			_phase_box.add_child(_label("%-14s %4d %6d %5d %5d%s" % [
+				name.left(14), int(row["fires"]), int(row["damage"]),
+				int(row["repair"]) + int(row["shield"]), int(row["material"]),
+				"  파손" if bool(row["destroyed"]) else ""],
+				11, WARN_COLOR if bool(row["destroyed"]) else Color.WHITE))
+
+	var next: Button = Button.new()
+	next.text = "계속" if _it.state == "salvage" else "런 결과 보기"
+	next.pressed.connect(_on_after_result)
+	_phase_box.add_child(next)
+
+
+func _on_after_result() -> void:
+	_ui_phase = "salvage" if _it.state == "salvage" else "final"
+	_refresh()
+
+
+# --- Salvage ---
+
 func _show_salvage() -> void:
 	for pid: String in _it.offer:
-		var def: Dictionary = _catalog.parts.get(pid, {})
-		var card: PanelContainer = PanelContainer.new()
-		card.add_theme_stylebox_override("panel", _box(Color("23272f")))
-		var box: VBoxContainer = VBoxContainer.new()
-		box.add_theme_constant_override("separation", 2)
-		card.add_child(_pad(box, 6))
-		box.add_child(_label(str(def.get("name", pid)), 14, Color.WHITE))
-		box.add_child(_label(_part_line(pid), 11, DIM_COLOR))
+		var def: Dictionary = _def_of(pid)
+		var box: VBoxContainer = _card_box()
+		var title: Label = _label(str(def.get("name", pid)), 14, Color.WHITE)
+		_attach_tooltip(title, pid)
+		box.add_child(title)
+		var line: Label = _label(PartText.summary(def), 11, DIM_COLOR)
+		line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		_attach_tooltip(line, pid)
+		box.add_child(line)
 		var owned: int = _count_owned(pid)
 		if owned > 0:
 			box.add_child(_label("이미 %d개 보유" % owned, 11, DIM_COLOR))
@@ -435,46 +712,29 @@ func _show_salvage() -> void:
 		take.text = "이것을 회수한다"
 		take.pressed.connect(_on_take.bind(pid))
 		box.add_child(take)
-		_phase_box.add_child(card)
 
 
 func _on_take(pid: String) -> void:
 	_it.take_salvage(pid)
+	_ui_phase = "choose" if _it.state == "choose_enemy" else "final"
 	_refresh()
-
-
-func _show_final() -> void:
-	var again: Button = Button.new()
-	again.text = "같은 시드로 다시"
-	again.pressed.connect(_start_run)
-	_phase_box.add_child(again)
 
 
 # --- 로그 ---
 
-## 방금 전투의 Trigger Chain. 같은 틱 안에서 연쇄별로 묶어 읽는다 —
-## log는 방출 순서라서 두 연쇄가 서로 끼어든다 (CLAUDE.md 이벤트 스트림 계약).
-func _render_combat_log() -> void:
-	_log_text.clear()
-	var summary: Dictionary = _it.last_summary
-	_log_text.append_text("[b]%s[/b]  %.1f초 · 피해 %d · 수리 %d · 발동 %d\n\n" % [
-		"승리" if str(summary.get("winner", "")) == "player" else "패배",
-		float(summary.get("elapsed", 0.0)), int(summary.get("damage", 0)),
-		int(summary.get("repair", 0)), int(summary.get("fires", 0))])
-
-	var last_chain: int = -1
-	for event: Dictionary in Analysis.grouped_by_chain(_it.last_log):
-		var chain_id: int = int(event.get("chain_id", 0))
-		var stamp: String = "      "
-		if chain_id != last_chain:
-			last_chain = chain_id
-			stamp = "%6.2f" % float(event["t"])
+func _append_log_line(e: Dictionary) -> void:
+	var chain_id: int = int(e.get("chain_id", 0))
+	var stamp: String = "      "
+	if chain_id != _last_chain:
+		_last_chain = chain_id
+		stamp = "%6.2f" % float(e["t"])
+		if _cursor > 0:
 			_log_text.append_text("\n")
-		var depth: int = int(event.get("chain_depth", 0))
-		var arrow: String = "" if depth == 0 else "%s└→ " % "  ".repeat(depth)
-		_log_text.append_text("[color=#5a616e]%s[/color] [color=#%s]%s%s[/color]\n" % [
-			stamp, _side_color(str(event.get("ship", ""))).to_html(false),
-			arrow, Analysis.describe(event)])
+	var depth: int = int(e.get("chain_depth", 0))
+	var arrow: String = "" if depth == 0 else "%s└→ " % "  ".repeat(depth)
+	_log_text.append_text("[color=#5a616e]%s[/color] [color=#%s]%s%s[/color]\n" % [
+		stamp, _side_color(str(e.get("ship", ""))).to_html(false),
+		arrow, Analysis.describe(e)])
 
 
 func _refresh_history() -> void:
@@ -493,6 +753,48 @@ func _refresh_history() -> void:
 
 # --- 보조 ---
 
+## 파츠 전문을 툴팁으로 붙인다. Godot의 기본 툴팁이 곧 작은 오버레이 상자다 —
+## 전용 오버레이를 만들 공수를 아끼면서 "파츠 효과를 다 볼 수 있게" 한다.
+func _attach_tooltip(control: Control, part_id: String) -> void:
+	if part_id == "" or control == null:
+		return
+	control.mouse_filter = Control.MOUSE_FILTER_STOP
+	control.tooltip_text = PartText.detail(_def_of(part_id))
+
+
+## 자식을 즉시 떼어낸 뒤 해제한다. queue_free()만 쓰면 프레임 끝까지 트리에 남아
+## get_node_or_null()이 죽어가는 노드를 찾아온다 — 재생 중 readout이 그 함정에 빠진다.
+func _clear(node: Node) -> void:
+	for child: Node in node.get_children():
+		node.remove_child(child)
+		child.queue_free()
+
+## 카드 하나를 만들어 _phase_box에 붙이고 내용 컨테이너를 돌려준다.
+func _card_box() -> VBoxContainer:
+	var card: PanelContainer = PanelContainer.new()
+	card.add_theme_stylebox_override("panel", _box(Color("23272f")))
+	var box: VBoxContainer = VBoxContainer.new()
+	box.add_theme_constant_override("separation", 2)
+	card.add_child(_pad(box, 6))
+	_phase_box.add_child(card)
+	return box
+
+## 슬롯 -> 파츠 이름. 빌드 정의(정적)에서 읽는다.
+func _slot_names(side: String) -> Dictionary:
+	var out: Dictionary = {}
+	if side == "player":
+		for slot_id: String in _it.run.inventory.board:
+			var uid: int = int((_it.run.inventory.board[slot_id] as Dictionary)["active"])
+			out[slot_id] = _name_of(_it.run.inventory.part_id_of(uid))
+		return out
+	var slots: Dictionary = _it.enemy_reveal()["slots"]
+	for slot_id: String in slots:
+		out[slot_id] = _name_of(str((slots[slot_id] as Dictionary).get("part", "")))
+	return out
+
+func _def_of(part_id: String) -> Dictionary:
+	return _catalog.parts.get(part_id, {})
+
 func _frame_slots() -> Array:
 	return (_catalog.frames[_it.run.frame_id] as Dictionary)["slots"]
 
@@ -500,7 +802,7 @@ func _role_fits(slot_role: String, base_role: String) -> bool:
 	return slot_role == "flexible" or slot_role == base_role
 
 func _name_of(part_id: String) -> String:
-	return str((_catalog.parts.get(part_id, {}) as Dictionary).get("name", part_id))
+	return str(_def_of(part_id).get("name", part_id))
 
 func _name_of_enemy(enemy_id: String) -> String:
 	return str((_content.enemies.get(enemy_id, {}) as Dictionary).get("name", enemy_id))
@@ -511,18 +813,6 @@ func _count_owned(part_id: String) -> int:
 		if pid == part_id:
 			total += 1
 	return total
-
-## 파츠 한 줄 설명. 키워드가 곧 설명이다 — 별도 설명 문구를 두면 파츠를 고칠 때
-## 두 곳을 고쳐야 하고 반드시 어긋난다.
-func _part_line(part_id: String) -> String:
-	var def: Dictionary = _catalog.parts.get(part_id, {})
-	if def.is_empty():
-		return ""
-	var active: Dictionary = def["active"]
-	var cooldown: String = "패시브" if not active.has("cooldown") \
-		else "쿨 %s초" % str(active["cooldown"])
-	return "%s · %s · %s" % [str(def["faction"]), cooldown,
-		" ".join(def.get("keywords", []))]
 
 func _side_color(side: String) -> Color:
 	if side == "player":

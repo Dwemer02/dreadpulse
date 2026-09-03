@@ -173,6 +173,61 @@ static func combat_summary(log: Array, side: String) -> Dictionary:
 			out["overheat_ticks"] = int(out["overheat_ticks"]) + 1
 	return out
 
+## 슬롯별 전투 기여. 이벤트가 slot / source_slot을 싣고 있으므로 sim 내부를 보지 않는다.
+##
+## 반환: slot_id -> {name, fires, damage, hull_damage, repair, shield, material,
+##                   overheat, charges, destroyed}
+##
+## 어느 이벤트를 어느 슬롯에 붙이느냐가 이 함수의 전부다:
+##   - 피해는 **때린 쪽**에서 나고 source_slot이 행위자다
+##   - 수리·보호막·자재는 **맞는 쪽/얻는 쪽**에서 나고 slot이 행위자다
+##   - 과열 부여는 맞은 쪽 함선으로 나가므로 source_ship으로 우리 것을 가려낸다
+static func part_breakdown(log: Array, side: String) -> Dictionary:
+	var out: Dictionary = {}
+	for e: Dictionary in log:
+		var type: String = str(e["type"])
+		var ship: String = str(e.get("ship", ""))
+		var slot: String = ""
+		match type:
+			"part_fired", "repaired", "shield_gained", "material_gained", "part_destroyed":
+				if ship == side:
+					slot = str(e.get("slot", ""))
+			"damage_dealt":
+				if ship == side:
+					slot = str(e.get("source_slot", ""))
+			"overheat_applied", "charge_applied":
+				if str(e.get("source_ship", "")) == side:
+					slot = str(e.get("source_slot", ""))
+		if slot == "":
+			continue
+		if not out.has(slot):
+			out[slot] = {
+				"name": "", "fires": 0, "damage": 0, "hull_damage": 0, "repair": 0,
+				"shield": 0, "material": 0, "overheat": 0, "charges": 0, "destroyed": false,
+			}
+		var row: Dictionary = out[slot]
+		match type:
+			"part_fired":
+				row["fires"] = int(row["fires"]) + 1
+				row["name"] = str(e.get("part_name", row["name"]))
+			"damage_dealt":
+				row["damage"] = int(row["damage"]) + int(e.get("amount", 0))
+				row["hull_damage"] = int(row["hull_damage"]) + int(e.get("hull_damage", 0))
+			"repaired":
+				row["repair"] = int(row["repair"]) + int(e.get("amount", 0))
+			"shield_gained":
+				row["shield"] = int(row["shield"]) + int(e.get("amount", 0))
+			"material_gained":
+				row["material"] = int(row["material"]) + int(e.get("amount", 0))
+			"overheat_applied":
+				row["overheat"] = int(row["overheat"]) + int(e.get("stacks", 0))
+			"charge_applied":
+				row["charges"] = int(row["charges"]) + 1
+			"part_destroyed":
+				row["destroyed"] = true
+				row["name"] = str(e.get("part_name", row["name"]))
+	return out
+
 ## 사람이 읽는 한 줄. 이벤트 하나만 보고 만든다.
 static func describe(e: Dictionary) -> String:
 	var type: String = str(e.get("type", ""))
