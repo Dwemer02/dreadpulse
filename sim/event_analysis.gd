@@ -112,9 +112,13 @@ static func signature_ranking(log: Array, min_depth: int = 2) -> Array:
 ## 런 계층의 지표(§10 전투 데이터)가 이 함수를 쓴다. sim 내부를 조회하지 않으므로
 ## "소비자는 이벤트 스트림만 본다"는 계약을 지킨다 — 그래서 여기 있고 run/에 없다.
 ##
-## 주의: damage / overheat 항목은 **이 진영이 낸 것**이다. 피해 이벤트는 공격자
-## 진영으로 방출되기 때문이다(damage_dealt의 ship은 때린 쪽이다). 반면 repaired ·
-## shield_gained는 맞는 쪽에서 나므로 같은 side가 자기 회복을 뜻한다.
+## 주의 — 이벤트마다 "누구의 것인가"를 정하는 필드가 다르다:
+##   - `damage_dealt`는 **때린 쪽** 진영으로 방출된다 → ship == side가 곧 내가 준 피해
+##   - `repaired` · `shield_gained`는 **얻는 쪽**에서 난다 → ship == side가 내 회복
+##   - **상태이상 부여는 맞는 쪽 진영으로 방출된다** → ship이 아니라 `source_ship`을 봐야
+##     "내가 건 것"이 된다. ship으로 세면 부호가 뒤집혀 받은 양을 부여량으로 표시한다
+##     (실제로 그렇게 잘못 세고 있었고 화면에서 발견됐다)
+##   - 상태이상 **피해**는 맞는 쪽에서 나므로 상대 진영을 봐야 내가 낸 피해다
 static func combat_summary(log: Array, side: String) -> Dictionary:
 	var out: Dictionary = {
 		"elapsed": 0.0, "winner": "",
@@ -122,6 +126,7 @@ static func combat_summary(log: Array, side: String) -> Dictionary:
 		"repair": 0, "regen": 0, "shield_gained": 0,
 		"material_gained": 0, "material_spent": 0, "resonance": 0,
 		"overheat_applied": 0, "overheat_ticks": 0,
+		"overheat_damage": 0, "overheat_absorbed": 0,
 		"multi_fires": 0, "accelerates": 0, "charges": 0,
 		"fires": 0, "parts_destroyed": 0, "parts_restored": 0,
 	}
@@ -151,8 +156,7 @@ static func combat_summary(log: Array, side: String) -> Dictionary:
 				out["material_spent"] = int(out["material_spent"]) + int(e.get("amount", 0))
 			"resonance_gained":
 				out["resonance"] = int(e.get("total", 0))
-			"overheat_applied":
-				out["overheat_applied"] = int(out["overheat_applied"]) + int(e.get("stacks", 0))
+
 			"speed_changed":
 				if str(e.get("state", "")) == "accelerated":
 					out["accelerates"] = int(out["accelerates"]) + 1
@@ -167,10 +171,17 @@ static func combat_summary(log: Array, side: String) -> Dictionary:
 			"part_restored":
 				out["parts_restored"] = int(out["parts_restored"]) + 1
 	# 과열 틱은 **맞는 쪽**에서 방출된다. "내가 낸 과열 피해"를 세려면 상대 진영을 본다.
+	# 상태이상은 부여량(내가 건 것)과 피해량(상대가 받은 것)이 서로 다른 이벤트라서
+	# 이렇게 나뉜다. 붕괴·부식을 추가할 때도 같은 형태가 된다.
 	var foe: String = "enemy" if side == "player" else "player"
 	for e: Dictionary in log:
-		if str(e["type"]) == "overheat_ticked" and str(e.get("ship", "")) == foe:
+		var type2: String = str(e["type"])
+		if type2 == "overheat_applied" and str(e.get("source_ship", "")) == side:
+			out["overheat_applied"] = int(out["overheat_applied"]) + int(e.get("stacks", 0))
+		elif type2 == "overheat_ticked" and str(e.get("ship", "")) == foe:
 			out["overheat_ticks"] = int(out["overheat_ticks"]) + 1
+			out["overheat_damage"] = int(out["overheat_damage"]) + int(e.get("damage", 0))
+			out["overheat_absorbed"] = int(out["overheat_absorbed"]) + int(e.get("absorbed", 0))
 	return out
 
 ## 슬롯별 전투 기여. 이벤트가 slot / source_slot을 싣고 있으므로 sim 내부를 보지 않는다.
@@ -258,6 +269,11 @@ static func describe(e: Dictionary) -> String:
 		"repaired":
 			return "수리 +%d" % int(e.get("amount", 0))
 		"regen_applied":
+			# duration -1은 영구 센티넬이다 (K.PERMANENT). 숫자를 그대로 찍으면
+			# "-1.0초"가 되어 읽는 사람이 버그로 오해한다.
+			var regen_duration: float = float(e.get("duration", 0.0))
+			if regen_duration < 0.0:
+				return "재생 %d (영구)" % int(e.get("amount", 0))
 			return "재생 %d (%s초)" % [int(e.get("amount", 0)), str(e.get("duration", 0))]
 		"regen_ticked":
 			return "재생 발동 +%d" % int(e.get("amount", 0))

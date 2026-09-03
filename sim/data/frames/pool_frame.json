@@ -1,15 +1,38 @@
 {
   "id": "pool_frame",
   "name": "테스트 풀 Frame",
-  "hull": 200,
+  "hull": 100,
   "relic_slots": 1,
-  "thresholds": [0.75, 0.50, 0.25],
+  "thresholds": [
+    0.75,
+    0.5,
+    0.25
+  ],
   "slots": [
-    { "id": "core",      "role": "core"     },
-    { "id": "weapon_1",  "role": "weapon"   },
-    { "id": "defense_1", "role": "defense"  },
-    { "id": "flex_1",    "role": "flexible" },
-    { "id": "flex_2",    "role": "flexible" },
-    { "id": "flex_3",    "role": "flexible" }
-  ]
+    {
+      "id": "core",
+      "role": "core"
+    },
+    {
+      "id": "weapon_1",
+      "role": "weapon"
+    },
+    {
+      "id": "defense_1",
+      "role": "defense"
+    },
+    {
+      "id": "flex_1",
+      "role": "flexible"
+    },
+    {
+      "id": "flex_2",
+      "role": "flexible"
+    },
+    {
+      "id": "flex_3",
+      "role": "flexible"
+    }
+  ],
+  "_comment": "선체 100. 200에서 절반으로 내렸다 — 전투가 너무 길었다(실측 60초). 파괴선 비율은 그대로다. (선체는 Frame 속성이다. Core 파츠는 재질만 정한다.)"
 }

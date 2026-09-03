@@ -46,6 +46,15 @@ var _ships: Dictionary = {}
 ## side/slot -> 발동 수 (재생 중 실시간으로 오른다)
 var _live_fires: Dictionary = {}
 var _live_broken: Dictionary = {}
+## side/slot -> 마지막 발동 시각. 쿨타임 바가 이것을 쓴다.
+var _live_last_fire: Dictionary = {}
+## side/slot -> {"state": "accelerated"/"slowed", "until": float}
+var _live_speed: Dictionary = {}
+## side/slot -> 정지가 풀리는 시각
+var _live_stasis: Dictionary = {}
+## slot -> 공칭 쿨타임(초). Augment의 cooldown_mult까지 반영된 값이라
+## catalog.merge()로 전투 시작 때 한 번 계산해 둔다.
+var _slot_cooldown: Dictionary = {}
 ## 이번 프레임에 파츠 상태가 바뀌었는가. 보드 재구성 빈도를 줄인다.
 var _board_dirty: bool = false
 
@@ -292,7 +301,6 @@ func _build_slot_row(slot_def: Dictionary, editable: bool, live: bool) -> Contro
 	if live:
 		# 전투 중에는 드롭다운 대신 실시간 상태를 보여준다.
 		var key: String = "player/%s" % slot_id
-		var fires: int = int(_live_fires.get(key, 0))
 		var broken: bool = bool(_live_broken.get(key, false))
 		var head: Label = _label(active_id if active_id == "" else _name_of(active_id),
 			13, WARN_COLOR if broken else Color.WHITE)
@@ -303,8 +311,10 @@ func _build_slot_row(slot_def: Dictionary, editable: bool, live: bool) -> Contro
 			var chip: Label = _label("+ %s" % _name_of(augment_id), 11, DIM_COLOR)
 			_attach_tooltip(chip, augment_id)
 			box.add_child(chip)
-		box.add_child(_label("발동 %d%s" % [fires, "   파손" if broken else ""], 12,
-			WARN_COLOR if broken else GOOD_COLOR))
+		if active_id != "":
+			box.add_child(_cooldown_bar(slot_id, key, broken))
+			box.add_child(_label(_slot_status_line(key, broken), 11,
+				WARN_COLOR if broken else GOOD_COLOR))
 		return card
 
 	var active_pick: OptionButton = _build_part_picker(slot_id, str(slot_def["role"]),
@@ -320,6 +330,54 @@ func _build_slot_row(slot_def: Dictionary, editable: bool, live: bool) -> Contro
 		_attach_tooltip(line, active_id)
 		box.add_child(line)
 	return card
+
+
+## 쿨타임 진행 바.
+##
+## **근사값이다.** 진행도를 매 틱 방출하는 이벤트가 없으므로(넣으면 스트림이 진행도로
+## 뒤덮인다) "마지막 발동 이후 경과 / 공칭 쿨타임"으로 그린다. 가속·둔화 중에는 실제
+## 진행과 어긋나므로 그 상태는 색과 뱃지로 따로 알린다. 정확한 정보는 언제나 로그다.
+func _cooldown_bar(slot_id: String, key: String, broken: bool) -> ProgressBar:
+	var bar: ProgressBar = ProgressBar.new()
+	bar.show_percentage = false
+	bar.max_value = 1.0
+	bar.step = 0.0001
+	bar.custom_minimum_size.y = 5
+	var cooldown: float = float(_slot_cooldown.get(slot_id, 0.0))
+	if broken or cooldown <= 0.0:
+		bar.value = 0.0
+	else:
+		bar.value = clampf((_clock - float(_live_last_fire.get(key, 0.0))) / cooldown, 0.0, 1.0)
+	bar.add_theme_stylebox_override("fill", _box(_slot_tint(key, broken).darkened(0.35)))
+	return bar
+
+
+## 슬롯 상태 색: 파손 붉게 · 정지 보라 · 가속 노랑 · 그 외 초록.
+func _slot_tint(key: String, broken: bool) -> Color:
+	if broken:
+		return WARN_COLOR
+	if _clock < float(_live_stasis.get(key, -1.0)):
+		return Color("9b8cff")
+	var speed: Dictionary = _live_speed.get(key, {})
+	if not speed.is_empty() and _clock < float(speed["until"]):
+		return Color("ffd479") if str(speed["state"]) == "accelerated" else Color("7f8ba0")
+	return GOOD_COLOR
+
+
+## 슬롯 한 줄 상태. 발동 수 + 지금 걸려 있는 상태와 남은 시간.
+func _slot_status_line(key: String, broken: bool) -> String:
+	var parts: Array[String] = ["발동 %d" % int(_live_fires.get(key, 0))]
+	var speed: Dictionary = _live_speed.get(key, {})
+	if not speed.is_empty() and _clock < float(speed["until"]):
+		parts.append("%s %.1fs" % [
+			"가속" if str(speed["state"]) == "accelerated" else "둔화",
+			float(speed["until"]) - _clock])
+	var stasis_until: float = float(_live_stasis.get(key, -1.0))
+	if _clock < stasis_until:
+		parts.append("정지 %.1fs" % (stasis_until - _clock))
+	if broken:
+		parts.append("파손")
+	return "   ".join(parts)
 
 
 ## 이 슬롯에 넣을 수 있는 파츠 목록. 규칙은 두 가지뿐이다 —
@@ -496,6 +554,16 @@ func _on_fight() -> void:
 	_log_text.clear()
 	_live_fires = {}
 	_live_broken = {}
+	_live_last_fire = {}
+	_live_speed = {}
+	_live_stasis = {}
+	_slot_cooldown = {}
+	for slot_id: String in _it.run.inventory.board:
+		var entry: Dictionary = _it.run.inventory.board[slot_id]
+		var spec: Dictionary = _catalog.merge(
+			_it.run.inventory.part_id_of(int(entry["active"])),
+			_it.run.inventory.part_id_of(int(entry.get("augment", Inventory.NONE))))
+		_slot_cooldown[slot_id] = float(spec["cooldown_units"]) / float(K.SPEED_NORMAL) * K.TICK_DT
 	_ships = {
 		"player": _ship_model(_it.run.frame_id),
 		"enemy": _ship_model(str(_it.enemy_reveal()["frame"])),
@@ -506,7 +574,8 @@ func _on_fight() -> void:
 
 func _ship_model(frame_id: String) -> Dictionary:
 	var hull: int = int((_catalog.frames[frame_id] as Dictionary)["hull"])
-	return {"hull": hull, "max_hull": hull, "shield": 0, "material": 0, "resonance": 0}
+	return {"hull": hull, "max_hull": hull, "shield": 0, "material": 0,
+		"resonance": 0, "overheat": 0}
 
 
 func _process(delta: float) -> void:
@@ -522,10 +591,8 @@ func _process(delta: float) -> void:
 		_ui_phase = "result"
 		_refresh()
 		return
-	# 보드는 파츠 상태가 실제로 바뀐 프레임에만 다시 그린다.
-	# 매 프레임 6칸을 재구성하면 4배속에서 프레임이 떨어진다.
-	if _board_dirty:
-		_refresh_board()
+	# 쿨타임 바는 매 프레임 움직여야 하므로 보드를 늘 다시 그린다. 6칸뿐이라 감당된다.
+	_refresh_board()
 	_refresh_combat_readout()
 
 
@@ -544,12 +611,25 @@ func _consume(e: Dictionary) -> void:
 			ship["hull"] = mini(int(ship["max_hull"]), int(ship["hull"]) + int(e["amount"]))
 		"overheat_ticked":
 			ship["hull"] = maxi(0, int(ship["hull"]) - int(e["damage"]))
+			# stacks는 이 틱이 끝난 뒤 남은 적층이다 (combat_sim이 1을 깎은 뒤 방출한다)
+			ship["overheat"] = int(e.get("stacks", 0))
 		"shield_gained": ship["shield"] = int(ship["shield"]) + int(e["amount"])
 		"shield_absorbed": ship["shield"] = maxi(0, int(ship["shield"]) - int(e["amount"]))
 		"material_gained", "material_spent": ship["material"] = int(e["total"])
 		"resonance_gained": ship["resonance"] = int(e["total"])
+		"overheat_applied":
+			# 부여 이벤트는 **맞는 쪽** 함선으로 나가고 total에 적층 합계가 실려 있다.
+			ship["overheat"] = int(e.get("total", ship["overheat"]))
 		"part_fired":
 			_live_fires[key] = int(_live_fires.get(key, 0)) + 1
+			_live_last_fire[key] = float(e["t"])
+			_board_dirty = true
+		"speed_changed":
+			_live_speed[key] = {"state": str(e.get("state", "")),
+				"until": float(e["t"]) + float(e.get("duration", 0.0))}
+			_board_dirty = true
+		"stasis_applied":
+			_live_stasis[key] = float(e["t"]) + float(e.get("duration", 0.0))
 			_board_dirty = true
 		"part_destroyed":
 			_live_broken[key] = true
@@ -614,9 +694,11 @@ func _refresh_combat_readout() -> void:
 		var bar2: ProgressBar = readout.get_node("%s_bar" % side)
 		bar2.value = clampf(float(ship["hull"]) / maxf(1.0, float(ship["max_hull"])), 0.0, 1.0)
 		(readout.get_node("%s_stats" % side) as Label).text = \
-			"선체 %d/%d   실드 %d   자재 %d   공명 %d" % [
+			"선체 %d/%d   실드 %d   자재 %d   공명 %d%s" % [
 				int(ship["hull"]), int(ship["max_hull"]), int(ship["shield"]),
-				int(ship["material"]), int(ship["resonance"])]
+				int(ship["material"]), int(ship["resonance"]),
+				"" if int(ship.get("overheat", 0)) == 0
+					else "   과열 %d" % int(ship["overheat"])]
 	(readout.get_node("clock") as Label).text = "%.2f초" % _clock
 
 
@@ -651,11 +733,18 @@ func _show_result() -> void:
 			int(summary.get("hull_damage", 0)), int(summary.get("repair", 0)),
 			int(summary.get("regen", 0)), int(summary.get("shield_gained", 0))], 12, DIM_COLOR))
 	_phase_box.add_child(_label(
-		"자재 +%d/−%d · 과열 %d · Multi-fire %d · 가속 %d · 충전 %d · 총 발동 %d"
+		"자재 +%d/−%d · Multi-fire %d · 가속 %d · 충전 %d · 총 발동 %d"
 		% [int(summary.get("material_gained", 0)), int(summary.get("material_spent", 0)),
-			int(summary.get("overheat_applied", 0)), int(summary.get("multi_fires", 0)),
-			int(summary.get("accelerates", 0)), int(summary.get("charges", 0)),
-			int(summary.get("fires", 0))], 12, DIM_COLOR))
+			int(summary.get("multi_fires", 0)), int(summary.get("accelerates", 0)),
+			int(summary.get("charges", 0)), int(summary.get("fires", 0))], 12, DIM_COLOR))
+
+	# 상태이상은 별도 섹션이다. 부여량과 피해량이 서로 다른 이벤트에서 나오고
+	# (부여는 내가 건 것, 피해는 상대가 받은 것) 파츠별로는 부여량만 귀속되기 때문이다.
+	# 붕괴·부식을 추가할 때도 이 형태를 그대로 쓴다.
+	_show_status_section("과열", Color("ffb066"), [
+		{"side": "player", "label": "내가 부여"},
+		{"side": "enemy", "label": "적이 부여"},
+	])
 
 	for side: String in ["player", "enemy"]:
 		_phase_box.add_child(_label("", 6, DIM_COLOR))
@@ -663,7 +752,8 @@ func _show_result() -> void:
 			"파츠별 — %s" % ("내 함선" if side == "player" else "적 함선"),
 			13, _side_color(side)))
 		_phase_box.add_child(_label(
-			"%-14s %4s %6s %5s %5s" % ["파츠", "발동", "피해", "수리", "자재"], 11, DIM_COLOR))
+			"%-14s %4s %6s %5s %5s %5s" % ["파츠", "발동", "피해", "수리", "자재", "과열"],
+			11, DIM_COLOR))
 		var rows: Dictionary = Analysis.part_breakdown(_it.last_log, side)
 		var names: Dictionary = _slot_names(side)
 		if rows.is_empty():
@@ -675,9 +765,10 @@ func _show_result() -> void:
 			var name: String = str(row["name"])
 			if name == "":
 				name = str(names.get(slot, slot))
-			_phase_box.add_child(_label("%-14s %4d %6d %5d %5d%s" % [
+			_phase_box.add_child(_label("%-14s %4d %6d %5d %5d %5d%s" % [
 				name.left(14), int(row["fires"]), int(row["damage"]),
 				int(row["repair"]) + int(row["shield"]), int(row["material"]),
+				int(row["overheat"]),
 				"  파손" if bool(row["destroyed"]) else ""],
 				11, WARN_COLOR if bool(row["destroyed"]) else Color.WHITE))
 
@@ -685,6 +776,25 @@ func _show_result() -> void:
 	next.text = "계속" if _it.state == "salvage" else "런 결과 보기"
 	next.pressed.connect(_on_after_result)
 	_phase_box.add_child(next)
+
+
+## 상태이상 섹션. 양측을 다 보여준다 — "내가 얼마나 걸었나"와 "얼마나 맞았나"는
+## 다른 질문이고 둘 다 빌드 판단에 쓰인다.
+func _show_status_section(title: String, color: Color, sides: Array) -> void:
+	var rows: Array[String] = []
+	for entry: Dictionary in sides:
+		var s: Dictionary = Analysis.combat_summary(_it.last_log, str(entry["side"]))
+		if int(s["overheat_applied"]) == 0 and int(s["overheat_ticks"]) == 0:
+			continue
+		rows.append("%s  부여 %d적층 · %d회 발화 · 선체 피해 %d · 보호막 흡수 %d" % [
+			str(entry["label"]), int(s["overheat_applied"]), int(s["overheat_ticks"]),
+			int(s["overheat_damage"]), int(s["overheat_absorbed"])])
+	if rows.is_empty():
+		return
+	_phase_box.add_child(_label("", 6, DIM_COLOR))
+	_phase_box.add_child(_label(title, 13, color))
+	for row: String in rows:
+		_phase_box.add_child(_label(row, 12, Color.WHITE))
 
 
 func _on_after_result() -> void:
@@ -739,7 +849,13 @@ func _append_log_line(e: Dictionary) -> void:
 
 func _refresh_history() -> void:
 	_history_text.clear()
-	for record: Dictionary in _it.history:
+	# 재생 중에는 마지막 노드의 결과를 감춘다. 전투는 이미 해소돼 있지만
+	# 화면은 아직 재생 중이므로, 여기 승패를 띄우면 재생을 볼 이유가 사라진다.
+	var visible_count: int = _it.history.size()
+	if _ui_phase == "combat" and visible_count > 0:
+		visible_count -= 1
+	for i: int in visible_count:
+		var record: Dictionary = _it.history[i]
 		var tune: Dictionary = record["tune"]
 		var won: bool = str(record["winner"]) == "player"
 		_history_text.append_text("[color=#%s]노드 %d[/color] %s — %s\n" % [

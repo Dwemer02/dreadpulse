@@ -8,7 +8,7 @@ extends RefCounted
 ## 대신 "설계한 메커니즘이 실제 전투에서 실제로 일어나는가"를 검증한다.
 ## 조용히 죽는 효과(트리거가 영원히 안 도는 것)가 이 프로젝트의 주된 실패 양식이다.
 
-const EXPECTED_CHECKS := 67
+const EXPECTED_CHECKS := 72
 
 const K = preload("res://sim/sim_const.gd")
 const Catalog = preload("res://sim/catalog.gd")
@@ -35,6 +35,7 @@ func run(t: RefCounted) -> void:
 	_test_every_event_describes(t)
 	_test_part_text_covers_vocabulary(t)
 	_test_part_breakdown(t)
+	_test_overheat_attribution(t)
 	_test_determinism(t)
 	t.done()
 
@@ -335,6 +336,31 @@ func _test_part_breakdown(t: RefCounted) -> void:
 	t.eq(total_fires, int(summary["fires"]), "슬롯별 발동 수의 합이 전체 발동 수와 같다")
 	t.eq(total_damage, int(summary["damage"]), "슬롯별 피해의 합이 전체 피해와 같다")
 	t.check(named > 0, "슬롯에 파츠 이름이 붙는다")
+
+## 상태이상 부여는 **맞는 쪽** 진영으로 방출된다. ship으로 세면 부호가 뒤집혀
+## "내가 받은 과열"이 "내가 부여한 과열"로 표시된다 — 실제로 화면에서 발견된 버그다.
+func _test_overheat_attribution(t: RefCounted) -> void:
+	var c: RefCounted = Content.load_catalog()
+	# Reclaimer는 과열을 부여하고 Viridia는 이 풀에서 과열 파츠가 없다.
+	var sim: RefCounted = Content.prepare(c, "reclaimer_pure", "viridia_mirror", SMOKE_SEED)["sim"]
+	var log: Array = sim.run()
+	var mine: Dictionary = Analysis.combat_summary(log, "player")
+	var theirs: Dictionary = Analysis.combat_summary(log, "enemy")
+
+	t.check(int(mine["overheat_applied"]) > 0, "Reclaimer는 과열을 부여한다 (%d)"
+		% int(mine["overheat_applied"]))
+	t.eq(int(theirs["overheat_applied"]), 0,
+		"과열 파츠가 없는 Viridia의 부여량은 0이다 — ship으로 세면 여기가 뒤집힌다")
+	t.check(int(mine["overheat_damage"]) > 0, "부여한 과열이 실제 피해로 이어진다")
+	t.eq(int(theirs["overheat_damage"]), 0, "상대는 과열 피해를 내지 않았다")
+
+	# 파츠별 집계도 같은 규칙을 쓴다
+	var rows: Dictionary = Analysis.part_breakdown(log, "player")
+	var applied: int = 0
+	for slot: String in rows:
+		applied += int((rows[slot] as Dictionary)["overheat"])
+	t.eq(applied, int(mine["overheat_applied"]),
+		"슬롯별 과열 부여량의 합이 전체 부여량과 같다")
 
 func _test_determinism(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
