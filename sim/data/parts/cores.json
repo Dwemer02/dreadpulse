@@ -1,0 +1,78 @@
+{
+  "_comment": "함선 Core 3종. 90종 아키타입 풀에는 포함되지 않는다 (기획서 §3.1) — 선체 재질을 정하고 영구 파괴 불가를 기본 보유한다. Salvage 후보에서도 제외된다.",
+  "archetype": null,
+  "parts": [
+    {
+      "_note": "CORE. 재질 plating. 첫 파손을 자재로 바꾼다. 스스로 발동하지 않는다.",
+      "id": "foundry_core",
+      "name": "용광로 노심",
+      "faction": "reclaimer",
+      "base_role": "core",
+      "keywords": [
+        "plating"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "part_destroyed",
+            "max_fires": 1,
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "CORE. 재질 biomass. **repair를 트리거하지 않는다** — 2026-09-02에 기록된 결정이며, 기획서 §3.2.4(Regen 틱도 실제 Repair다)의 유일한 예외다. triggers_repair: false가 그 예외를 데이터에 명시한다.",
+      "id": "symbiotic_core",
+      "name": "공생 노심",
+      "faction": "viridia",
+      "base_role": "core",
+      "keywords": [
+        "biomass"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "combat_start",
+            "do": [
+              {
+                "op": "apply_regen",
+                "amount": 1,
+                "duration": -1.0,
+                "triggers_repair": false
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "CORE. 재질 plating. Aeonic도 plating을 유지한다 (2026-09-02 결정) — 재질이 팩션 단위가 아니라 빌드 단위여야 한다는 §3.4는 Core가 늘어날 때 함께 푼다.",
+      "id": "phase_core",
+      "name": "위상 노심",
+      "faction": "aeonic",
+      "base_role": "core",
+      "keywords": [
+        "plating"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "combat_start",
+            "do": [
+              {
+                "op": "gain_shield",
+                "amount": 50
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

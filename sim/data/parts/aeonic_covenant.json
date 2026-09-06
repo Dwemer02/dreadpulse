@@ -1,0 +1,526 @@
+{
+  "_comment": "AT 시간 성약 — 유한한 고효율 발동 → 제한 소비 Charge → 소진 자재 → 한정 재충전. 병목: 빠른 초반 이후 주요 파츠가 소진된다. 소진은 파손이 아니다 (기획서 §3.3).",
+  "archetype": "AT",
+  "parts": [
+    {
+      "_note": "AT01 신규. 빠른 고효율 세 번. 소진해도 파손되지 않고 슬롯에 남는다 (기획서 §3.3) — 그 상태가 AT09의 대상이고 AT10의 사건이다. AUGMENT의 Fire Limit 3은 트리거 max_fires로 표현한다.",
+      "id": "forward_loan_beam",
+      "name": "선차입 광선기",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AT",
+      "keywords": [
+        "energy",
+        "damage",
+        "fire_limit"
+      ],
+      "active": {
+        "cooldown": 3.0,
+        "fire_limit": 3,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "energy",
+            "amount": 10
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy",
+          "damage",
+          "fire_limit"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "energy",
+                "amount": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AT02 신규. 빠른 시간 선차입. 지속 Charge 공급보다 앞서지만 금방 소진된다.",
+      "id": "reverse_accelerator",
+      "name": "역산 촉진기",
+      "faction": "aeonic",
+      "base_role": "system",
+      "archetype": "AT",
+      "keywords": [
+        "stasis",
+        "charge",
+        "fire_limit"
+      ],
+      "active": {
+        "cooldown": 2.0,
+        "fire_limit": 3,
+        "on_fire": [
+          {
+            "op": "charge",
+            "target": "slowest_other_own",
+            "seconds": 2.0
+          },
+          {
+            "op": "apply_stasis",
+            "target": "self",
+            "duration": 1.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "stasis",
+          "charge",
+          "fire_limit"
+        ],
+        "triggers": [
+          {
+            "on": "stasis_applied",
+            "where": {
+              "event_field": {
+                "field": "first_entry",
+                "equals": true
+              },
+              "is_host": true
+            },
+            "max_fires": 2,
+            "do": [
+              {
+                "op": "charge",
+                "target": "slowest_other_own",
+                "seconds": 2.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AT03 신규. 매우 이른 보호를 두 번 제공한다. 이후 방어 기능이 사라진다.",
+      "id": "loan_shield_membrane",
+      "name": "차입 차폐막",
+      "faction": "aeonic",
+      "base_role": "defense",
+      "archetype": "AT",
+      "keywords": [
+        "energy_shield",
+        "fire_limit"
+      ],
+      "active": {
+        "cooldown": 2.0,
+        "fire_limit": 2,
+        "on_fire": [
+          {
+            "op": "gain_shield",
+            "amount": 8
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy_shield",
+          "fire_limit"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "gain_shield",
+                "amount": 5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AT04 신규. 초반 과열 밀도가 높다. RF09처럼 장기 공급원으로 쓸 수 없다.",
+      "id": "ephemeral_stellar_tube",
+      "name": "단명 항성관",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AT",
+      "keywords": [
+        "thermal",
+        "damage",
+        "overheat",
+        "fire_limit"
+      ],
+      "active": {
+        "cooldown": 4.0,
+        "fire_limit": 3,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "thermal",
+            "amount": 5
+          },
+          {
+            "op": "apply_overheat",
+            "stacks": 2
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "overheat",
+          "fire_limit"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "apply_overheat",
+                "stacks": 3
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AT05 신규. 제한 횟수를 쓸수록 다른 미래를 당긴다. 무제한 파츠만 있으면 작동하지 않는다 — fires_changed는 발동 제한이 걸린 파츠에서만 난다.",
+      "id": "consumption_counter",
+      "name": "소모 계수기",
+      "faction": "aeonic",
+      "base_role": "system",
+      "archetype": "AT",
+      "keywords": [
+        "charge",
+        "fire_limit"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "fires_changed",
+            "where": {
+              "event_field": {
+                "field": "cause",
+                "equals": "fired"
+              },
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "charge",
+                "target": "slowest_other_own",
+                "seconds": 1.0
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "charge",
+          "fire_limit"
+        ],
+        "triggers": [
+          {
+            "on": "fires_changed",
+            "where": {
+              "is_host": true,
+              "event_field": {
+                "field": "cause",
+                "equals": "fired"
+              },
+              "every_nth_occurrence": 2
+            },
+            "do": [
+              {
+                "op": "charge",
+                "target": "random_other_own",
+                "seconds": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AT06 신규. 짧은 기간에 붕괴를 준비한다. 직접 피해 없이 소진되면 마무리가 부족하다.",
+      "id": "timed_fracture_needle",
+      "name": "시한 균열침",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AT",
+      "keywords": [
+        "fracture",
+        "stasis",
+        "fire_limit"
+      ],
+      "active": {
+        "cooldown": 3.0,
+        "fire_limit": 3,
+        "on_fire": [
+          {
+            "op": "apply_fracture",
+            "amount": 4
+          },
+          {
+            "op": "apply_stasis",
+            "target": "self",
+            "duration": 1.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "fracture",
+          "fire_limit"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "apply_fracture",
+                "amount": 3
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AT07 신규. 빠른 대량 회복 두 번. 만피에 낭비하면 횟수만 잃는다 — 실제 회복 0은 사건도 성장도 만들지 않는다.",
+      "id": "emergency_retrograde_membrane",
+      "name": "비상 역행막",
+      "faction": "aeonic",
+      "base_role": "defense",
+      "archetype": "AT",
+      "keywords": [
+        "repair",
+        "stasis",
+        "fire_limit"
+      ],
+      "active": {
+        "cooldown": 3.0,
+        "fire_limit": 2,
+        "on_fire": [
+          {
+            "op": "repair",
+            "amount": 12
+          },
+          {
+            "op": "apply_stasis",
+            "target": "self",
+            "duration": 2.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair",
+          "fire_limit"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 6
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AT08 신규. 복원과 연결되는 단발 무기. 복원은 횟수를 채워주지 않으므로 (기획서 §3.3) 이 파츠가 **자기 효과로** 1을 되찾는다. 재발동마다 실제 파괴·복원과 쿨다운을 거치므로 같은 시각에 무한 발동하는 경로가 없다.",
+      "id": "returning_photon_shell",
+      "name": "귀환 광자탄",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AT",
+      "keywords": [
+        "energy",
+        "damage",
+        "destroy",
+        "restore",
+        "fire_limit"
+      ],
+      "active": {
+        "cooldown": 4.0,
+        "fire_limit": 1,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "energy",
+            "amount": 12
+          },
+          {
+            "op": "destroy_self"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "part_restored",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "restore_fires",
+                "target": "self",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy",
+          "damage",
+          "restore"
+        ],
+        "triggers": [
+          {
+            "on": "part_restored",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "energy",
+                "amount": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AT09 신규. 자재를 제한 발동으로 바꾸되 자신도 두 번 소진된다. AUGMENT는 복원과 **원래 발동 제한**을 모두 요구한다 — 무제한 숙주에게 restore_fires는 0을 돌려주고 사건도 만들지 않는다.",
+      "id": "residual_time_exchanger",
+      "name": "잔여 시간 교환기",
+      "faction": "aeonic",
+      "base_role": "system",
+      "archetype": "AT",
+      "keywords": [
+        "material",
+        "fire_limit"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "fire_limit": 2,
+        "cost": {
+          "material": 3
+        },
+        "require": {
+          "has_exhausted_own": true
+        },
+        "on_fire": [
+          {
+            "op": "restore_fires",
+            "target": "exhausted_other_own",
+            "amount": 1
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "restore",
+          "fire_limit"
+        ],
+        "triggers": [
+          {
+            "on": "part_restored",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "restore_fires",
+                "target": "host",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AT10 신규. 소진을 다음 부품의 자재·생존으로 남긴다. fires_changed는 실제로 값이 변할 때만 나므로 이미 0인 상태를 다시 검사해도 사건이 없다.",
+      "id": "depletion_recovery_plate",
+      "name": "소진 회수판",
+      "faction": "aeonic",
+      "base_role": "system",
+      "archetype": "AT",
+      "keywords": [
+        "material",
+        "fire_limit"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "fires_changed",
+            "where": {
+              "is_host": false,
+              "event_field": {
+                "field": "remaining",
+                "equals": 0
+              }
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair",
+          "fire_limit"
+        ],
+        "triggers": [
+          {
+            "on": "fires_changed",
+            "where": {
+              "is_host": true,
+              "event_field": {
+                "field": "remaining",
+                "equals": 0
+              }
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 4
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -170,7 +170,11 @@ func _make_part(catalog: RefCounted, slot_id: String, role: String,
 	p.augment_id = spec["augment_id"]
 	p.passive = bool(spec.get("passive", false))
 	p.cooldown_units = spec["cooldown_units"]
+	# AUGMENT의 cooldown_mult가 이미 반영된 값을 기준선으로 삼는다 —
+	# RD08이 고르는 "기본 쿨타임"은 저작 수치가 아니라 **장착된 그대로의** 주기다.
+	p.base_cooldown_units = spec["cooldown_units"]
 	p.cost = spec["cost"]
+	p.require = spec.get("require", null)
 	p.on_fire = spec["on_fire"]
 	p.triggers = spec["triggers"]
 	p.fire_limit = spec["fire_limit"]

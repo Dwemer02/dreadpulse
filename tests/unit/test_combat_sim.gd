@@ -445,7 +445,7 @@ func _test_force_fire_bypasses_readiness(t: RefCounted) -> void:
 	t.eq(x.fires_used, 1, "combat_start 체인의 fire_part가 준비되지 않은 파츠를 강제 발동시켰다")
 	t.eq(player.material, 1, "강제 발동의 on_fire 효과도 정상 실행됐다")
 
-# --- 남은 횟수가 0이 된 파츠는 효과를 실행한 뒤 파손된다 ---
+# --- 남은 횟수가 0이 되어도 파손되지 않는다 (기획서 §3.3) ---
 
 func _test_fires_exhausted_breaks_after_last_shot(t: RefCounted) -> void:
 	var sim: RefCounted = CombatSim.new()
@@ -468,19 +468,19 @@ func _test_fires_exhausted_breaks_after_last_shot(t: RefCounted) -> void:
 	sim._fire(x, player, "cooldown")
 	t.eq(x.fires_remaining, 0, "두 번째 발동 후 남은 횟수 0")
 	t.eq(player.material, 2, "마지막 발동의 on_fire 효과도 정상 실행됐다 — 마지막 한 발은 나간다")
-	t.eq(x.broken, true, "남은 횟수가 0이 되어 파손됐다")
-	var destroyed: Array = _events_of_type(sim.log, "part_destroyed")
-	t.eq(destroyed.size(), 1, "part_destroyed 이벤트가 남는다")
-	if destroyed.size() > 0:
-		t.eq(str(destroyed[0]["cause"]), "fires_exhausted", "파손 사유는 fires_exhausted")
+	# 소진은 파손이 아니다. 소진된 채 **살아 있는** 파츠가 AT09의 대상이고,
+	# AT10은 그 순간을 사건으로 센다 — 파손시키면 두 파츠가 함께 죽는다.
+	t.eq(x.broken, false, "소진만으로는 파손되지 않는다")
+	t.eq(_events_of_type(sim.log, "part_destroyed").size(), 0, "part_destroyed도 나지 않는다")
+	t.check(x.is_exhausted(), "대신 소진 상태로 남는다")
 
 	sim.tick += K.MIN_FIRE_TICKS
 	sim._fire(x, player, "cooldown")
-	t.eq(player.material, 2, "파손된 파츠는 더 이상 발동하지 않는다 — 자재가 늘지 않는다")
+	t.eq(player.material, 2, "소진된 파츠는 더 이상 발동하지 않는다 — 자재가 늘지 않는다")
 	var blocked: Array = _events_of_type(sim.log, "part_fire_blocked")
-	t.eq(blocked.size(), 1, "파손 후 시도는 차단 이벤트를 남긴다")
+	t.eq(blocked.size(), 1, "소진 후 시도는 차단 이벤트를 남긴다")
 	if blocked.size() > 0:
-		t.eq(str(blocked[0]["reason"]), "broken", "차단 이유는 broken")
+		t.eq(str(blocked[0]["reason"]), "fire_limit", "차단 이유는 fire_limit")
 
 # --- 자재 부족 불발 + 정상 지불 시 실제로 차감된다 ---
 
@@ -776,7 +776,8 @@ func _test_regen_does_not_trigger_repair(t: RefCounted) -> void:
 	core.passive = true
 	core.cooldown_units = 0
 	_add_trigger(core, {"on": "combat_start",
-		"do": [{"op": "apply_regen", "amount": 1, "duration": -1.0}]})
+		"do": [{"op": "apply_regen", "amount": 1, "duration": -1.0,
+			"triggers_repair": false}]})
 	player.add_part(core)
 
 	sim.setup(player, enemy, 1)
@@ -785,6 +786,9 @@ func _test_regen_does_not_trigger_repair(t: RefCounted) -> void:
 		sim.step()
 
 	t.check(sim.count_events("regen_ticked") > 0, "영구 재생이 실제로 돈다")
-	t.eq(sim.count_events("repaired"), 0, "재생은 repaired를 내지 않는다")
+	# 기록된 예외 하나 — Viridia Core만 triggers_repair: false로 repair를 트리거하지
+	# 않는다. 그 외의 모든 재생 틱은 "실제 Repair"다 (기획서 §3.2.4).
+	t.eq(sim.count_events("repaired"), 0,
+		"triggers_repair: false인 재생은 repaired를 내지 않는다")
 	t.eq(player.material, 0, "따라서 repaired를 세는 파츠가 반응하지 않는다")
 	t.check(player.hull > 50, "그래도 선체는 실제로 회복된다 (%d)" % player.hull)

@@ -1,0 +1,546 @@
+{
+  "_comment": "AH 항성 과열 — Stasis → Charge → Overheat 성장 → 적층 일부를 시간으로 교환. 병목: 자기 Stasis와 긴 Burst 주기 동안 Overheat가 식는다.",
+  "archetype": "AH",
+  "parts": [
+    {
+      "_note": "AH01. 안정적인 Energy 기본 무기. Thermal 엔진에 의존하지 않는 안전망이다.",
+      "id": "photon_lance",
+      "name": "광자창",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AH",
+      "keywords": [
+        "energy",
+        "damage"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "energy",
+            "amount": 8
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy",
+          "damage"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "energy",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AH02. 조건 없는 피해 예방. Repair 트리거를 만들지 않는다 — 회복 사건을 세는 파츠들과는 궁합이 없다.",
+      "id": "phase_barrier",
+      "name": "위상 방벽",
+      "faction": "aeonic",
+      "base_role": "defense",
+      "archetype": "AH",
+      "keywords": [
+        "energy_shield"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "gain_shield",
+            "amount": 7
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy_shield"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "gain_shield",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AH03 수정. AUGMENT가 VG03과 같은 무작위·같은 조건에서 지속시간만 길던 하위호환 관계를 끊었다 (기획서 §2). 이제 **Stasis 공급을 요구하는** 긴 가속이다 — 자기 정지가 없는 빌드에서는 침묵한다.",
+      "id": "time_accelerator",
+      "name": "시간 가속기",
+      "faction": "aeonic",
+      "base_role": "system",
+      "archetype": "AH",
+      "keywords": [
+        "accelerate"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "accelerate",
+            "target": "slowest_other_own",
+            "duration": 4.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "stasis",
+          "accelerate"
+        ],
+        "triggers": [
+          {
+            "on": "stasis_ended",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "slowest_other_own",
+                "duration": 3.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AH04 명세. 성장은 **Charge를 받은 뒤의 발동부터** 반영된다 — 성장 보상은 해당 사건 처리 후 적용된다 (기획서 §3.2.2). 자기 정지 중에도 Charge는 남은 쿨다운을 당길 수 있지만 발동은 해제 뒤다 (§3.2.7).",
+      "id": "helios_lance",
+      "name": "헬리오스 창",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AH",
+      "keywords": [
+        "thermal",
+        "damage",
+        "overheat",
+        "stasis",
+        "charge",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "thermal",
+            "amount": 7
+          },
+          {
+            "op": "apply_overheat",
+            "stacks": 3,
+            "plus_growth": "self_overheat"
+          },
+          {
+            "op": "apply_stasis",
+            "target": "self",
+            "duration": 2.0
+          }
+        ],
+        "triggers": [
+          {
+            "on": "charge_applied",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_overheat",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "overheat",
+          "charge",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "apply_overheat",
+                "stacks": 1,
+                "plus_growth": "aug_overheat"
+              }
+            ]
+          },
+          {
+            "on": "charge_applied",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_overheat",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AH05 수정. AUGMENT가 AH06과 동일해 피벗 선택이 약했다 (기획서 §2). 이제 Active는 **시간 공급**, AUGMENT는 **수신 방어**다 — 같은 재료를 어느 쪽에 쓸지 고르게 만든다.",
+      "id": "causal_igniter",
+      "name": "인과 점화기",
+      "faction": "aeonic",
+      "base_role": "system",
+      "archetype": "AH",
+      "keywords": [
+        "stasis",
+        "charge"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "charge",
+            "target": "slowest_other_own",
+            "seconds": 2.0
+          },
+          {
+            "op": "apply_stasis",
+            "target": "self",
+            "duration": 1.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy_shield",
+          "charge"
+        ],
+        "triggers": [
+          {
+            "on": "charge_applied",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "gain_shield",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AH06 명세. **최초 진입만** 반응한다. Charge 대상에서 사건 원인 파츠와 자신을 제외한다 — 그러지 않으면 정지에 들어간 파츠를 자기가 다시 밀어 증식 오류가 난다 (기획서 §7.4).",
+      "id": "eclipse_capacitor",
+      "name": "일식 축전기",
+      "faction": "aeonic",
+      "base_role": "system",
+      "archetype": "AH",
+      "keywords": [
+        "stasis",
+        "charge"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "stasis_applied",
+            "where": {
+              "event_field": {
+                "field": "first_entry",
+                "equals": true
+              }
+            },
+            "do": [
+              {
+                "op": "charge",
+                "target": "random_other_own_except_event",
+                "seconds": 1.0
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "stasis",
+          "charge"
+        ],
+        "triggers": [
+          {
+            "on": "stasis_applied",
+            "where": {
+              "event_field": {
+                "field": "first_entry",
+                "equals": true
+              },
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "charge",
+                "target": "random_other_own",
+                "seconds": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AH07. RF04와 출력은 비슷해도 자재가 아니라 **가속 유지**에 비용을 낸다. 비가속에서는 RF04보다 주기가 느리다.",
+      "id": "solar_reflector",
+      "name": "태양 반사경",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AH",
+      "keywords": [
+        "thermal",
+        "damage",
+        "overheat",
+        "multi_fire"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "thermal",
+            "amount": 3
+          },
+          {
+            "op": "apply_overheat",
+            "stacks": 1
+          },
+          {
+            "op": "multi_fire",
+            "times": 1,
+            "where": {
+              "is_accelerated": true
+            }
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "thermal",
+          "damage",
+          "overheat"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "thermal",
+                "amount": 1
+              },
+              {
+                "op": "apply_overheat",
+                "stacks": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AH08 신규. 낮은 Shield 효율 대신 **Stasis 사건**을 제공한다 — AH03·AH06·AE03이 그 사건을 먹고 산다. 방어가 공급원이 되는 자리다.",
+      "id": "eclipse_shield_plate",
+      "name": "일식 차폐판",
+      "faction": "aeonic",
+      "base_role": "defense",
+      "archetype": "AH",
+      "keywords": [
+        "energy_shield",
+        "stasis"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "gain_shield",
+            "amount": 4
+          },
+          {
+            "op": "apply_stasis",
+            "target": "self",
+            "duration": 1.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy_shield"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "gain_shield",
+                "amount": 7
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AH09 신규. 적층 피해를 다음 Burst 준비로 바꾼다. 과열을 유지하는 조합과 자원을 경쟁한다 — RF07·AH04가 쌓은 것을 이 파츠가 먹는다. 과열이 모자라면 대기한다.",
+      "id": "stellar_withdrawal_furnace",
+      "name": "항성 인출로",
+      "faction": "aeonic",
+      "base_role": "system",
+      "archetype": "AH",
+      "keywords": [
+        "overheat",
+        "charge"
+      ],
+      "active": {
+        "cooldown": 8.0,
+        "require": {
+          "enemy_overheat_at_least": 3
+        },
+        "on_fire": [
+          {
+            "op": "cleanse_overheat",
+            "stacks": 3
+          },
+          {
+            "op": "charge",
+            "target": "slowest_other_own",
+            "seconds": 3.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy_shield",
+          "overheat"
+        ],
+        "triggers": [
+          {
+            "on": "overheat_applied",
+            "where": {
+              "enemy_ship": true,
+              "source_is_host": true,
+              "every_nth_accumulated": {
+                "field": "stacks",
+                "n": 6
+              }
+            },
+            "do": [
+              {
+                "op": "gain_shield",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AH10 신규. Overheat 감소와 무관하게 직접 화력이 성장한다 — AH09가 적층을 빼가도 이 파츠는 약해지지 않는다. 성장 입력이 없으면 느린 기본 무기다.",
+      "id": "photothermal_memory_cannon",
+      "name": "광열 기억포",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AH",
+      "keywords": [
+        "thermal",
+        "damage",
+        "charge",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 9.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "thermal",
+            "amount": 10,
+            "plus_growth": "self_thermal"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "charge_applied",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_thermal",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "thermal",
+          "damage",
+          "stasis"
+        ],
+        "triggers": [
+          {
+            "on": "stasis_ended",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "thermal",
+                "amount": 3
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -8,6 +8,7 @@ extends RefCounted
 
 const K = preload("res://sim/sim_const.gd")
 const Actions = preload("res://sim/actions.gd")
+const Conditions = preload("res://sim/conditions.gd")
 const TriggerEngine = preload("res://sim/trigger_engine.gd")
 
 var player: RefCounted
@@ -77,9 +78,16 @@ func step() -> void:
 	tick += 1
 
 	# 1~2. 쿨타임 진행 + 지속 효과 만료 (파손 파츠는 둘 다 멈춘다)
+	#
+	# 정지 해제는 시간이 흘러서 일어나는 일이라 액션 쪽에서는 관측할 수 없다.
+	# 「Stasis에서 풀릴 때」를 구독하는 파츠가 다섯 종이므로 여기서 사건을 만든다.
 	for ship: RefCounted in [player, enemy]:
 		for part: RefCounted in ship.parts:
-			part.advance()
+			if part.advance():
+				_begin_chain()
+				emit("stasis_ended", ship.side,
+					{"slot": part.slot_id, "part_id": part.part_id})
+	_drain_chain()
 
 	# 2.5. delay 예약 실행 — 시간 기반이므로 발동보다 먼저
 	_run_scheduled()
@@ -103,12 +111,29 @@ func step() -> void:
 	# 4. 체인 소진
 	_drain_chain()
 
+	# 4.5. 자기 파괴 예약 해소 — "현재 발동 묶음을 마친 뒤" (기획서 §3.3).
+	# on_fire 안에서 즉시 파괴하면 뒤따르는 액션과 숙주 AUGMENT가 통째로 사라진다.
+	# Multi-fire 예약이 남아 있으면 아직 묶음이 끝나지 않은 것이므로 기다린다.
+	_resolve_self_destruction()
+
 	# 5. 지속 피해/회복
 	for ship: RefCounted in [player, enemy]:
 		var effects: Dictionary = ship.advance_effects(tick)
-		if int(effects["regen"]) > 0:
+		# 재생은 부여마다 따로 난다 — 출처가 없으면 VE03의 "이 파츠 출처의 Regen"을
+		# 표현할 수 없고, 합산하면 회복 **횟수**를 세는 파츠들이 전부 어긋난다.
+		for entry: Dictionary in (effects["regen_ticks"] as Array):
+			var healed: int = int(entry["healed"])
 			_begin_chain()
-			emit("regen_ticked", ship.side, {"amount": effects["regen"]})
+			emit("regen_ticked", ship.side, {
+				"amount": entry["amount"], "healed": healed,
+				"slot": entry["source_slot"],
+			})
+			# Regen 틱도 "실제 Repair"다 (기획서 §3.2.4). 실제로 선체가 올라간
+			# 경우에만 사건이 되며, source로 즉시 회복과 구별한다.
+			if healed > 0 and bool(entry["triggers_repair"]):
+				emit("repaired", ship.side, {
+					"amount": healed, "slot": entry["source_slot"], "source": "regen",
+				})
 		# 실드가 전부 흡수해 hull_damage가 0이어도 과열은 작동했다.
 		# 그 틱을 이벤트에서 지우면 "왜 중첩이 줄었는가"를 복원할 수 없다.
 		if bool(effects["overheat_fired"]):
@@ -177,6 +202,19 @@ func count_events(type: String) -> int:
 func _other(ship: RefCounted) -> RefCounted:
 	return enemy if ship == player else player
 
+## destroy_self가 예약한 파괴를 해소한다. Multi-fire 예약이 남아 있으면 묶음이
+## 아직 끝나지 않은 것이므로 다음 틱으로 미룬다.
+func _resolve_self_destruction() -> void:
+	var acted: bool = false
+	for ship: RefCounted in [player, enemy]:
+		for part: RefCounted in ship.parts:
+			if part.destroy_pending and not part.broken and part.pending_fires == 0:
+				_begin_chain()
+				Actions.break_part(part, ship, "self_destruct", self)
+				acted = true
+	if acted:
+		_drain_chain()
+
 func _fire(part: RefCounted, ship: RefCounted, cause: String) -> void:
 	# 체인이 부른 강제 발동(fire_part)은 부른 쪽 연쇄에 계속 매달린다.
 	# 주의: Phase 0b 현재 Reclaimer 콘텐츠에는 fire_part를 쓰는 파츠가 없어서
@@ -197,6 +235,14 @@ func _fire(part: RefCounted, ship: RefCounted, cause: String) -> void:
 	var reason: String = part.block_reason(tick)
 	if reason == "" and not repeat and not ship.can_afford(part.cost):
 		reason = "no_material"
+	# 발동 전제 — "조건이 안 되면 다음 주기까지 기다림" (기획서 §3.2.10).
+	# 자재 부족과 같은 구조다: 쿨타임을 소모하지 않고 다음 틱에 다시 시도한다.
+	if reason == "" and part.require != null \
+			and not Conditions.evaluate(part.require, {
+				"sim": self, "own_ship": ship, "enemy_ship": foe, "part": part,
+				"rng": rng, "event": {}, "tick": tick,
+			}):
+		reason = "requirement"
 	if reason != "":
 		# 같은 사유가 이어지는 동안은 한 번만 보고한다. 쿨타임이 찬 파츠는 매 틱
 		# 재시도하므로, 매번 방출하면 자재가 마른 파츠 하나가 이벤트 스트림의
@@ -255,9 +301,9 @@ func _fire(part: RefCounted, ship: RefCounted, cause: String) -> void:
 		"rng": rng, "event": {}, "tick": tick, "fire_cause": cause,
 	})
 
-	# 이번 발동으로 0이 되었으면 효과를 실행한 뒤 파손된다
-	if part.fires_remaining == 0:
-		Actions.break_part(part, ship, "fires_exhausted", self)
+	# 발동 횟수를 다 써도 **파손되지 않는다** (기획서 §3.3) — 주기 발동만 멈춘다.
+	# 파괴는 destroy_self를 명시한 파츠(AT08)만 한다. 소진된 채 살아 있는 파츠가
+	# AT09 「잔여 시간 교환기」의 대상이고, AT10은 그 순간을 사건으로 센다.
 
 ## convergence_engine Relic — 서로 다른 팩션이 연속 발동하면 공명 +1 (최소 간격 있음)
 func _check_convergence(ship: RefCounted, part: RefCounted) -> void:

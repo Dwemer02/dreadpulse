@@ -17,6 +17,9 @@ const MAX_CHAIN_DEPTH: int = 12
 const MAX_PENDING_FIRES: int = 12
 
 ## 무제한 파츠가 drain_fires를 처음 맞을 때 확정되는 수명. 스펙 §4.5
+##
+## 0이 되어도 **파손되지 않는다** — 주기 발동만 멈춘다.
+## 파괴는 명시적 destroy_self를 가진 파츠만 한다 (기획서 §3.3).
 const DEFAULT_FIRE_LIMIT: int = 5
 
 ## 발동 누적 8회마다 공명 +1. 스펙 §7.2
@@ -25,8 +28,13 @@ const RESONANCE_PER_FIRES: int = 8
 ## 전투 시간 상한. 초과 시 잔여 HP 비율로 판정. 스펙 §4.1
 const MAX_COMBAT_TICKS: int = 2400  # 120초
 
-## 재생·과열이 적용되는 주기 (1초)
+## 과열이 적용되는 주기 (1초)
 const PERIOD_TICKS: int = 20
+
+## 재생이 회복을 만드는 주기 (2초). 과열과 다르다 —
+## `Regen 1 / 6초`는 2·4·6초에 Repair 1을 만든다 (기획서 §3.2.5).
+## 부여마다 자기 시계를 갖는다: 함선 전역 틱이 아니라 부여 시점부터 센다.
+const REGEN_PERIOD_TICKS: int = 40
 
 # --- 공격 / 방어 타입 (스펙 §21.1) ---
 
@@ -83,3 +91,8 @@ static func ticks_to_secs(ticks: int) -> float:
 ## 쿨타임(초)을 진행 유닛 목표치로. 보통 속도로 정확히 그 초가 걸린다.
 static func cooldown_to_units(secs: float) -> int:
 	return secs_to_ticks(secs) * SPEED_NORMAL
+
+## Charge가 수신 사건(charge_applied)을 만드는 최소 폭 = 1초.
+## 이보다 적게 당겼으면 이벤트를 내지 않는다 (기획서 §3.2.7) — 쿨타임이 거의 찬
+## 파츠를 밀어 "충전 수신"을 무한히 만드는 순환을 막는다.
+const MIN_CHARGE_UNITS: int = SPEED_NORMAL * int(1.0 / TICK_DT)

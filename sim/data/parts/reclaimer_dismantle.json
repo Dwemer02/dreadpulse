@@ -1,0 +1,532 @@
+{
+  "_comment": "RD 해체 순환 — Destroy → 자재·출력 → Restore. 병목: 자기 파괴 뒤 멈춰 있는 시간이 길다. 복원기와 자재를 모두 확보해야 한다. Restore는 성장을 유지하지만 **발동 횟수를 채워주지 않는다** (기획서 §3.3).",
+  "archetype": "RD",
+  "parts": [
+    {
+      "_note": "RD01 신규. 빠른 큰 한 발 뒤 장기 공백. AUGMENT가 **숙주 자신의 파손**에 반응한다 — 파손 파츠의 트리거는 원래 멈추지만, 자기 파손 사건 하나만은 예외로 통과한다 (trigger_engine._is_own_destruction).",
+      "id": "disposable_shredder",
+      "name": "일회용 파쇄탄",
+      "faction": "reclaimer",
+      "base_role": "weapon",
+      "archetype": "RD",
+      "keywords": [
+        "physical",
+        "damage",
+        "destroy"
+      ],
+      "active": {
+        "cooldown": 3.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "physical",
+            "amount": 12
+          },
+          {
+            "op": "destroy_self"
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "physical",
+          "damage",
+          "destroy"
+        ],
+        "triggers": [
+          {
+            "on": "part_destroyed",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "physical",
+                "amount": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RD02 신규. 많은 시작 자재를 한 번 제공한다. 계속 생산하려면 복원이 필요하다.",
+      "id": "detachable_fuel_cell",
+      "name": "탈착식 연료통",
+      "faction": "reclaimer",
+      "base_role": "system",
+      "archetype": "RD",
+      "keywords": [
+        "material",
+        "destroy"
+      ],
+      "active": {
+        "cooldown": 4.0,
+        "on_fire": [
+          {
+            "op": "gain_material",
+            "amount": 5
+          },
+          {
+            "op": "destroy_self"
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "destroy"
+        ],
+        "triggers": [
+          {
+            "on": "part_destroyed",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RD03 신규. 파괴의 경제 가치를 늘린다. 파츠를 잃는 사건이 없으면 빈 System이다.",
+      "id": "debris_sorter",
+      "name": "잔해 분류기",
+      "faction": "reclaimer",
+      "base_role": "system",
+      "archetype": "RD",
+      "keywords": [
+        "material",
+        "destroy"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "part_destroyed",
+            "where": {
+              "is_host": false
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "repair",
+          "destroy"
+        ],
+        "triggers": [
+          {
+            "on": "part_destroyed",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 1
+              },
+              {
+                "op": "repair",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RD04 신규. 핵심 복원기지만 느리고 자재를 쓴다. AUGMENT는 복원 기능을 제공하지 않는다 — 이 파츠를 증강으로 쓰면 아키타입의 엔진을 잃는다.",
+      "id": "field_reassembler",
+      "name": "야전 재조립기",
+      "faction": "reclaimer",
+      "base_role": "defense",
+      "archetype": "RD",
+      "keywords": [
+        "material",
+        "restore"
+      ],
+      "active": {
+        "cooldown": 9.0,
+        "cost": {
+          "material": 3
+        },
+        "require": {
+          "has_broken_own": true
+        },
+        "on_fire": [
+          {
+            "op": "restore_part",
+            "target": "oldest_broken_own"
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair",
+          "restore"
+        ],
+        "triggers": [
+          {
+            "on": "part_restored",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 3
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RD05 신규. 느리게 커지는 복원 경제. 첫 두 번의 복원은 별도 자재로 감당해야 한다. 성장은 **이 파츠가 실제로 자재를 만들었을 때만** 오른다.",
+      "id": "rivet_memory",
+      "name": "리벳 기억장치",
+      "faction": "reclaimer",
+      "base_role": "system",
+      "archetype": "RD",
+      "keywords": [
+        "material",
+        "restore",
+        "growth"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "part_restored",
+            "where": {
+              "every_nth_occurrence": 2
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 1,
+                "plus_growth": "self_material"
+              }
+            ]
+          },
+          {
+            "on": "material_gained",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_material",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "restore"
+        ],
+        "triggers": [
+          {
+            "on": "part_restored",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 3
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RD06 신규. 일회성 대량 회복과 파괴 트리거. 만피에 낭비하면 회복 사건도 얻지 못한다 — 실제 회복 0은 성장 재료가 아니다 (기획서 §3.2.4).",
+      "id": "blast_weld_membrane",
+      "name": "폭압 용접막",
+      "faction": "reclaimer",
+      "base_role": "defense",
+      "archetype": "RD",
+      "keywords": [
+        "repair",
+        "destroy"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "repair",
+            "amount": 10
+          },
+          {
+            "op": "destroy_self"
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair",
+          "destroy"
+        ],
+        "triggers": [
+          {
+            "on": "part_destroyed",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RD07 신규. 복원 후 긴 재시동 시간을 줄인다. 평상시 가속 능력이 없다.",
+      "id": "restart_crank",
+      "name": "재기동 크랭크",
+      "faction": "reclaimer",
+      "base_role": "system",
+      "archetype": "RD",
+      "keywords": [
+        "accelerate",
+        "restore"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "part_restored",
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "event_part",
+                "duration": 3.0
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "accelerate",
+          "restore"
+        ],
+        "triggers": [
+          {
+            "on": "part_restored",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "host",
+                "duration": 4.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RD08 신규. 희생 대상이 없으면 발동하지 않는다 (require). 대상은 **기본 쿨타임이 가장 긴** 파츠 — 대개 가장 값비싼 지원 파츠다.",
+      "id": "demolition_detonator",
+      "name": "해체용 기폭기",
+      "faction": "reclaimer",
+      "base_role": "weapon",
+      "archetype": "RD",
+      "keywords": [
+        "thermal",
+        "damage",
+        "destroy"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "require": {
+          "has_other_own": true
+        },
+        "on_fire": [
+          {
+            "op": "destroy_part",
+            "target": "longest_base_cooldown_other_own"
+          },
+          {
+            "op": "deal_damage",
+            "type": "thermal",
+            "amount": 15
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "overheat",
+          "destroy"
+        ],
+        "triggers": [
+          {
+            "on": "part_destroyed",
+            "where": {
+              "source_is_host": true
+            },
+            "do": [
+              {
+                "op": "apply_overheat",
+                "stacks": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RD09 신규. 파츠 손실 직후 Hull을 보수한다. 복원이나 자재를 주지 않고 만피에서는 효과가 없다.",
+      "id": "debris_patch",
+      "name": "잔해 보수판",
+      "faction": "reclaimer",
+      "base_role": "defense",
+      "archetype": "RD",
+      "keywords": [
+        "repair",
+        "destroy"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "part_destroyed",
+            "where": {
+              "is_host": false
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 4
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "regen",
+          "restore",
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "part_restored",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "apply_regen",
+                "amount": 2,
+                "duration": 2.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RD10 신규. 복원을 반복할수록 강해진다. 스스로 파괴되지 않으므로 희생 수단(RD08 등)과 공백을 따로 마련해야 한다.",
+      "id": "recast_barrel",
+      "name": "재주조 포신",
+      "faction": "reclaimer",
+      "base_role": "weapon",
+      "archetype": "RD",
+      "keywords": [
+        "physical",
+        "damage",
+        "restore",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "physical",
+            "amount": 5,
+            "plus_growth": "self_physical"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "part_restored",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_physical",
+                "amount": 3
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "physical",
+          "damage",
+          "restore",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "physical",
+                "amount": 0,
+                "plus_growth": "aug_physical"
+              }
+            ]
+          },
+          {
+            "on": "part_restored",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_physical",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

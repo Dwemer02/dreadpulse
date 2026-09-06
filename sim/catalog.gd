@@ -17,6 +17,13 @@ const VALID_BASE_ROLES: Array[String] = ["core", "weapon", "defense", "system"]
 ## 프레임 슬롯이 가질 수 있는 role. Base Role 4종 + 아무 파츠나 받는 flexible.
 const VALID_SLOT_ROLES: Array[String] = ["core", "weapon", "defense", "system", "flexible"]
 const VALID_FACTIONS: Array[String] = ["reclaimer", "viridia", "aeonic", "first"]
+## 아키타입 9종. 파츠의 설계상 주 용도이며 **장착·증강 제한이 아니다**
+## (기획서 §1). Core와 The First는 아키타입을 갖지 않는다.
+const VALID_ARCHETYPES: Array[String] = [
+	"RF", "RC", "RD",   # Reclaimer: 용광로 포화사격 · 산성 회수 · 해체 순환
+	"VC", "VE", "VG",   # Viridia:  부식 대사 · 생체 방전 · 재생 증식
+	"AE", "AH", "AT",   # Aeonic:   예정된 붕괴 · 항성 과열 · 시간 성약
+]
 
 var parts: Dictionary = {}    # part_id -> 정의 Dictionary
 var frames: Dictionary = {}   # frame_id -> 정의 Dictionary
@@ -101,6 +108,8 @@ func _validate_part(def: Variant) -> String:
 		return "%s: base_role은 문자열 하나여야 한다 (배열이 아니다)" % pid
 	if not VALID_BASE_ROLES.has(def["base_role"]):
 		return "%s: 알 수 없는 Base Role \"%s\"" % [pid, str(def["base_role"])]
+	if def.has("archetype") and not VALID_ARCHETYPES.has(str(def["archetype"])):
+		return "%s: 알 수 없는 아키타입 \"%s\"" % [pid, str(def["archetype"])]
 	var active: Variant = def["active"]
 	if not (active is Dictionary):
 		return "%s: active가 Dictionary가 아니다" % pid
@@ -113,6 +122,10 @@ func _validate_part(def: Variant) -> String:
 		# 쿨타임이 없는데 on_fire가 있으면 그 블록은 영원히 실행되지 않는다.
 		# 조용히 죽는 대신 저작 시점에 거부한다.
 		return "%s: 쿨타임 없는 패시브 파츠는 on_fire를 가질 수 없다 (영원히 실행되지 않는다)" % pid
+	# 발동 전제도 조건 어휘 검증을 받는다. 오타 난 전제는 fail-closed로 **항상 거짓**이
+	# 되어 그 파츠가 전투 내내 한 번도 발동하지 않는다 — 로드 시점에 잡아야 한다.
+	for key: String in Conditions.unknown_keys(active.get("require", null)):
+		return "%s: active.require의 알 수 없는 조건 \"%s\"" % [pid, key]
 	var problem: String = _validate_effects(pid, active.get("on_fire", []), "active.on_fire")
 	if problem != "":
 		return problem
@@ -152,9 +165,11 @@ func merge(part_id: String, augment_id: String) -> Dictionary:
 		"part_name": host["name"],
 		"faction": host["faction"],
 		"base_role": str(host["base_role"]),
+		"archetype": str(host.get("archetype", "")),
 		"keywords": keywords,
 		"passive": not active.has("cooldown"),
 		"cooldown_units": K.cooldown_to_units(float(active.get("cooldown", 0.0))),
+		"require": active.get("require", null),
 		"fire_limit": int(active.get("fire_limit", K.UNLIMITED)),
 		"cost": (active.get("cost", {}) as Dictionary).duplicate(true),
 		"on_fire": (active.get("on_fire", []) as Array).duplicate(true),
@@ -214,6 +229,14 @@ func _validate_effects(pid: String, block: Array, where: String) -> String:
 		# 상성표가 통째로 무의미해진다.
 		if action.has("type") and not K.ATTACK_TYPES.has(str(action["type"])):
 			return "%s %s: 알 수 없는 공격 타입 \"%s\"" % [pid, where, str(action["type"])]
+		# scale의 원천도 화이트리스트다. 오타가 조용히 0이 되면 "적층이 아직 없구나"와
+		# 구별되지 않아서, 적층을 읽는 파츠가 영원히 기본 수치만 낸다.
+		if action.has("scale"):
+			if not (action["scale"] is Dictionary):
+				return "%s %s: scale이 Dictionary가 아니다" % [pid, where]
+			var of: String = str((action["scale"] as Dictionary).get("of", ""))
+			if not Actions.SCALE_SOURCES.has(of):
+				return "%s %s: 알 수 없는 비례 원천 \"%s\"" % [pid, where, of]
 		for key: String in Conditions.unknown_keys(action.get("where", {})):
 			return "%s %s: 알 수 없는 조건 \"%s\"" % [pid, where, key]
 		if action.has("do"):

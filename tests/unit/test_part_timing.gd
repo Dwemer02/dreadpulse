@@ -2,7 +2,7 @@ extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너가 대조해 서브테스트 중단을 잡는다 —
 ## _test_* 안에서 에러가 나면 그 함수만 중단되고 run()은 정상 종료하기 때문이다.
-const EXPECTED_CHECKS := 41
+const EXPECTED_CHECKS := 42
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -63,11 +63,14 @@ func _test_accel_slow(t: RefCounted) -> void:
 	q.advance()
 	t.check(q.is_ready(), "둔화 중이면 40틱에 준비된다")
 
-	# 같은 종류는 지속시간 합산
+	# 같은 종류는 합산이 아니라 **큰 쪽으로 갱신**한다 (기획서 §3.2.8).
+	# 합산이면 1초짜리 작은 가속을 뿌리는 파츠 두 장만으로 영구 가속이 된다.
 	var r: RefCounted = _make(10.0)
 	r.apply_accel(20)
 	r.apply_accel(30)
-	t.eq(r.accel_ticks, 50, "가속끼리는 지속시간이 합산된다")
+	t.eq(r.accel_ticks, 30, "가속끼리는 긴 쪽으로 갱신된다")
+	r.apply_accel(10)
+	t.eq(r.accel_ticks, 30, "더 짧은 가속은 남은 시간을 줄이지 않는다")
 
 	# 반대 종류는 상쇄. 짧은 쪽이 사라지고 긴 쪽에 차이만 남는다
 	var s: RefCounted = _make(10.0)

@@ -1,6 +1,6 @@
 extends RefCounted
 
-const EXPECTED_CHECKS := 112
+const EXPECTED_CHECKS := 124
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -282,15 +282,39 @@ func _test_catalog_consistency(t: RefCounted) -> void:
 	broken_part.broken = true
 	s.add_part(broken_part)
 
+	# 소진되었지만 살아 있는 파츠 — has_exhausted_own / has_other_own의 후보다.
+	# 소진은 더 이상 파손이 아니므로 이런 상태가 실제로 존재한다 (기획서 §3.3).
+	var spent: RefCounted = Part.new()
+	spent.slot_id = "system_1"
+	spent.role = "system"
+	spent.cooldown_units = K.cooldown_to_units(3.0)
+	spent.fire_limit = 2
+	spent.fires_remaining = 0
+	s.add_part(spent)
+
+	# 적함 조건들(과열·파열·지정 파츠 부식)은 실제 적함이 있어야 참이 될 수 있다.
+	var foe: RefCounted = _ship()
+	foe.side = "enemy"
+	foe.max_hull = 100
+	foe.hull = 100
+	foe.overheat_stacks = 5
+	foe.fracture = 60
+	foe.get_part("weapon_1").corrosion_stacks = 4
+
 	# source_slot/source_ship은 상태이상 이벤트가 싣는 필드다 (source_is_host가 본다).
+	# amount는 event_field_min이 읽는다 — 금액 0의 사건을 거르는 조건이다.
 	var own_event: Dictionary = {"ship": "player", "slot": "weapon_1", "faction": "reclaimer",
-		"cause": "x", "source_slot": "weapon_1", "source_ship": "player"}
+		"cause": "x", "amount": 3, "source_slot": "weapon_1", "source_ship": "player"}
 	var own_ctx: Dictionary = _ctx(s, own_event, 700)
+	own_ctx["enemy_ship"] = foe
+	own_ctx["rng"] = RandomNumberGenerator.new()
 	own_ctx["accum_prev"] = 8
 	own_ctx["accum"] = 12
 
 	var enemy_event: Dictionary = {"ship": "enemy", "slot": "weapon_1"}
 	var enemy_ctx: Dictionary = _ctx(s, enemy_event, 700)
+	enemy_ctx["enemy_ship"] = foe
+	enemy_ctx["rng"] = RandomNumberGenerator.new()
 
 	var spec_by_key: Dictionary = {
 		"resonance_at_least": 5,
@@ -309,6 +333,12 @@ func _test_catalog_consistency(t: RefCounted) -> void:
 		"hull_below_ratio": 0.5,
 		"fires_remaining_at_most": 2,
 		"has_broken_own": true,
+		"has_exhausted_own": true,
+		"has_other_own": true,
+		"event_field_min": {"field": "amount", "value": 3},
+		"enemy_overheat_at_least": 5,
+		"enemy_fracture_ratio_at_least": 0.5,
+		"designated_corrosion_at_least": 4,
 		"own_ship": true,
 		"enemy_ship": true,
 	}

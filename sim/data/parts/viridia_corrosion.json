@@ -1,0 +1,614 @@
+{
+  "_comment": "VC 부식 대사 — 적층 → 적 발동으로 Corrosion 피해 → 실제 Repair → 부여량 성장. 병목: 적이 행동하지 않거나 아군이 만피이면 성장 재료가 끊긴다.",
+  "archetype": "VC",
+  "parts": [
+    {
+      "_note": "VC01 신규. 빠른 작은 적층과 낮은 직접 피해. RC02보다 한 번의 부식량은 작다.",
+      "id": "acid_tentacle",
+      "name": "산성 촉수",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "archetype": "VC",
+      "keywords": [
+        "caustic",
+        "damage",
+        "corrosion"
+      ],
+      "active": {
+        "cooldown": 3.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "caustic",
+            "amount": 2
+          },
+          {
+            "op": "apply_corrosion",
+            "target": "designated_enemy",
+            "stacks": 1
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "caustic",
+          "damage",
+          "corrosion"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 2
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "caustic",
+                "amount": 1
+              },
+              {
+                "op": "apply_corrosion",
+                "target": "designated_enemy",
+                "stacks": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VC02 신규. 넓게 깔아 적 행동을 수익화한다. 적 파츠가 적으면 효율이 준다.",
+      "id": "corrosive_sporangium",
+      "name": "부식 포자낭",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "archetype": "VC",
+      "keywords": [
+        "corrosion"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "apply_corrosion",
+            "target": "all_enemy_active",
+            "stacks": 1
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "corrosion"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 4
+            },
+            "do": [
+              {
+                "op": "apply_corrosion",
+                "target": "all_enemy_active",
+                "stacks": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VC03 신규. 적 행동을 회복으로 전환한다. 만피·느린 적에서는 유효 회복 사건이 적다 — 회복 0은 성장 재료가 아니다.",
+      "id": "metabolic_absorption",
+      "name": "대사 흡수막",
+      "faction": "viridia",
+      "base_role": "defense",
+      "archetype": "VC",
+      "keywords": [
+        "repair",
+        "corrosion"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "corrosion_ticked",
+            "where": {
+              "enemy_ship": true,
+              "event_field_min": {
+                "field": "hull_damage",
+                "value": 1
+              },
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair",
+          "corrosion"
+        ],
+        "triggers": [
+          {
+            "on": "corrosion_applied",
+            "where": {
+              "enemy_ship": true,
+              "source_is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VC04 신규. 즉시 회복을 포기하고 여러 회복 사건을 예약한다. Regen 1/6초는 2·4·6초에 1씩 — 부여마다 자기 시계다 (기획서 §3.2.5).",
+      "id": "culture_slime_sac",
+      "name": "배양 점액낭",
+      "faction": "viridia",
+      "base_role": "defense",
+      "archetype": "VC",
+      "keywords": [
+        "regen",
+        "repair"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "apply_regen",
+            "amount": 1,
+            "duration": 6.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "regen",
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "apply_regen",
+                "amount": 1,
+                "duration": 4.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VC05 신규. 회복을 적층 성장으로 변환한다. 시작 부식이 약하고 AUGMENT는 준비 전에는 0이다.",
+      "id": "adaptive_venom_gland",
+      "name": "적응성 독샘",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "archetype": "VC",
+      "keywords": [
+        "repair",
+        "corrosion",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "apply_corrosion",
+            "target": "designated_enemy",
+            "stacks": 1,
+            "plus_growth": "self_corrosion"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "repaired",
+            "where": {
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_corrosion",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair",
+          "corrosion",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "apply_corrosion",
+                "target": "designated_enemy",
+                "stacks": 0,
+                "plus_growth": "aug_corrosion"
+              }
+            ]
+          },
+          {
+            "on": "repaired",
+            "where": {
+              "every_nth_occurrence": 6
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_corrosion",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VC06 신규. 적 행동을 아군 속도로 돌린다. 적을 Stasis로 묶는 전략과는 긴장 관계다 — 멈춘 적은 부식 피해도 내지 않는다.",
+      "id": "acid_neural_net",
+      "name": "산성 신경망",
+      "faction": "viridia",
+      "base_role": "system",
+      "archetype": "VC",
+      "keywords": [
+        "corrosion",
+        "accelerate"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "corrosion_ticked",
+            "where": {
+              "enemy_ship": true,
+              "event_field_min": {
+                "field": "hull_damage",
+                "value": 1
+              },
+              "every_nth_occurrence": 4
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "slowest_other_own",
+                "duration": 2.0
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "corrosion",
+          "accelerate"
+        ],
+        "triggers": [
+          {
+            "on": "corrosion_applied",
+            "where": {
+              "enemy_ship": true,
+              "source_is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "host",
+                "duration": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VC07 신규. 큰 피해보다 반복 부식 전투에 적응한다. 초반에는 RF03보다 약하다.",
+      "id": "acid_proof_membrane",
+      "name": "내산 증식막",
+      "faction": "viridia",
+      "base_role": "defense",
+      "archetype": "VC",
+      "keywords": [
+        "repair",
+        "corrosion",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "repair",
+            "amount": 2,
+            "plus_growth": "self_repair"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "corrosion_ticked",
+            "where": {
+              "enemy_ship": true,
+              "event_field_min": {
+                "field": "hull_damage",
+                "value": 1
+              },
+              "every_nth_occurrence": 4
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_repair",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair",
+          "corrosion",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 2
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 1,
+                "plus_growth": "aug_repair"
+              }
+            ]
+          },
+          {
+            "on": "corrosion_ticked",
+            "where": {
+              "enemy_ship": true,
+              "event_field_min": {
+                "field": "hull_damage",
+                "value": 1
+              },
+              "every_nth_occurrence": 6
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_repair",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VC08 신규. 느린 두 번의 Caustic 출력. VG01보다 한 번의 피해가 크지만 주기가 길다.",
+      "id": "bipolar_stinger",
+      "name": "쌍극 독침",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "archetype": "VC",
+      "keywords": [
+        "caustic",
+        "damage",
+        "multi_fire"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "caustic",
+            "amount": 3
+          },
+          {
+            "op": "multi_fire",
+            "times": 1
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "caustic",
+          "damage"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 2
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "caustic",
+                "amount": 3
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VC09 신규. 적층을 생존으로 전환한다. 회복할수록 적에게 남는 부식 피해를 포기한다 — RC09와 같은 거래이고 얻는 것만 다르다.",
+      "id": "acid_digest_organ",
+      "name": "산분해 배양기관",
+      "faction": "viridia",
+      "base_role": "defense",
+      "archetype": "VC",
+      "keywords": [
+        "regen",
+        "corrosion",
+        "repair"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "require": {
+          "designated_corrosion_at_least": 2
+        },
+        "on_fire": [
+          {
+            "op": "cleanse_corrosion",
+            "target": "designated_enemy",
+            "stacks": 2
+          },
+          {
+            "op": "apply_regen",
+            "amount": 2,
+            "duration": 4.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair",
+          "corrosion"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "cleanse_corrosion",
+                "target": "designated_enemy",
+                "stacks": 1
+              },
+              {
+                "op": "repair",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VC10 신규. 회복 **횟수**가 아니라 **유효 회복 총량**에 보상한다 — 작은 틱만 빠른 조합에서는 VG07보다 느리게 성장한다.",
+      "id": "hemacid_ejector",
+      "name": "혈산 분비포",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "archetype": "VC",
+      "keywords": [
+        "caustic",
+        "damage",
+        "repair",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "caustic",
+            "amount": 4,
+            "plus_growth": "self_caustic"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "repaired",
+            "where": {
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 10
+              }
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_caustic",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "caustic",
+          "damage",
+          "repair",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "caustic",
+                "amount": 0,
+                "plus_growth": "aug_caustic"
+              }
+            ]
+          },
+          {
+            "on": "repaired",
+            "where": {
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 15
+              }
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_caustic",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

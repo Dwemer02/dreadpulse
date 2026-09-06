@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 150
+const EXPECTED_CHECKS := 154
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -473,13 +473,23 @@ func _test_growth(t: RefCounted) -> void:
 	t.eq(Actions.amount_of({"amount": 0, "plus_growth": "none"}, ctx), 0,
 		"없는 stat은 0으로 읽는다")
 
-	# 적 상태 적층 비례분은 성장과 다르다 — 지금 이 순간의 적 상태를 읽는다
+	# 적 상태 적층 비례분(scale)은 성장과 다르다 — 지금 이 순간의 적 상태를 읽는다
 	foe.overheat_stacks = 4
-	t.eq(Actions.amount_of({"amount": 4, "plus_per_enemy_overheat": 1}, ctx), 8,
+	t.eq(Actions.amount_of({"amount": 4, "scale": {"of": "enemy_overheat", "per": 1}}, ctx), 8,
 		"적 과열 적층만큼 더해진다")
 	foe.overheat_stacks = 0
-	t.eq(Actions.amount_of({"amount": 4, "plus_per_enemy_overheat": 1}, ctx), 4,
+	t.eq(Actions.amount_of({"amount": 4, "scale": {"of": "enemy_overheat", "per": 1}}, ctx), 4,
 		"적층이 사라지면 함께 줄어든다 (성장과 다른 점)")
+
+	# 분모가 데이터에 있어야 하는 이유: 같은 축을 서로 다른 환율로 쓰는 것이
+	# RC07(/1) · VE10(/4) · AE05(/2)의 유일한 차별점이다.
+	foe.fracture = 9
+	t.eq(Actions.amount_of({"amount": 3, "scale": {"of": "enemy_fracture", "per": 4}}, ctx), 5,
+		"파열 9를 4로 나눈 몫 2가 더해진다 (정수 나눗셈)")
+	t.eq(Actions.amount_of({"amount": 3, "scale": {"of": "enemy_fracture", "per": 2}}, ctx), 7,
+		"같은 적층도 분모가 작으면 더 크게 환산된다")
+	t.eq(Actions.amount_of({"amount": 3, "scale": {"of": "no_such_source", "per": 1}}, ctx), 3,
+		"알 수 없는 원천은 0으로 닫는다")
 
 func _test_where_skip(t: RefCounted) -> void:
 	var sim: RefCounted = FakeSim.new()
@@ -586,7 +596,9 @@ func _test_delay(t: RefCounted) -> void:
 	t.check(alive_y.broken, "새로 파손된 다른 파츠(alive_y)는 건드리지 않는다")
 
 func _test_vocabulary(t: RefCounted) -> void:
-	t.eq(Actions.OPS.size(), 24, "op 어휘는 24종 (charge·grow 추가, reduce_cooldown 제거)")
+	t.eq(Actions.OPS.size(), 27, "op 어휘는 27종 (cleanse_overheat·destroy_self·shorten_cooldown 추가)")
+	t.check(not Actions.OWN_ONLY_OPS.has("cleanse_corrosion"),
+		"cleanse_corrosion은 적 파츠를 대상으로 할 수 있다 — 적층을 현재 이득으로 바꾸는 거래다")
 	t.check(not Actions.OPS.has("reduce_cooldown"), "reduce_cooldown은 charge로 대체됐다")
 	t.check(Actions.OPS.has("charge"), "charge는 어휘에 있다")
 	t.check(Actions.OPS.has("grow"), "grow는 어휘에 있다")

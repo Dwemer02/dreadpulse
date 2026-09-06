@@ -1,0 +1,585 @@
+{
+  "_comment": "VE 생체 방전 — Regen·가속 → Fracture 공급 → 붕괴. 병목: Fracture 공급은 많아도 높은 Hull을 낮출 직접 피해가 제한된다. Charge는 이 10종에 넣지 않아 Aeonic과 작동 방식을 구분한다.",
+  "archetype": "VE",
+  "parts": [
+    {
+      "_note": "VE01 신규. 빠른 작은 축적. 직접 피해가 없어 초반 생존 압박을 줄이지 못한다.",
+      "id": "fracture_cilia",
+      "name": "균열 섬모",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "archetype": "VE",
+      "keywords": [
+        "fracture"
+      ],
+      "active": {
+        "cooldown": 2.0,
+        "on_fire": [
+          {
+            "op": "apply_fracture",
+            "amount": 1
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "fracture"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 2
+            },
+            "do": [
+              {
+                "op": "apply_fracture",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VE02 신규. 작은 Energy 발동 두 번. AUGMENT는 첫 발동에 0이지만 두 번째까지 누적하면 AH01의 매 발동 2를 앞선다 — 첫 피해와 누적 출력의 교환이다.",
+      "id": "bipolar_discharge_sac",
+      "name": "쌍극 방전낭",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "archetype": "VE",
+      "keywords": [
+        "energy",
+        "damage",
+        "multi_fire"
+      ],
+      "active": {
+        "cooldown": 3.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "energy",
+            "amount": 2
+          },
+          {
+            "op": "multi_fire",
+            "times": 1
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy",
+          "damage"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 2
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "energy",
+                "amount": 5
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VE03 신규. 회복을 통해 적층한다. **이 파츠 출처의** 재생만 센다 — 재생 사건이 부여별로 나뉘고 slot을 싣기 때문에 가능하다 (기획서 §3.2.5). 만피에서는 Fracture도 만들지 못한다.",
+      "id": "luminous_regen_sac",
+      "name": "발광 재생낭",
+      "faction": "viridia",
+      "base_role": "defense",
+      "archetype": "VE",
+      "keywords": [
+        "repair",
+        "regen",
+        "fracture"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "apply_regen",
+            "amount": 1,
+            "duration": 6.0
+          }
+        ],
+        "triggers": [
+          {
+            "on": "repaired",
+            "where": {
+              "event_field": {
+                "field": "source",
+                "equals": "regen"
+              },
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "apply_fracture",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "regen",
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "apply_regen",
+                "amount": 1,
+                "duration": 2.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VE04 신규. **부여**가 속도가 된다 — Regen 틱 자체는 부여 사건이 아니다. 긴 재생 하나보다 짧은 재생을 자주 거는 쪽이 이 파츠를 돌린다.",
+      "id": "ion_ganglion",
+      "name": "이온 신경총",
+      "faction": "viridia",
+      "base_role": "system",
+      "archetype": "VE",
+      "keywords": [
+        "regen",
+        "accelerate",
+        "repair"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "regen_applied",
+            "where": {
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "slowest_other_own",
+                "duration": 3.0
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "regen",
+          "accelerate",
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "regen_applied",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "host",
+                "duration": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VE05 신규. 가속 아래 작은 적층을 반복한다. 가속 없이는 VE01보다 공급 빈도·효율이 낮다.",
+      "id": "resonant_fiber_cluster",
+      "name": "공진 섬유총",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "archetype": "VE",
+      "keywords": [
+        "fracture",
+        "multi_fire"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "apply_fracture",
+            "amount": 2
+          },
+          {
+            "op": "multi_fire",
+            "times": 1,
+            "where": {
+              "is_accelerated": true
+            }
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "fracture"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "apply_fracture",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VE06 신규. 회복 이력을 피해 예방으로 옮긴다. Shield가 Hull 피해를 막으면 이후 회복 성장이 느려질 수 있다 — 자기 억제가 이 파츠의 대가다.",
+      "id": "dielectric_accumulator",
+      "name": "유전 축전막",
+      "faction": "viridia",
+      "base_role": "defense",
+      "archetype": "VE",
+      "keywords": [
+        "energy_shield",
+        "repair",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "gain_shield",
+            "amount": 3,
+            "plus_growth": "self_shield"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "repaired",
+            "where": {
+              "every_nth_occurrence": 4
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_shield",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy_shield",
+          "repair",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "gain_shield",
+                "amount": 0,
+                "plus_growth": "aug_shield"
+              }
+            ]
+          },
+          {
+            "on": "repaired",
+            "where": {
+              "every_nth_occurrence": 6
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_shield",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VE07 신규. 작은 에너지 적층을 가속으로 되돌린다. 지속시간이 짧고 가속은 합산되지 않으므로 (기획서 §3.2.8) 외부 공급이 계속 필요하다.",
+      "id": "fracture_sensor_node",
+      "name": "균열 감응절",
+      "faction": "viridia",
+      "base_role": "system",
+      "archetype": "VE",
+      "keywords": [
+        "fracture",
+        "accelerate"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "fracture_applied",
+            "where": {
+              "enemy_ship": true,
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 6
+              }
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "slowest_other_own",
+                "duration": 1.0
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "fracture",
+          "accelerate"
+        ],
+        "triggers": [
+          {
+            "on": "fracture_applied",
+            "where": {
+              "enemy_ship": true,
+              "source_is_host": true,
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 5
+              }
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "host",
+                "duration": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VE08 신규. **지속 회복형** 장기 공격. 즉시 Repair만 있는 빌드에서는 성장하지 않는다 — VG07과 입력이 다르다.",
+      "id": "biocurrent_emitter",
+      "name": "생전류 방사기",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "archetype": "VE",
+      "keywords": [
+        "energy",
+        "damage",
+        "repair",
+        "regen",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "energy",
+            "amount": 4,
+            "plus_growth": "self_energy"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "repaired",
+            "where": {
+              "event_field": {
+                "field": "source",
+                "equals": "regen"
+              },
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_energy",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy",
+          "damage",
+          "repair",
+          "regen",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "energy",
+                "amount": 0,
+                "plus_growth": "aug_energy"
+              }
+            ]
+          },
+          {
+            "on": "repaired",
+            "where": {
+              "event_field": {
+                "field": "source",
+                "equals": "regen"
+              },
+              "every_nth_occurrence": 5
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_energy",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VE09 신규. 짧고 굵은 회복과 부식 정리. 긴 쿨타임·낮은 회복 횟수를 지불한다.",
+      "id": "insulating_slime_membrane",
+      "name": "절연 점액막",
+      "faction": "viridia",
+      "base_role": "defense",
+      "archetype": "VE",
+      "keywords": [
+        "regen",
+        "corrosion",
+        "repair"
+      ],
+      "active": {
+        "cooldown": 8.0,
+        "on_fire": [
+          {
+            "op": "apply_regen",
+            "amount": 2,
+            "duration": 4.0
+          },
+          {
+            "op": "cleanse_corrosion",
+            "target": "most_corroded_own",
+            "stacks": 2
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "regen",
+          "corrosion",
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "regen_applied",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "cleanse_corrosion",
+                "target": "host",
+                "stacks": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VE10 신규. 순수 빌드에도 약한 붕괴 보조를 준다. 분모 4는 AE05의 2보다 환율이 나쁘다 — 그것이 팩션 차이다.",
+      "id": "flash_contraction_cannon",
+      "name": "섬광 수축포",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "archetype": "VE",
+      "keywords": [
+        "energy",
+        "damage",
+        "fracture"
+      ],
+      "active": {
+        "cooldown": 8.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "energy",
+            "amount": 3,
+            "scale": {
+              "of": "enemy_fracture",
+              "per": 4
+            }
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy",
+          "damage",
+          "fracture"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "energy",
+                "amount": 1,
+                "scale": {
+                  "of": "enemy_fracture",
+                  "per": 8
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

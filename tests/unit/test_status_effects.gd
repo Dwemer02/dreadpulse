@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 48
+const EXPECTED_CHECKS := 52
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -78,14 +78,15 @@ func _test_corrosion_cleanse_by_repair(t: RefCounted) -> void:
 	near_full.repair(100)
 	t.eq(near_full.pending_cleanse_repair, 4, "상한을 넘긴 몫은 세지 않는다")
 
-	# 재생도 같은 경로를 지난다 — repair()를 통과하기 때문이다
+	# 재생도 같은 경로를 지난다 — repair()를 통과하기 때문이다.
+	# 주기는 2초이므로 6초짜리 재생은 2·4·6초에 세 번 회복한다 (기획서 §3.2.5).
 	var regen: RefCounted = _ship()
 	regen.take_damage(100)
-	regen.add_regen(6, K.secs_to_ticks(5.0))
+	regen.add_regen(6, K.secs_to_ticks(6.0))
 	for tick: int in range(1, 121):
 		regen.advance_effects(tick)
-	t.check(regen.pending_cleanse_repair >= 30,
-		"재생도 부식 제거에 기여한다 (%d)" % regen.pending_cleanse_repair)
+	t.eq(regen.pending_cleanse_repair, 18,
+		"재생 6/6초는 세 번 회복하고 그 전부가 부식 제거에 기여한다")
 
 func _test_corrosion_dies_with_part(t: RefCounted) -> void:
 	var s: RefCounted = _ship()
@@ -204,11 +205,15 @@ func _test_stasis(t: RefCounted) -> void:
 		ind.advance()
 	t.eq(ind.indestructible_ticks, ind_before, "정지 중에는 파괴 불가 타이머도 멈춘다")
 
-	# 같은 종류는 시간 합산 — 가속/둔화와 같은 규칙
+	# 같은 종류는 큰 쪽으로 갱신 — 가속/둔화와 같은 규칙 (기획서 §3.2.7~8).
+	# 재부여는 **최초 진입이 아니다**. 이것을 구별하지 못하면 정지를 계속 갱신하는
+	# 조합이 "Stasis에 처음 들어갈 때 Charge"를 무한히 만든다.
 	var stack: RefCounted = _ship().get_part("weapon_1")
-	stack.apply_stasis(20)
-	stack.apply_stasis(30)
-	t.eq(stack.stasis_ticks, 50, "정지는 시간이 합산된다")
+	t.check(stack.apply_stasis(20), "처음 정지에 들어가면 최초 진입이다")
+	t.check(not stack.apply_stasis(30), "이미 정지 중이면 최초 진입이 아니다")
+	t.eq(stack.stasis_ticks, 30, "정지는 긴 쪽으로 갱신된다")
+	t.check(not stack.apply_stasis(10), "짧은 재부여도 최초 진입이 아니다")
+	t.eq(stack.stasis_ticks, 30, "더 짧은 재부여는 남은 시간을 줄이지 않는다")
 
 	# 파손이 정지보다 강하다 — 파손 중에는 정지 시간도 흐르지 않으므로 복구 시 함께 풀린다
 	var frozen: RefCounted = _ship().get_part("weapon_1")

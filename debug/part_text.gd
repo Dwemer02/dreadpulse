@@ -42,6 +42,10 @@ static func detail(def: Dictionary) -> String:
 		lines.append("[ACTIVE] 쿨타임 %s초%s" % [_num(active["cooldown"]), cost])
 		if active.has("fire_limit"):
 			lines.append("  전투당 %d회만 발동" % int(active["fire_limit"]))
+		# 발동 전제를 감추면 "쿨타임이 찼는데 왜 안 쏘는가"를 화면에서 알 수 없다.
+		var need: String = condition_text(active.get("require", null))
+		if need != "":
+			lines.append("  전제: %s (아니면 다음 주기까지 대기)" % need)
 		for item: Variant in active.get("on_fire", []):
 			lines.append("  · %s" % action_line(item as Dictionary))
 	else:
@@ -103,6 +107,10 @@ static func _event_phrase(type: String) -> String:
 		"multi_fire_queued": return "추가 발동이 예약될 때"
 		"part_destroyed": return "파츠가 파손될 때"
 		"part_restored": return "파츠가 복구될 때"
+		"stasis_ended": return "정지가 풀릴 때"
+		"overheat_cleansed": return "과열이 제거될 때"
+		"cooldown_shortened": return "쿨타임이 줄어들 때"
+		"regen_ended": return "재생이 끊길 때"
 		"reinforce_gained": return "보강을 얻을 때"
 		"reinforce_consumed": return "보강이 소모될 때"
 		"break_prevented": return "파손이 유예될 때"
@@ -131,6 +139,12 @@ static func _one_condition(key: String, value: Variant) -> String:
 		"enemy_ship": return "적함에서" if bool(value) else "적함이 아닌 곳에서"
 		"is_accelerated": return "가속 중일 때" if bool(value) else "가속 중이 아닐 때"
 		"has_broken_own": return "아군에 파손 파츠가 있을 때"
+		"has_exhausted_own": return "아군에 소진된 파츠가 있을 때"
+		"has_other_own": return "희생할 다른 아군 파츠가 있을 때"
+		"enemy_overheat_at_least": return "적 과열 %d 이상" % int(value)
+		"enemy_fracture_ratio_at_least":
+			return "적 파열이 선체의 %d%% 이상" % int(round(float(value) * 100.0))
+		"designated_corrosion_at_least": return "지정 적 파츠의 부식 %d 이상" % int(value)
 		"resonance_at_least": return "공명 %d 이상" % int(value)
 		"material_at_least": return "자재 %d 이상" % int(value)
 		"hull_below_ratio": return "선체 %d%% 미만" % int(round(float(value) * 100.0))
@@ -146,14 +160,35 @@ static func _one_condition(key: String, value: Variant) -> String:
 				return "누적 조건"
 			var spec: Dictionary = value
 			return "%s 누적 %d마다" % [str(spec.get("field", "amount")), int(spec.get("n", 0))]
+		"event_field_min":
+			if not (value is Dictionary):
+				return "이벤트 최소값 조건"
+			var spec3: Dictionary = value
+			return "%s가 %d 이상일 때" % [str(spec3.get("field", "")), int(spec3.get("value", 1))]
 		"event_field":
 			if not (value is Dictionary):
 				return "이벤트 필드 조건"
 			var spec2: Dictionary = value
-			return "%s가 %s일 때" % [str(spec2.get("field", "")), str(spec2.get("equals", ""))]
+			return _field_phrase(str(spec2.get("field", "")), spec2.get("equals", null))
 		"source_faction": return "%s 파츠가 일으켰을 때" % str(value)
 		"source_keyword": return "%s 키워드 파츠가 일으켰을 때" % str(value)
 	return _unknown("조건", key)
+
+## 자주 쓰는 event_field 조합은 사람이 읽는 말로 바꾼다.
+## "first_entry가 true일 때"는 틀리지 않지만 파츠 설명으로는 쓸 수 없는 문장이다.
+static func _field_phrase(field: String, equals: Variant) -> String:
+	match field:
+		"first_entry":
+			return "처음 들어갈 때" if bool(equals) else "이미 걸려 있을 때"
+		"source":
+			return "재생에 의한 회복일 때" if str(equals) == "regen" else "직접 회복일 때"
+		"cause":
+			if str(equals) == "fired":
+				return "발동으로 줄어들 때"
+			return "사유가 %s일 때" % str(equals)
+		"remaining":
+			return "남은 발동이 %s가 될 때" % str(equals)
+	return "%s가 %s일 때" % [field, str(equals)]
 
 # --- 액션 ---
 
@@ -165,15 +200,15 @@ static func action_line(action: Dictionary) -> String:
 	match op:
 		"deal_damage":
 			line = "%s 피해 %s" % [_type_text(str(action.get("type", K.DEFAULT_ATTACK_TYPE))), amount]
-			if action.has("plus_per_enemy_overheat"):
-				line += " + 적 과열 적층만큼"
+			line += _scale_text(action)
 		"gain_shield": line = "보호막 +%s" % amount
 		"repair": line = "수리 %s" % amount
 		"apply_regen": line = "재생 %s (%s초)" % [amount, _num(action.get("duration", 0))]
 		"apply_overheat": line = "적에게 과열 %s" % _amount_text(action, "stacks")
+		"cleanse_overheat": line = "적 과열 %d 제거" % int(action.get("stacks", 0))
 		"apply_corrosion": line = "%s에 부식 %s" % [target, _amount_text(action, "stacks")]
 		"cleanse_corrosion": line = "%s의 부식 %s 제거" % [target, _amount_text(action, "stacks")]
-		"apply_fracture": line = "적에게 파열 %s" % amount
+		"apply_fracture": line = "적에게 파열 %s%s" % [amount, _scale_text(action)]
 		"apply_stasis": line = "%s를 %s초 정지" % [target, _num(action.get("duration", 0))]
 		"accelerate": line = "%s를 %s초 가속" % [target, _num(action.get("duration", 0))]
 		"slow": line = "%s를 %s초 둔화" % [target, _num(action.get("duration", 0))]
@@ -189,6 +224,10 @@ static func action_line(action: Dictionary) -> String:
 			var d: float = float(action.get("duration", 0.0))
 			line = "%s를 %s 파괴 불가" % [target, "영구" if d < 0.0 else "%s초" % _num(d)]
 		"destroy_part": line = "%s 파괴" % target
+		"destroy_self": line = "이번 발동이 끝난 뒤 자신을 파괴"
+		"shorten_cooldown":
+			line = "%s의 기본 쿨타임 %s초 감소 (최저 %s초)" % [
+				target, _num(action.get("seconds", 0)), _num(action.get("min", 1))]
 		"restore_part": line = "%s 복구" % target
 		"reinforce": line = "%s에 보강 +%d" % [target, int(action.get("stacks", 0))]
 		"gain_material": line = "자재 +%s" % amount
@@ -218,6 +257,23 @@ static func _amount_text(action: Dictionary, key: String) -> String:
 		return "성장분만큼"
 	return "%d + 성장분" % base
 
+## 적 상태 적층에 비례하는 몫. 분모를 적지 않으면 "적 파열만큼"과
+## "적 파열의 1/4만큼"이 화면에서 같아 보인다 — 그 둘이 다른 파츠의 정체성이다.
+static func _scale_text(action: Dictionary) -> String:
+	if not (action.get("scale", null) is Dictionary):
+		return ""
+	var spec: Dictionary = action["scale"]
+	var per: int = maxi(1, int(spec.get("per", 1)))
+	var source: String = ""
+	match str(spec.get("of", "")):
+		"enemy_overheat": source = "적 과열"
+		"enemy_fracture": source = "적 파열"
+		"designated_corrosion": source = "지정 적 파츠의 부식"
+		_: return " " + _unknown("비례 원천", str(spec.get("of", "")))
+	if per == 1:
+		return " + %s만큼" % source
+	return " + %s를 %d로 나눈 몫" % [source, per]
+
 static func _target_text(action: Dictionary) -> String:
 	match str(action.get("target", "")):
 		"": return "자함"
@@ -228,6 +284,12 @@ static func _target_text(action: Dictionary) -> String:
 		"slowest_own": return "가장 느린 아군 파츠"
 		"slowest_other_own": return "가장 느린 다른 아군 파츠"
 		"random_broken_own": return "무작위 파손 파츠"
+		"oldest_broken_own": return "가장 오래 파손된 아군 파츠"
+		"most_corroded_own": return "부식이 가장 높은 아군 파츠"
+		"exhausted_other_own": return "소진된 다른 아군 파츠"
+		"longest_base_cooldown_other_own": return "기본 쿨타임이 가장 긴 다른 아군 파츠"
+		"event_part": return "그 파츠"
+		"random_other_own_except_event": return "사건 원인을 뺀 무작위 다른 아군 파츠"
 		"all_own_active": return "모든 아군 파츠"
 		"all_own_weapons": return "모든 아군 무기"
 		"all_own_limited": return "발동 제한이 걸린 아군 파츠 전부"
@@ -235,6 +297,7 @@ static func _target_text(action: Dictionary) -> String:
 		"random_enemy_active": return "무작위 적 파츠"
 		"all_enemy_active": return "모든 적 파츠"
 		"slowest_enemy": return "가장 느린 적 파츠"
+		"designated_enemy": return "지정 적 파츠"
 	return _unknown("대상", str(action.get("target", "")))
 
 static func _type_text(attack_type: String) -> String:

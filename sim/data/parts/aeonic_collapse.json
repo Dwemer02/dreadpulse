@@ -1,0 +1,572 @@
+{
+  "_comment": "AE 예정된 붕괴 — Fracture → 직접 피해 → Collapse → Charge. 병목: Fracture 공급과 큰 직접 피해에 긴 주기가 있다. Collapse 이후 보상 파츠는 넣지 않았다 (기획서 §7.3).",
+  "archetype": "AE",
+  "parts": [
+    {
+      "_note": "AE01 신규. 느리고 굵은 축적. VE01보다 사건은 늦지만 총량이 크다.",
+      "id": "fracture_engraver",
+      "name": "균열 각인기",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AE",
+      "keywords": [
+        "fracture"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "apply_fracture",
+            "amount": 5
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "fracture"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "apply_fracture",
+                "amount": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AE02 신규. 직접 피해와 축적을 함께 진행한다. 각 기능만 보면 전문 파츠보다 약하다.",
+      "id": "quantum_cutting_lance",
+      "name": "양자 절단창",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AE",
+      "keywords": [
+        "energy",
+        "damage",
+        "fracture"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "energy",
+            "amount": 7
+          },
+          {
+            "op": "apply_fracture",
+            "amount": 2
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy",
+          "damage",
+          "fracture"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "energy",
+                "amount": 2
+              },
+              {
+                "op": "apply_fracture",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AE03 신규. AH05보다 큰 선차입과 긴 공백. AUGMENT의 Fire Limit 3은 **그 증강 효과만** 3회라는 뜻이므로 트리거의 max_fires로 표현한다 — 숙주 본체의 발동 횟수와는 다른 축이고 fires_changed를 만들지 않는다.",
+      "id": "future_withdrawal",
+      "name": "미래 인출기",
+      "faction": "aeonic",
+      "base_role": "system",
+      "archetype": "AE",
+      "keywords": [
+        "stasis",
+        "charge"
+      ],
+      "active": {
+        "cooldown": 8.0,
+        "on_fire": [
+          {
+            "op": "charge",
+            "target": "slowest_other_own",
+            "seconds": 3.0
+          },
+          {
+            "op": "apply_stasis",
+            "target": "self",
+            "duration": 2.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "stasis",
+          "charge",
+          "fire_limit"
+        ],
+        "triggers": [
+          {
+            "on": "stasis_ended",
+            "where": {
+              "is_host": true
+            },
+            "max_fires": 3,
+            "do": [
+              {
+                "op": "charge",
+                "target": "slowest_other_own",
+                "seconds": 2.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AE04 신규. Hull을 크게 낮추는 마무리. 첫 발동이 느리고 작은 적층을 직접 만들지 않는다.",
+      "id": "severance_beam",
+      "name": "단절 광선포",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AE",
+      "keywords": [
+        "energy",
+        "damage",
+        "stasis"
+      ],
+      "active": {
+        "cooldown": 10.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "energy",
+            "amount": 18
+          },
+          {
+            "op": "apply_stasis",
+            "target": "self",
+            "duration": 1.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy",
+          "damage",
+          "stasis"
+        ],
+        "triggers": [
+          {
+            "on": "stasis_ended",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "energy",
+                "amount": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AE05 신규. VE10보다 좋은 환율(분모 2)을 긴 자기 정지로 산다. 축적이 없으면 매우 약하다.",
+      "id": "fracture_focus_lance",
+      "name": "균열 집중창",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AE",
+      "keywords": [
+        "energy",
+        "damage",
+        "fracture",
+        "stasis"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "energy",
+            "amount": 3,
+            "scale": {
+              "of": "enemy_fracture",
+              "per": 2
+            }
+          },
+          {
+            "op": "apply_stasis",
+            "target": "self",
+            "duration": 3.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy",
+          "damage",
+          "fracture"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 2
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "energy",
+                "amount": 1,
+                "scale": {
+                  "of": "enemy_fracture",
+                  "per": 6
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AE06 신규. 폭발 **이전**의 마지막 간격을 줄인다. 붕괴 이후 보상을 엔진 중심에 두지 않는다 (기획서 §7.3) — 붕괴는 대개 전투를 끝낸다. 조건이 안 되면 다음 주기까지 기다린다.",
+      "id": "threshold_observer",
+      "name": "임계 관측기",
+      "faction": "aeonic",
+      "base_role": "system",
+      "archetype": "AE",
+      "keywords": [
+        "fracture",
+        "charge"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "require": {
+          "enemy_fracture_ratio_at_least": 0.5
+        },
+        "on_fire": [
+          {
+            "op": "charge",
+            "target": "slowest_other_own",
+            "seconds": 2.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "fracture",
+          "stasis"
+        ],
+        "triggers": [
+          {
+            "on": "stasis_ended",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "apply_fracture",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AE07 신규. Charge를 축적 성장으로 바꾼다. 충전 사건은 **실제로 1초 이상 당겼을 때만** 나므로 (기획서 §3.2.7) 거의 찬 파츠를 계속 미는 것으로는 성장하지 않는다.",
+      "id": "destined_engraver",
+      "name": "예정 각인포",
+      "faction": "aeonic",
+      "base_role": "weapon",
+      "archetype": "AE",
+      "keywords": [
+        "fracture",
+        "charge",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "apply_fracture",
+            "amount": 2,
+            "plus_growth": "self_fracture"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "charge_applied",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_fracture",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "fracture",
+          "charge",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "apply_fracture",
+                "amount": 0,
+                "plus_growth": "aug_fracture"
+              }
+            ]
+          },
+          {
+            "on": "charge_applied",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 2
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_fracture",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AE08 신규. 공격 준비가 생존을 키운다. 준비가 끊기면 낮은 초기 방어만 남는다.",
+      "id": "fracture_reflector",
+      "name": "균열 반사막",
+      "faction": "aeonic",
+      "base_role": "defense",
+      "archetype": "AE",
+      "keywords": [
+        "energy_shield",
+        "fracture",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "on_fire": [
+          {
+            "op": "gain_shield",
+            "amount": 4,
+            "plus_growth": "self_shield"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "fracture_applied",
+            "where": {
+              "enemy_ship": true,
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 8
+              }
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_shield",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "energy_shield",
+          "fracture",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "gain_shield",
+                "amount": 0,
+                "plus_growth": "aug_shield"
+              }
+            ]
+          },
+          {
+            "on": "fracture_applied",
+            "where": {
+              "enemy_ship": true,
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 12
+              }
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_shield",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AE09 신규. Charge를 많이 받는 빌드의 부식 부담을 줄인다. 기본 회복 효율은 RF03보다 낮다.",
+      "id": "phase_suture",
+      "name": "위상 봉합기",
+      "faction": "aeonic",
+      "base_role": "defense",
+      "archetype": "AE",
+      "keywords": [
+        "repair",
+        "corrosion",
+        "charge"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "repair",
+            "amount": 4
+          }
+        ],
+        "triggers": [
+          {
+            "on": "charge_applied",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "cleanse_corrosion",
+                "target": "self",
+                "stacks": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair",
+          "charge"
+        ],
+        "triggers": [
+          {
+            "on": "charge_applied",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 2
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "AE10 신규. 자재를 시간을 버는 제어로 바꾼다. 순수 빌드는 자재 공급이 약하고, 적을 멈추면 Corrosion 동료의 수입도 함께 멈춘다.",
+      "id": "fixed_coordinates",
+      "name": "고정 좌표기",
+      "faction": "aeonic",
+      "base_role": "system",
+      "archetype": "AE",
+      "keywords": [
+        "material",
+        "stasis"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "cost": {
+          "material": 2
+        },
+        "on_fire": [
+          {
+            "op": "apply_stasis",
+            "target": "designated_enemy",
+            "duration": 3.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "stasis"
+        ],
+        "triggers": [
+          {
+            "on": "material_spent",
+            "where": {
+              "is_host": true,
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 5
+              }
+            },
+            "do": [
+              {
+                "op": "apply_stasis",
+                "target": "designated_enemy",
+                "duration": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

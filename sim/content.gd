@@ -5,7 +5,8 @@ extends RefCounted
 ## 존재 이유다. 디렉터리를 훑지 않고 명시적 목록을 쓴다 — 나열 순서가 곧 배치 실행 순서
 ## (결정론 계약)이고, 내보낸 빌드에서 res:// 디렉터리 나열은 신뢰할 수 없기 때문이다.
 ##
-## 테스트용 파츠 풀 21종(팩션당 7종)이 들어 있다. 수치와 구성은 전부 잠정이다.
+## 아키타입 9종 × 10 파츠(총 90종)와 Core 3종이 들어 있다. 수치는 전부 잠정이다 —
+## 기획서(TFD_Parts_Audit_and_90_Part_Concepts_v1.0)의 테스트 시작값 그대로다.
 
 const Catalog = preload("res://sim/catalog.gd")
 const BuildLoader = preload("res://sim/build_loader.gd")
@@ -19,10 +20,21 @@ const FRAME_PATHS: Array[String] = [
 	"res://sim/data/frames/skirmish_frame.json",
 	"res://sim/data/frames/boss_frame.json",
 ]
+## 아키타입 9종 × 10 파츠 = 90종 + Core 3종.
+## 파일이 아키타입 단위로 나뉜 이유: 한 파일이 곧 하나의 순수 루프이고, 그 안에서
+## "무엇이 무엇을 먹여주는가"를 한 화면에서 볼 수 있어야 하기 때문이다.
+## 나열 순서가 곧 로드 순서이자 배치 실행 순서다 (결정론 계약).
 const PART_PATHS: Array[String] = [
-	"res://sim/data/parts/reclaimer.json",
-	"res://sim/data/parts/viridia.json",
-	"res://sim/data/parts/aeonic.json",
+	"res://sim/data/parts/cores.json",
+	"res://sim/data/parts/reclaimer_furnace.json",
+	"res://sim/data/parts/reclaimer_acid.json",
+	"res://sim/data/parts/reclaimer_dismantle.json",
+	"res://sim/data/parts/viridia_corrosion.json",
+	"res://sim/data/parts/viridia_discharge.json",
+	"res://sim/data/parts/viridia_growth.json",
+	"res://sim/data/parts/aeonic_collapse.json",
+	"res://sim/data/parts/aeonic_stellar.json",
+	"res://sim/data/parts/aeonic_covenant.json",
 ]
 const RELIC_PATHS: Array[String] = ["res://sim/data/relics/relics.json"]
 

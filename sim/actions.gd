@@ -15,15 +15,19 @@ const OPS: Array[String] = [
 	"charge", "destroy_part", "restore_part", "reinforce", "grow",
 	"gain_material", "spend_material", "gain_resonance", "fire_part", "multi_fire",
 	"apply_corrosion", "cleanse_corrosion", "apply_fracture", "apply_stasis",
+	"cleanse_overheat", "destroy_self", "shorten_cooldown",
 ]
 
 ## 적 파츠 셀렉터를 쓸 수 없는 op. 디버프만 적 파츠를 겨냥할 수 있다 —
 ## GDD §20이 직접 파괴기를 억제하고 있으므로 파괴·복구·강화는 자기 함선 전용이다.
 ## catalog.gd가 저작 시점에 조합을 거부한다.
+## `cleanse_corrosion`은 여기 없다 — 의도적이다. RC09 「산성 추출기」와
+## VC09 「산분해 배양기관」이 **적의 부식을 제거하고 그 대가로 자재·재생을 얻는다**.
+## 미래의 부식 피해를 현재 이득으로 바꾸는 거래이므로 적 대상에 의미가 생겼다.
 const OWN_ONLY_OPS: Array[String] = [
 	"destroy_part", "restore_part", "restore_fires", "reinforce",
-	"make_indestructible", "fire_part", "cleanse_corrosion",
-	"charge", "grow", "multi_fire",
+	"make_indestructible", "fire_part",
+	"charge", "grow", "multi_fire", "shorten_cooldown",
 ]
 
 ## do 블록 하나를 실행한다.
@@ -47,18 +51,42 @@ static func resolve_selectors(block: Array, ctx: Dictionary) -> Dictionary:
 ## 제거됐다. 대신 "파츠 수치 자체가 커진다"를 표현하려면 수치를 읽는 모든 자리가
 ## 같은 규칙을 써야 한다 — 네 군데에 복사하면 반드시 어긋난다.
 ##
-## `plus_per_enemy_overheat`는 성장과 다르다. 성장은 되돌아가지 않는 누적이고
-## 이쪽은 **지금 이 순간의** 적 상태를 읽는다 — 적층이 줄면 함께 줄어든다.
+## `scale`은 성장과 다르다. 성장은 되돌아가지 않는 누적이고 이쪽은 **지금 이 순간의**
+## 상태를 읽는다 — 적층이 줄면 함께 줄어든다.
+##
+## `{"scale": {"of": <원천>, "per": N}}` = 원천 값을 N으로 나눈 몫을 더한다.
+## 분모가 데이터에 있어야 하는 이유: 같은 적층 축을 서로 다른 환율로 쓰는 것이
+## RC07(/1) · VE10(/4) · AE05(/2)의 유일한 차별점이다.
 static func amount_of(action: Dictionary, ctx: Dictionary, key: String = "amount") -> int:
 	var total: int = int(action.get(key, 0))
 	var owner: RefCounted = ctx.get("part", null)
 	if action.has("plus_growth") and owner != null:
 		total += int(owner.growth.get(str(action["plus_growth"]), 0))
-	if action.has("plus_per_enemy_overheat"):
-		var foe: RefCounted = ctx.get("enemy_ship", null)
-		if foe != null:
-			total += foe.overheat_stacks * int(action["plus_per_enemy_overheat"])
+	if action.has("scale"):
+		total += _scaled(action["scale"], ctx)
 	return maxi(0, total)
+
+## `scale.of`가 읽을 수 있는 원천. 카탈로그가 저작 시점에 검증한다 —
+## 오타가 조용히 0이 되면 "적층이 아직 없구나"와 구별되지 않는다.
+const SCALE_SOURCES: Array[String] = [
+	"enemy_overheat", "enemy_fracture", "designated_corrosion",
+]
+
+static func _scaled(spec: Variant, ctx: Dictionary) -> int:
+	if not (spec is Dictionary):
+		return 0
+	var per: int = maxi(1, int((spec as Dictionary).get("per", 1)))
+	var foe: RefCounted = ctx.get("enemy_ship", null)
+	var raw: int = 0
+	match str((spec as Dictionary).get("of", "")):
+		"enemy_overheat":
+			raw = foe.overheat_stacks if foe != null else 0
+		"enemy_fracture":
+			raw = foe.fracture if foe != null else 0
+		"designated_corrosion":
+			var picked: Array = Targeting.resolve("designated_enemy", ctx)
+			raw = (picked[0] as RefCounted).corrosion_stacks if not picked.is_empty() else 0
+	return raw / per
 
 static func run_action(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> void:
 	if action.has("where") and not Conditions.evaluate(action["where"], ctx):
@@ -92,13 +120,25 @@ static func _targets(action: Dictionary, ctx: Dictionary, resolved: Dictionary) 
 
 ## 파손을 시도하고 결과에 맞는 이벤트를 남긴다.
 ## 파괴선 검사(combat_sim)와 횟수 소진도 이 함수를 거친다 — 파손 경로는 하나뿐이다.
-static func break_part(part: RefCounted, ship: RefCounted, cause: String, sim: RefCounted) -> String:
+## source_slot은 "누가 이 파츠를 파괴했는가"다. RD08 「해체용 기폭기」의 AUGMENT가
+## "숙주가 다른 아군 파츠를 Destroy할 때"를 구독하므로, 원인을 싣지 않으면
+## 파괴선·소진·자기 파괴와 구별할 수 없다.
+static func break_part(part: RefCounted, ship: RefCounted, cause: String, sim: RefCounted,
+		source_slot: String = "") -> String:
 	var outcome: String = part.try_break()
 	match outcome:
 		"broken":
+			part.broken_at_tick = sim.tick
+			# 출처가 파괴되면 그 출처가 만든 남은 재생은 종료한다 (기획서 §3.2.5).
+			# 남겨두면 파괴된 파츠가 계속 회복을 만들고, "회복 N회마다" 성장이
+			# 죽은 파츠에서 계속 굴러간다.
+			var ended: int = ship.end_regen_from(part.slot_id)
+			if ended > 0:
+				sim.emit("regen_ended", ship.side, {"slot": part.slot_id, "entries": ended})
 			sim.emit("part_destroyed", ship.side, {
 				"slot": part.slot_id, "part_id": part.part_id,
 				"part_name": part.part_name, "cause": cause,
+				"source_slot": source_slot, "source_ship": ship.side,
 			})
 		"reinforce":
 			sim.emit("reinforce_consumed", ship.side, {
@@ -142,14 +182,23 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 			sim.emit("shield_gained", own.side, {"amount": amount2, "slot": owner_slot})
 
 		"repair":
+			# 실제로 선체가 올라간 경우만 사건이다 (기획서 §3.2.4) —
+			# 만피에서의 수리는 성장 재료가 되지 않는다.
 			var healed: int = own.repair(amount_of(action, ctx))
 			if healed > 0:
-				sim.emit("repaired", own.side, {"amount": healed, "slot": owner_slot})
+				sim.emit("repaired", own.side,
+					{"amount": healed, "slot": owner_slot, "source": "effect"})
 
 		"apply_regen":
+			# 부여마다 독립된 유한 효과다 (기획서 §3.2.5). 출처를 함께 남겨야
+			# VE03의 "이 파츠 출처의 Regen"과 파괴 시 종료가 성립한다.
+			#
+			# triggers_repair: false는 기록된 예외 하나(Viridia Core)를 위한 것이다 —
+			# 그 파츠만 회복을 만들되 repair 사건을 만들지 않는다.
 			var amount3: int = amount_of(action, ctx)
 			var ticks: int = K.secs_to_ticks(float(action.get("duration", 0.0)))
-			own.add_regen(amount3, ticks)
+			own.add_regen(amount3, ticks, owner_slot,
+				bool(action.get("triggers_repair", true)))
 			sim.emit("regen_applied", own.side,
 				{"amount": amount3, "duration": action.get("duration", 0.0), "slot": owner_slot})
 
@@ -164,7 +213,7 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 			})
 
 		"apply_corrosion":
-			var corr: int = maxi(0, int(action.get("stacks", 0)))
+			var corr: int = amount_of(action, ctx, "stacks")
 			if corr > 0:
 				for target: RefCounted in _targets(action, ctx, resolved):
 					target.corrosion_stacks += corr
@@ -188,7 +237,7 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 					})
 
 		"apply_fracture":
-			var frac: int = maxi(0, int(action.get("amount", 0)))
+			var frac: int = amount_of(action, ctx)
 			if frac > 0:
 				foe.add_fracture(frac)
 				# 임계점까지 남은 거리를 함께 실어야 이벤트가 자기서술적이다 —
@@ -203,10 +252,13 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 			var st_ticks: int = K.secs_to_ticks(float(action.get("duration", 0.0)))
 			if st_ticks > 0:
 				for target: RefCounted in _targets(action, ctx, resolved):
-					target.apply_stasis(st_ticks)
+					# first_entry가 없으면 "Stasis에 처음 들어갈 때"(AH06 · AT02)를
+					# 재부여와 구별할 수 없다 — 구별하지 못하면 정지를 계속 갱신하는
+					# 조합이 Charge를 무한히 만든다 (기획서 §3.2.7).
+					var entered: bool = target.apply_stasis(st_ticks)
 					sim.emit("stasis_applied", _side_of(target, own, foe), {
 						"slot": target.slot_id, "duration": action.get("duration", 0.0),
-						"remaining_ticks": target.stasis_ticks,
+						"remaining_ticks": target.stasis_ticks, "first_entry": entered,
 						"source_slot": owner_slot, "source_ship": own.side,
 					})
 
@@ -269,15 +321,21 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 			#
 			# 반드시 이벤트로 남긴다. Aeonic의 성장·변환 파츠가 "충전을 받는 순간"을
 			# 구독하기 때문이다 — 이벤트가 없으면 그 루프 전체가 조용히 성립하지 않는다.
+			# **실제로 1초 이상 당겼을 때만** 사건을 만든다 (기획서 §3.2.7).
+			# 쿨타임이 거의 찬 파츠를 계속 밀어 "충전 수신"을 무한히 찍어내는
+			# 순환을 막는다 — AE07·AH04·AH10이 전부 수신 횟수로 성장한다.
 			var push: int = K.secs_to_ticks(float(action.get("seconds", 0.0))) * K.SPEED_NORMAL
 			if push > 0:
 				for target: RefCounted in _targets(action, ctx, resolved):
 					var before_units: int = target.progress_units
 					target.progress_units = mini(target.cooldown_units,
 						target.progress_units + push)
+					var gained: int = target.progress_units - before_units
+					if gained < K.MIN_CHARGE_UNITS:
+						continue
 					sim.emit("charge_applied", _side_of(target, own, foe), {
 						"slot": target.slot_id, "seconds": action.get("seconds", 0.0),
-						"gained_units": target.progress_units - before_units,
+						"gained_units": gained,
 						"source_slot": owner_slot, "source_ship": own.side,
 					})
 
@@ -296,7 +354,7 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 
 		"destroy_part":
 			for target: RefCounted in _targets(action, ctx, resolved):
-				break_part(target, own, "effect", sim)
+				break_part(target, own, "effect", sim, owner_slot)
 
 		"restore_part":
 			for target: RefCounted in _targets(action, ctx, resolved):
@@ -339,6 +397,36 @@ static func apply(action: Dictionary, ctx: Dictionary, resolved: Dictionary) -> 
 		"fire_part":
 			for target: RefCounted in _targets(action, ctx, resolved):
 				sim.force_fire(target, own, "chain")
+
+		"cleanse_overheat":
+			# 과열은 파츠가 아니라 함선에 쌓인다 — 셀렉터를 쓰지 않고 적함을 본다.
+			var removed: int = foe.cleanse_overheat(int(action.get("stacks", 0)))
+			if removed > 0:
+				sim.emit("overheat_cleansed", foe.side, {
+					"stacks": removed, "total": foe.overheat_stacks,
+					"source_slot": owner_slot, "source_ship": own.side,
+				})
+
+		"destroy_self":
+			# **이번 발동 묶음이 끝난 뒤** 파괴된다 (기획서 §3.3).
+			# 즉시 파괴하면 나머지 on_fire 액션과 숙주에 얹힌 AUGMENT가
+			# 실행되지 못한 채 사라진다 — 자기 파괴 파츠의 값어치가 통째로 없어진다.
+			if owner != null:
+				owner.destroy_pending = true
+
+		"shorten_cooldown":
+			# 진행도를 미는 charge와 다르다 — **주기 자체**를 그 전투 동안 줄인다.
+			# 하한(min)은 필수로 적는다. 없으면 0초 주기가 만들어진다.
+			var by_units: int = K.cooldown_to_units(float(action.get("seconds", 0.0)))
+			var floor_units: int = K.cooldown_to_units(float(action.get("min", 1.0)))
+			for target: RefCounted in _targets(action, ctx, resolved):
+				var cut: int = target.shorten_cooldown(by_units, floor_units)
+				if cut > 0:
+					sim.emit("cooldown_shortened", own.side, {
+						"slot": target.slot_id,
+						"seconds": K.ticks_to_secs(cut / K.SPEED_NORMAL),
+						"cooldown": K.ticks_to_secs(target.cooldown_units / K.SPEED_NORMAL),
+					})
 
 		"multi_fire":
 			# Multi-fire는 **발동 전체를 다시 일으킨다** — part_fired가 다시 방출되고

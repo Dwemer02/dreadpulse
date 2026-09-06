@@ -1,0 +1,544 @@
+{
+  "_comment": "VG 재생 증식 — 실제 Repair → 가속·재사용 → 더 잦은 Repair → 성장. 병목: 만피에서는 성장하지 않는다. 초반 출력이 낮다.",
+  "archetype": "VG",
+  "parts": [
+    {
+      "_note": "VG01. 낮은 직접 DPS와 높은 사건 밀도의 기준 파츠. 범용 숙주로 강하다는 이유만으로 재사용을 제거하지 않는다.",
+      "id": "bone_spike_organ",
+      "name": "골침 발사기관",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "archetype": "VG",
+      "keywords": [
+        "physical",
+        "damage",
+        "multi_fire"
+      ],
+      "active": {
+        "cooldown": 3.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "physical",
+            "amount": 2
+          },
+          {
+            "op": "multi_fire",
+            "times": 1
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "physical",
+          "damage"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "physical",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VG02. 가장 빠른 기본 회복 사건원. regen 태그를 붙이지 않는다 — 즉시 회복과 지속 회복은 서로 다른 파츠들이 구독하는 다른 축이다.",
+      "id": "regen_sac",
+      "name": "봉합낭",
+      "faction": "viridia",
+      "base_role": "defense",
+      "archetype": "VG",
+      "keywords": [
+        "repair",
+        "biomass"
+      ],
+      "active": {
+        "cooldown": 2.0,
+        "on_fire": [
+          {
+            "op": "repair",
+            "amount": 1
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VG03. 짧은 주기 공급. AUGMENT는 **무작위** 대상이라 통제가 어렵다 — AH03의 AUGMENT는 Stasis 공급을 요구하는 대신 더 길다.",
+      "id": "nerve_accelerant",
+      "name": "신경 촉진기관",
+      "faction": "viridia",
+      "base_role": "system",
+      "archetype": "VG",
+      "keywords": [
+        "accelerate"
+      ],
+      "active": {
+        "cooldown": 4.0,
+        "on_fire": [
+          {
+            "op": "accelerate",
+            "target": "slowest_other_own",
+            "duration": 3.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "accelerate"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "random_other_own",
+                "duration": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VG04 수정. AUGMENT가 **2회 발동마다**로 바뀌었다 — 기본 Repair 1 증강과 같은 빈도로 시작하면서 성장까지 얻으면 RF03·VG02·VG06 증강을 지배한다 (기획서 §2.1). 초기 사건 빈도를 절반 지불하고 회복량을 키운다.",
+      "id": "proliferating_heart",
+      "name": "증식 심장",
+      "faction": "viridia",
+      "base_role": "defense",
+      "archetype": "VG",
+      "keywords": [
+        "repair",
+        "biomass",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 3.0,
+        "on_fire": [
+          {
+            "op": "repair",
+            "amount": 1,
+            "plus_growth": "self_repair"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "repaired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_repair",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 2
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 1,
+                "plus_growth": "aug_repair"
+              }
+            ]
+          },
+          {
+            "on": "repaired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_repair",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VG05 명세. 대상은 **현재 남은 쿨다운이 가장 큰** 다른 파츠다 (기획서 §3.2.6). 만피에서는 실제 회복이 0이라 피드백이 멈춘다.",
+      "id": "nerve_bundle",
+      "name": "신경 다발",
+      "faction": "viridia",
+      "base_role": "system",
+      "archetype": "VG",
+      "keywords": [
+        "repair",
+        "accelerate"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "repaired",
+            "where": {
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "slowest_other_own",
+                "duration": 2.0
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair",
+          "accelerate"
+        ],
+        "triggers": [
+          {
+            "on": "repaired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 2
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "host",
+                "duration": 2.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VG06. 기본 효율은 낮다. 가속을 유지하면 회복량과 사건 밀도를 함께 얻는다.",
+      "id": "layered_regen_membrane",
+      "name": "중층 봉합막",
+      "faction": "viridia",
+      "base_role": "defense",
+      "archetype": "VG",
+      "keywords": [
+        "repair",
+        "multi_fire",
+        "biomass"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "repair",
+            "amount": 2
+          },
+          {
+            "op": "multi_fire",
+            "times": 1,
+            "where": {
+              "is_accelerated": true
+            }
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VG07 수정. AUGMENT가 **추가량 0에서 시작**한다 — Physical 1에서 시작해 성장까지 하면 기본 Physical 1 증강을 고를 이유가 사라진다 (기획서 §2.1).",
+      "id": "growth_battery",
+      "name": "성장 포대",
+      "faction": "viridia",
+      "base_role": "weapon",
+      "archetype": "VG",
+      "keywords": [
+        "physical",
+        "damage",
+        "repair",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "physical",
+            "amount": 3,
+            "plus_growth": "self_physical"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "repaired",
+            "where": {
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_physical",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "physical",
+          "damage",
+          "repair",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "physical",
+                "amount": 0,
+                "plus_growth": "aug_physical"
+              }
+            ]
+          },
+          {
+            "on": "repaired",
+            "where": {
+              "every_nth_occurrence": 4
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_physical",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VG08 신규. 회복 총량을 예약한다. VG02보다 사건이 늦게 시작되며 Burst를 바로 막지 못한다.",
+      "id": "regen_fluid_sac",
+      "name": "재생 유체낭",
+      "faction": "viridia",
+      "base_role": "defense",
+      "archetype": "VG",
+      "keywords": [
+        "regen",
+        "repair"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "on_fire": [
+          {
+            "op": "apply_regen",
+            "amount": 2,
+            "duration": 6.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "regen",
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 4
+            },
+            "do": [
+              {
+                "op": "apply_regen",
+                "amount": 2,
+                "duration": 4.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VG09 신규. 회복 엔진이 희생 파츠의 귀환을 돕는다. 쿨타임 감소에는 **명시적 하한 7초**가 있다 — 하한 없는 감소는 0초 주기를 만든다.",
+      "id": "rejoining_stalk",
+      "name": "재접합 줄기",
+      "faction": "viridia",
+      "base_role": "defense",
+      "archetype": "VG",
+      "keywords": [
+        "repair",
+        "restore",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 10.0,
+        "require": {
+          "has_broken_own": true
+        },
+        "on_fire": [
+          {
+            "op": "restore_part",
+            "target": "oldest_broken_own"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "repaired",
+            "where": {
+              "every_nth_occurrence": 6
+            },
+            "do": [
+              {
+                "op": "shorten_cooldown",
+                "target": "self",
+                "seconds": 1.0,
+                "min": 7.0
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "regen",
+          "restore",
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "part_restored",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "apply_regen",
+                "amount": 1,
+                "duration": 4.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "VG10 신규. 회복을 Reclaimer의 자재로 연결한다. 순수 회복 빌드에서는 자재 소비처가 없을 수 있다.",
+      "id": "byproduct_gland",
+      "name": "부산물 분비선",
+      "faction": "viridia",
+      "base_role": "system",
+      "archetype": "VG",
+      "keywords": [
+        "material",
+        "repair"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "repaired",
+            "where": {
+              "every_nth_occurrence": 5
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "repaired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

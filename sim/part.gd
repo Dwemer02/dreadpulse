@@ -23,7 +23,14 @@ var augment_id: String = ""
 ## 슬롯은 차지하며 파괴선·상태이상의 대상도 된다.
 var passive: bool = false
 var cooldown_units: int = 0
+## 저작된 원래 쿨타임. shorten_cooldown이 cooldown_units를 줄여도 이 값은 그대로다 —
+## RD08 「해체용 기폭기」가 "**기본 쿨타임**이 가장 긴 파츠"를 희생양으로 고르므로
+## 현재 값과 원래 값을 구별해야 한다.
+var base_cooldown_units: int = 0
 var cost: Dictionary = {}
+## 발동 전제. where와 같은 조건 사전이며 거짓이면 발동하지 않고 쿨타임도 소모하지 않는다.
+## "조건이 안 되면 다음 주기까지 기다림"(기획서 §3.2.10)이 이것이다.
+var require: Variant = null
 var on_fire: Array = []
 var triggers: Array = []
 ## triggers와 같은 길이. max_fires 계산용 — 트리거별 전투당 발동 횟수.
@@ -56,6 +63,11 @@ var growth: Dictionary = {}
 ## Multi-fire가 예약한 추가 발동 수. 발동 상한(초당 5회)이 간격을 벌린다.
 var pending_fires: int = 0
 var broken: bool = false
+## 파손된 틱. oldest_broken_own이 "가장 오래 파괴되어 있던 파츠"를 고르는 데 쓴다.
+var broken_at_tick: int = 0
+## destroy_self가 세운 깃발. **이번 발동 묶음이 끝난 뒤** 파괴된다 —
+## 즉시 파괴하면 자기 파괴 파츠의 나머지 효과와 AUGMENT가 실행되지 못한다.
+var destroy_pending: bool = false
 ## 마지막으로 방출한 불발 사유. 같은 사유가 매 틱 반복될 때 이벤트 스팸을 막는다.
 ## 발동에 성공하거나 복구되면 비운다 — 다시 막히면 새 사건으로 보고해야 하기 때문이다.
 var last_block_reason: String = ""
@@ -77,12 +89,15 @@ func is_stasised() -> bool:
 ## 정지 상태도 같다 — 다만 정지 자체의 남은 시간은 흘러야 하므로 그것만 먼저 깎는다.
 ## 가속/둔화/파괴 불가 타이머는 함께 멈춘다: 정지가 "시간이 멈춘 상태"인데
 ## 그 안에서 가속이 소모되면 정지가 오히려 이득이 된다.
-func advance() -> void:
+## 반환: 이번 틱에 정지가 풀렸으면 true. combat_sim이 stasis_ended를 방출한다 —
+## 「Stasis에서 풀릴 때」를 구독하는 파츠가 다섯 종 있고, 해제는 시간이 흘러서
+## 일어나는 일이라 액션 쪽에서는 관측할 수 없다.
+func advance() -> bool:
 	if broken:
-		return
+		return false
 	if stasis_ticks > 0:
 		stasis_ticks -= 1
-		return
+		return stasis_ticks == 0
 	progress_units += speed_units()
 	if accel_ticks > 0:
 		accel_ticks -= 1
@@ -90,11 +105,21 @@ func advance() -> void:
 		slow_ticks -= 1
 	if indestructible_ticks > 0:
 		indestructible_ticks -= 1
+	return false
 
-func apply_stasis(ticks: int) -> void:
-	# 같은 종류는 시간 합산 — 가속/둔화와 같은 규칙이다.
-	if ticks > 0:
-		stasis_ticks += ticks
+## 정지를 건다. 반환: **최초 진입**이면 true.
+##
+## 이미 정지한 대상에 재부여하면 지속시간만 갱신하고 진입 사건은 만들지 않는다
+## (기획서 §3.2.7). 재부여를 진입으로 세면 "Stasis에 들어갈 때 Charge" 계열이
+## 스스로를 되먹여 증식한다.
+##
+## 갱신 규칙은 가속/둔화와 같다 — 남은 시간과 새 지속시간 중 큰 값 (§3.2.8).
+func apply_stasis(ticks: int) -> bool:
+	if ticks <= 0:
+		return false
+	var was_free: bool = stasis_ticks == 0
+	stasis_ticks = maxi(stasis_ticks, ticks)
+	return was_free
 
 ## 쿨타임이 찼는가. **정지는 여기서 보지 않는다** — 일부러다.
 ##
@@ -123,6 +148,12 @@ func apply_slow(ticks: int) -> void:
 
 ## 가속과 둔화는 서로 배타적이다 — 상쇄 규칙상 둘 중 하나는 항상 0이다.
 ## 이 불변식을 유지하는 것이 이 함수의 유일한 책임이다.
+##
+## **같은 종류는 합산하지 않고 큰 쪽으로 갱신한다** (기획서 §3.2.8).
+## 반대 종류를 먼저 상쇄하고, 남은 양과 기존 남은 시간 중 큰 값을 쓴다.
+## 합산이면 1초짜리 작은 가속을 여러 개 붙이는 것만으로 영구 가속이 되고,
+## 그것을 전제로 설계된 파츠가 없다.
+##
 ## 영구(K.PERMANENT = -1)는 무한한 지속시간이므로 유한한 양으로 깎을 수 없고,
 ## 유한한 양을 아무리 쌓아도 영구를 넘어설 수 없다.
 func _apply_speed_effect(ticks: int, accelerating: bool) -> void:
@@ -149,7 +180,7 @@ func _apply_speed_effect(ticks: int, accelerating: bool) -> void:
 		var cancel: int = mini(opposite, remaining)
 		opposite -= cancel
 		remaining -= cancel
-		same += remaining
+		same = maxi(same, remaining)
 
 	if accelerating:
 		accel_ticks = same
@@ -175,6 +206,17 @@ func block_reason(tick: int) -> String:
 	if fires_remaining == 0:
 		return "fire_limit"
 	return ""
+
+## 발동 횟수를 다 쓴 파츠인가. 파손과 다르다 — 슬롯에 살아 있고 트리거도 돈다.
+## AT09 「잔여 시간 교환기」의 대상 조건이며, 시간 조작 대상에서는 제외된다.
+func is_exhausted() -> bool:
+	return fires_remaining == 0
+
+## 가속·충전 같은 시간 조작을 걸 의미가 있는 파츠인가 (기획서 §3.2.6).
+## 주기가 없는 패시브와 소진된 파츠는 대상에서 뺀다 — 걸어도 아무 일이 없어서
+## 조용히 낭비되기 때문이다.
+func accepts_time_effects() -> bool:
+	return not broken and not passive and not is_exhausted()
 
 ## 발동 확정. 쿨타임 초과분은 이월한다.
 func consume_fire(tick: int) -> void:
@@ -210,6 +252,7 @@ func try_break() -> String:
 		reinforce_stacks -= 1
 		return "reinforce"
 	broken = true
+	destroy_pending = false
 	# 예약된 추가 발동도 함께 사라진다. 남겨두면 복구 직후 옛 Multi-fire가 되살아난다.
 	pending_fires = 0
 	# 파손되면 부식 중첩이 사라진다 — 부식은 "발동할 때" 아픈 상태이고
@@ -218,12 +261,16 @@ func try_break() -> String:
 	corrosion_stacks = 0
 	return "broken"
 
-## 파손 해제 + 쿨타임 0 재시작 + 남은 횟수 초기화
+## 파손 해제 + 쿨타임 0 재시작.
+##
+## **잔여 발동 횟수는 채우지 않는다** (기획서 §3.3). 성장(growth)도 그대로 둔다 —
+## 복구는 "다시 켜는 것"이지 "새 파츠를 놓는 것"이 아니다. 횟수를 되돌리고 싶은
+## 파츠는 AT08처럼 자기 효과로 명시한다.
 func restore() -> void:
 	broken = false
+	destroy_pending = false
 	pending_fires = 0
 	progress_units = 0
-	fires_remaining = fire_limit
 	last_block_reason = ""
 	# 정지는 파손이 풀릴 때 함께 풀린다. 파손 중에는 advance()가 통째로 멈춰
 	# stasis_ticks가 흐르지 않으므로, 남겨두면 복구 직후 다시 얼어 있다.
@@ -241,6 +288,16 @@ func drain_fires(amount: int) -> int:
 		fires_remaining = K.DEFAULT_FIRE_LIMIT
 	var actual: int = mini(amount, fires_remaining)
 	fires_remaining -= actual
+	return actual
+
+## 기본 쿨타임 자체를 줄인다 (VG09). 실제로 줄어든 유닛 수를 돌려준다.
+## `min_units` 아래로는 내려가지 않는다 — 하한 없는 감소는 0초 주기를 만든다.
+func shorten_cooldown(units: int, min_units: int) -> int:
+	if units <= 0:
+		return 0
+	var target: int = maxi(min_units, cooldown_units - units)
+	var actual: int = cooldown_units - target
+	cooldown_units = target
 	return actual
 
 ## 남은 횟수를 회복하고 실제 회복량을 돌려준다. 초기값을 넘지 않는다.

@@ -1,0 +1,504 @@
+{
+  "_comment": "RF 용광로 포화사격 — Material → 재사용·가속 → Overheat 부여 → Material. 병목: RF05 환급은 소비보다 작다. RF04와 RF06이 같은 자재를 두고 경쟁한다.",
+  "archetype": "RF",
+  "parts": [
+    {
+      "_note": "RF01. 짧은 전투의 비교 기준. 직접 화력은 높고 사건 빈도는 낮다.",
+      "id": "scrap_autocannon",
+      "name": "고철 기관포",
+      "faction": "reclaimer",
+      "base_role": "weapon",
+      "archetype": "RF",
+      "keywords": [
+        "physical",
+        "damage"
+      ],
+      "active": {
+        "cooldown": 3.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "physical",
+            "amount": 6
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "physical",
+          "damage"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "physical",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RF02. 안정적인 시작 자재. 빠른 숙주가 생기면 Active를 포기할 이유가 생긴다.",
+      "id": "scrap_compactor",
+      "name": "폐철 압축기",
+      "faction": "reclaimer",
+      "base_role": "system",
+      "archetype": "RF",
+      "keywords": [
+        "material"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "gain_material",
+            "amount": 2
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RF03. 큰 즉시 회복. VG02보다 회복 사건 빈도가 낮다.",
+      "id": "field_welder",
+      "name": "야전 용접기",
+      "faction": "reclaimer",
+      "base_role": "defense",
+      "archetype": "RF",
+      "keywords": [
+        "repair"
+      ],
+      "active": {
+        "cooldown": 4.0,
+        "on_fire": [
+          {
+            "op": "repair",
+            "amount": 5
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RF04. 재사용 구매는 기본 발동에서 한 번뿐이다 — multi_fire op이 반복 발동 중에는 아무 일도 하지 않는 가드를 갖는다 (기획서 §3.2.1).",
+      "id": "rotary_incinerator",
+      "name": "회전식 소각포",
+      "faction": "reclaimer",
+      "base_role": "weapon",
+      "archetype": "RF",
+      "keywords": [
+        "thermal",
+        "damage",
+        "material",
+        "overheat",
+        "multi_fire"
+      ],
+      "active": {
+        "cooldown": 4.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "thermal",
+            "amount": 3
+          },
+          {
+            "op": "apply_overheat",
+            "stacks": 1
+          },
+          {
+            "op": "multi_fire",
+            "times": 1,
+            "cost_material": 4
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "thermal",
+          "damage",
+          "overheat"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "thermal",
+                "amount": 1
+              },
+              {
+                "op": "apply_overheat",
+                "stacks": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RF05 수정. 입력을 **부여 횟수**로 옮겼다 — 옛 피해 틱 방식은 고정 틱 수에 묶여 경제가 확장되지 않았다. 부여량은 세지 않으므로 큰 과열 한 번으로 자재가 쏟아지지 않는다.",
+      "id": "waste_heat_recovery",
+      "name": "폐열 회수기",
+      "faction": "reclaimer",
+      "base_role": "system",
+      "archetype": "RF",
+      "keywords": [
+        "overheat",
+        "material"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "overheat_applied",
+            "where": {
+              "enemy_ship": true,
+              "every_nth_occurrence": 4
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "overheat"
+        ],
+        "triggers": [
+          {
+            "on": "overheat_applied",
+            "where": {
+              "enemy_ship": true,
+              "source_is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RF06. 무기 수가 많을수록 좋다. 선제 너프하지 않는다 — 자재 경쟁과 System 자리가 이미 대가다.",
+      "id": "blast_turbine",
+      "name": "송풍 터빈",
+      "faction": "reclaimer",
+      "base_role": "system",
+      "archetype": "RF",
+      "keywords": [
+        "material",
+        "accelerate"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "cost": {
+          "material": 2
+        },
+        "on_fire": [
+          {
+            "op": "accelerate",
+            "target": "all_own_weapons",
+            "duration": 3.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "accelerate"
+        ],
+        "triggers": [
+          {
+            "on": "material_spent",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "host",
+                "duration": 2.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RF07 수정. AUGMENT는 **추가량 0에서 시작**한다 — 처음부터 1이면 기본 Physical 1 증강을 고를 이유가 없어진다 (기획서 §2.1). Active는 지금 이 순간의 적층, AUGMENT는 틱 이력에 투자한다.",
+      "id": "incandescent_crusher",
+      "name": "백열 파쇄포",
+      "faction": "reclaimer",
+      "base_role": "weapon",
+      "archetype": "RF",
+      "keywords": [
+        "thermal",
+        "damage",
+        "overheat",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "thermal",
+            "amount": 4,
+            "scale": {
+              "of": "enemy_overheat",
+              "per": 1
+            }
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "thermal",
+          "damage",
+          "overheat",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "thermal",
+                "amount": 0,
+                "plus_growth": "aug_thermal"
+              }
+            ]
+          },
+          {
+            "on": "overheat_ticked",
+            "where": {
+              "enemy_ship": true,
+              "every_nth_occurrence": 4
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_thermal",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RF08 신규. 긴급 대량 회복. 자재가 없으면 작동하지 않는다 — 비용은 no_material 불발로 다음 주기까지 대기한다.",
+      "id": "emergency_weld_drum",
+      "name": "긴급 용접 드럼",
+      "faction": "reclaimer",
+      "base_role": "defense",
+      "archetype": "RF",
+      "keywords": [
+        "material",
+        "repair"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "cost": {
+          "material": 2
+        },
+        "on_fire": [
+          {
+            "op": "repair",
+            "amount": 12
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "material_spent",
+            "where": {
+              "is_host": true,
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 4
+              }
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RF09 신규. 매우 잦은 부여지만 직접 피해가 없다. AUGMENT는 빈도를 줄이고 한 번의 적층량을 높인다 — RF05의 환급 횟수는 오히려 줄어든다.",
+      "id": "ignition_nozzle",
+      "name": "점화 노즐",
+      "faction": "reclaimer",
+      "base_role": "weapon",
+      "archetype": "RF",
+      "keywords": [
+        "overheat"
+      ],
+      "active": {
+        "cooldown": 2.0,
+        "on_fire": [
+          {
+            "op": "apply_overheat",
+            "stacks": 1
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "overheat"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "apply_overheat",
+                "stacks": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RF10 신규. 초반 RF02보다 느리고 약하다. 이미 소비하는 엔진이 있어야 경제가 성장한다 — 소비 총량을 보므로 RF04·RF06과 같은 자원을 공유한다.",
+      "id": "expanding_crucible",
+      "name": "팽창식 도가니",
+      "faction": "reclaimer",
+      "base_role": "system",
+      "archetype": "RF",
+      "keywords": [
+        "material",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "on_fire": [
+          {
+            "op": "gain_material",
+            "amount": 1,
+            "plus_growth": "self_material"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "material_spent",
+            "where": {
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 8
+              }
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_material",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "accelerate"
+        ],
+        "triggers": [
+          {
+            "on": "material_spent",
+            "where": {
+              "is_host": true,
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 6
+              }
+            },
+            "do": [
+              {
+                "op": "accelerate",
+                "target": "slowest_other_own",
+                "duration": 2.0
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

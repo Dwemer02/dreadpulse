@@ -21,10 +21,23 @@ static func dispatch(event: Dictionary, ships: Array, sim: RefCounted) -> void:
 
 		for part: RefCounted in ship.parts:
 			# 파손 파츠는 효과가 정지한다. 붙어 있던 Augment 트리거도 함께.
-			if part.broken:
+			#
+			# 예외가 정확히 하나 있다: **자기 자신의 파손 사건**이다.
+			# 「숙주가 실제 Destroy될 때 …」 형태의 AUGMENT가 해체 순환 아키타입의
+			# 절반을 차지하고(RD01·RD02·RD03·RD06), 그것들이 조용히 죽으면
+			# 자기 파괴 파츠는 대가만 있고 보상이 없는 파츠가 된다.
+			# 기획서 §3.3: "명시적인 자기 Destroy 보상은 전이 시 한 번 처리한 뒤
+			# 일반 구독을 중단한다" — 그 "한 번"이 이 분기다.
+			if part.broken and not _is_own_destruction(part, ship, event):
 				continue
 			_run_list(part.triggers, part.trigger_fires, part.trigger_accum,
 				part, ship, foe, event, depth, sim)
+
+## 이 이벤트가 이 파츠 자신의 파손 사건인가. 파손 파츠가 볼 수 있는 유일한 사건이다.
+static func _is_own_destruction(part: RefCounted, ship: RefCounted, event: Dictionary) -> bool:
+	return str(event.get("type", "")) == "part_destroyed" \
+		and str(event.get("slot", "")) == part.slot_id \
+		and str(event.get("ship", "")) == ship.side
 
 ## trigger.get("where", {})가 Dictionary가 아닌 값(저작 실수)을 돌려줄 수 있다.
 ## GDScript는 타입 지정 Dictionary 변수에 비-Dictionary 값을 대입하면 그 자체가

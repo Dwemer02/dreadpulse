@@ -276,7 +276,18 @@ static func describe(e: Dictionary) -> String:
 				return "재생 %d (영구)" % int(e.get("amount", 0))
 			return "재생 %d (%s초)" % [int(e.get("amount", 0)), str(e.get("duration", 0))]
 		"regen_ticked":
-			return "재생 발동 +%d" % int(e.get("amount", 0))
+			# 부여량과 실제 회복량은 다르다 — 만피에서는 회복이 0이고, 그때는
+			# "실제 Repair"로 세지 않는다 (기획서 §3.2.4).
+			return "%s 재생 발동 %d (실회복 %d)" % [e.get("slot", "?"),
+				int(e.get("amount", 0)), int(e.get("healed", 0))]
+		"regen_ended":
+			return "%s 파손 — 그 출처의 재생 %d건 종료" % [e.get("slot", "?"),
+				int(e.get("entries", 0))]
+		"overheat_cleansed":
+			return "적 과열 −%d → 남은 %d" % [int(e.get("stacks", 0)), int(e.get("total", 0))]
+		"cooldown_shortened":
+			return "%s 기본 쿨타임 −%s초 → %s초" % [e.get("slot", "?"),
+				str(e.get("seconds", 0)), str(e.get("cooldown", 0))]
 		"overheat_applied":
 			return "과열 %d 부여" % int(e.get("stacks", 0))
 		"overheat_ticked":
@@ -311,7 +322,11 @@ static func describe(e: Dictionary) -> String:
 			return "%s 추가 발동 %d회 예약 (대기 %d)" % [e.get("slot", "?"),
 				int(e.get("times", 0)), int(e.get("pending", 0))]
 		"stasis_applied":
-			return "%s 정지 (%s초)" % [e.get("slot", "?"), str(e.get("duration", 0))]
+			# 최초 진입과 재부여는 다른 사건이다 — AH06·AT02가 최초 진입만 본다.
+			return "%s 정지 (%s초)%s" % [e.get("slot", "?"), str(e.get("duration", 0)),
+				"" if bool(e.get("first_entry", true)) else " [갱신]"]
+		"stasis_ended":
+			return "%s 정지 해제" % e.get("slot", "?")
 		"speed_changed":
 			return "%s %s (%s초)" % [e.get("slot", "?"),
 				"가속" if str(e.get("state", "")) == "accelerated" else "둔화",

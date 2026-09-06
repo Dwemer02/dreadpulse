@@ -1,5 +1,6 @@
 extends RefCounted
-## 실제 콘텐츠(파츠 21종 + Relic 3종 + 빌드 6종)가 어휘 안에서 작동하는지 검증한다.
+## 실제 콘텐츠(아키타입 9종 × 10 파츠 + Core 3종 + Relic 3종)가 어휘 안에서
+## 작동하는지 검증한다.
 ##
 ## 픽스처 테스트가 엔진을 검증한다면, 이 모듈은 **콘텐츠**를 검증한다.
 ## 카탈로그 로드 자체가 op·조건·셀렉터 오타를 잡는 관문이므로 여기가 첫 방어선이다.
@@ -8,7 +9,7 @@ extends RefCounted
 ## 대신 "설계한 메커니즘이 실제 전투에서 실제로 일어나는가"를 검증한다.
 ## 조용히 죽는 효과(트리거가 영원히 안 도는 것)가 이 프로젝트의 주된 실패 양식이다.
 
-const EXPECTED_CHECKS := 72
+const EXPECTED_CHECKS := 90
 
 const K = preload("res://sim/sim_const.gd")
 const Catalog = preload("res://sim/catalog.gd")
@@ -18,6 +19,7 @@ const Actions = preload("res://sim/actions.gd")
 const Conditions = preload("res://sim/conditions.gd")
 const Targeting = preload("res://sim/targeting.gd")
 const PartText = preload("res://debug/part_text.gd")
+const BuildLoader = preload("res://sim/build_loader.gd")
 
 const SMOKE_SEED := 7
 const FACTIONS: Array[String] = ["reclaimer", "viridia", "aeonic"]
@@ -42,7 +44,7 @@ func run(t: RefCounted) -> void:
 func _test_catalog_loads(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
 	t.check(c.ok(), "실제 카탈로그가 에러 없이 로드된다: %s" % str(c.errors))
-	t.eq(c.parts.size(), 24, "파츠 24종 (팩션당 8종 — 7종 + Core)")
+	t.eq(c.parts.size(), 93, "파츠 93종 — 아키타입 9종 × 10 + Core 3")
 	t.eq(c.relics.size(), 3, "Relic 3종")
 	t.eq(c.frames.size(), 4, "Frame 4종 (픽스처용 · 테스트 풀 · 초반 적 · Boss)")
 
@@ -55,8 +57,23 @@ func _test_catalog_loads(t: RefCounted) -> void:
 		if not (def["active"] as Dictionary).has("cooldown"):
 			passives += 1
 	for faction: String in FACTIONS:
-		t.eq(int(by_faction.get(faction, 0)), 8, "%s 파츠 8종" % faction)
-	t.eq(passives, 6, "패시브 파츠 6종 — 변환기 3 + Core 3 (Core는 트리거만 갖는다)")
+		t.eq(int(by_faction.get(faction, 0)), 31, "%s 파츠 31종 (아키타입 3 × 10 + Core)" % faction)
+
+	# 아키타입은 파츠의 설계상 주 용도이며 장착 제한이 아니다 (기획서 §1).
+	# 각 10종이 정확히 채워져야 "이 루프가 자급 가능한가"를 아키타입 단위로 물을 수 있다.
+	var by_archetype: Dictionary = {}
+	for id2: String in c.parts:
+		var arch: String = str((c.parts[id2] as Dictionary).get("archetype", ""))
+		if arch == "":
+			continue
+		by_archetype[arch] = int(by_archetype.get(arch, 0)) + 1
+	t.eq(by_archetype.size(), 9, "아키타입 9종이 모두 존재한다")
+	for arch2: String in Catalog.VALID_ARCHETYPES:
+		t.eq(int(by_archetype.get(arch2, 0)), 10, "%s 아키타입 10종" % arch2)
+	t.check(not str((c.parts["foundry_core"] as Dictionary).get("archetype", "")) != "",
+		"Core는 아키타입을 갖지 않는다 — 90종 풀 밖이다 (기획서 §3.1)")
+
+	t.eq(passives, 19, "패시브(Trigger형) 파츠 19종 — 변환기 16 + Core 3")
 
 	# 선체 재질은 Core가 정한다 (Frame이 아니다). Core가 재질 키워드를 갖지 않으면
 	# 조용히 기본값(plating)이 되어 상성표의 절반이 잠든다.
@@ -91,32 +108,154 @@ func _test_builds_assemble(t: RefCounted) -> void:
 			continue
 		t.eq(prepared["sim"].player.parts.size(), 6, "%s는 슬롯 6칸을 모두 채운다" % id)
 
-## 풀의 모든 파츠가 어딘가에 쓰이는가, 그리고 각 팩션이 AUGMENT를 실제로 쓰는가.
-## 쓰이지 않는 파츠는 전투에서 한 번도 검증되지 않는다.
+## 풀의 모든 파츠가 실제로 조립되고 전투를 견디는가.
+##
+## 옛 판본은 "빌드에 한 번도 안 쓰인 파츠가 없다"를 봤다. 파츠가 21종일 때는 그것이
+## 곧 커버리지였지만 90종에서는 성립하지 않는다 — 6슬롯 빌드 6개로 90종을 덮을 수 없다.
+##
+## 그래서 검사를 둘로 나눈다.
+##   (1) 모든 파츠가 **Active 자리와 Augment 자리 양쪽에서** 조립된다.
+##       이중용도가 이 게임의 핵심이므로 한쪽만 되는 파츠는 절반이 죽은 것이다.
+##   (2) 아키타입 10종으로 짠 보드가 실제 전투에서 **자기 루프의 사건을 만든다**.
+##       개별 파츠로 검사하지 않는 이유: "단독으로는 아무것도 하지 않는" 변환기가
+##       17종이고, 그것들은 설계상 혼자서는 침묵하는 것이 맞다.
 func _test_part_coverage(t: RefCounted) -> void:
 	var c: RefCounted = Content.load_catalog()
-	var used: Dictionary = {}
-	var augment_by_faction: Dictionary = {}
-	for id: String in _all_build_ids():
-		var build: Dictionary = Content.read_build(id)
-		for slot_id: String in build.get("slots", {}):
-			var entry: Dictionary = build["slots"][slot_id]
-			used[str(entry["part"])] = true
-			var aug: String = str(entry.get("augment", ""))
-			if aug == "":
-				continue
-			used[aug] = true
-			var f: String = str(c.parts[aug]["faction"])
-			augment_by_faction[f] = int(augment_by_faction.get(f, 0)) + 1
+	var frame: Dictionary = c.frames["pool_frame"]
 
-	var unused: Array[String] = []
+	var not_placeable: Array[String] = []
+	var not_augmentable: Array[String] = []
 	for id: String in c.parts:
-		if not used.has(id):
-			unused.append(id)
-	t.check(unused.is_empty(), "빌드에 한 번도 안 쓰인 파츠가 없다 — 미사용: %s" % str(unused))
+		var def: Dictionary = c.parts[id]
+		if str(def["base_role"]) == "core":
+			continue
+		if _build_with(c, frame, id, "") == null:
+			not_placeable.append(id)
+		if not def.has("augment"):
+			not_augmentable.append(id)
+	t.check(not_placeable.is_empty(),
+		"모든 파츠가 자기 역할 슬롯에 조립된다 — 실패: %s" % str(not_placeable))
+	t.check(not_augmentable.is_empty(),
+		"모든 파츠가 AUGMENT 블록을 갖는다 (이중용도) — 없음: %s" % str(not_augmentable))
+
+	# 아키타입 보드가 실제로 돈다. 사건이 하나도 안 나면 그 아키타입은 죽은 설계다.
+	# 같은 실행에서 **새 메커니즘이 실제로 발화하는지**도 함께 센다 — 조용히 죽는
+	# 효과가 이 프로젝트의 주된 실패 양식이므로, 어휘를 늘렸으면 그 어휘가 실물
+	# 콘텐츠에서 한 번은 일어나는 것을 봐야 한다.
+	var silent: Array[String] = []
+	var seen: Dictionary = {}
+	var destroy_causes: Dictionary = {}
+	var block_reasons: Dictionary = {}
+	for arch: String in Catalog.VALID_ARCHETYPES:
+		var build: Dictionary = _archetype_build(c, arch)
+		var prepared: Dictionary = Content.prepare_builds(c, build, build, SMOKE_SEED)
+		if prepared["sim"] == null:
+			silent.append("%s(조립 실패: %s)" % [arch, str(prepared["errors"])])
+			continue
+		var log: Array = prepared["sim"].run()
+		var acted: Dictionary = {}
+		for e: Dictionary in log:
+			seen[str(e["type"])] = true
+			if str(e.get("ship", "")) == "player" and e.has("slot"):
+				acted[str(e["slot"])] = true
+			if str(e["type"]) == "part_destroyed":
+				destroy_causes[str(e.get("cause", "?"))] = true
+			elif str(e["type"]) == "part_fire_blocked":
+				block_reasons[str(e.get("reason", "?"))] = true
+		if acted.size() < 2:
+			silent.append("%s(움직인 슬롯 %d개)" % [arch, acted.size()])
+	t.check(silent.is_empty(), "아키타입 9종의 보드가 전부 사건을 만든다 — 침묵: %s" % str(silent))
+
+	# 90종을 위해 새로 만든 어휘. 하나라도 빠지면 그 어휘를 쓰는 파츠가 죽어 있다.
+	var never: Array[String] = []
+	for type: String in ["stasis_ended", "overheat_cleansed", "cooldown_shortened",
+			"regen_ended", "part_restored", "charge_applied", "fires_changed"]:
+		if not seen.has(type):
+			never.append(type)
+	t.check(never.is_empty(),
+		"새 이벤트가 실제 콘텐츠에서 발화한다 — 한 번도 안 난 것: %s" % str(never))
+	t.check(destroy_causes.has("self_destruct"),
+		"destroy_self가 실제로 파괴를 일으킨다 (해체 순환의 전제)")
+	t.check(block_reasons.has("requirement"),
+		"발동 전제가 실제로 발동을 대기시킨다 (RC09·AE06·AH09의 전제)")
+	t.check(block_reasons.has("fire_limit"),
+		"발동 횟수 소진이 발동만 막는다 — 파손 사유에는 없다")
+	t.check(not destroy_causes.has("fires_exhausted"),
+		"소진은 더 이상 파손 원인이 아니다 (기획서 §3.3)")
+
 	for faction: String in FACTIONS:
-		t.check(int(augment_by_faction.get(faction, 0)) > 0,
-			"%s 순수 빌드가 AUGMENT를 실제로 쓴다" % faction)
+		var augments: int = 0
+		for id2: String in _all_build_ids():
+			var b: Dictionary = Content.read_build(id2)
+			for slot_id: String in b.get("slots", {}):
+				var aug: String = str((b["slots"][slot_id] as Dictionary).get("augment", ""))
+				if aug != "" and str(c.parts[aug]["faction"]) == faction:
+					augments += 1
+		t.check(augments > 0, "%s 순수 빌드가 AUGMENT를 실제로 쓴다" % faction)
+
+## 아키타입 하나의 파츠만으로 6슬롯을 채운 보드. 역할이 남으면 같은 팩션 Core로 메운다.
+## 슬롯을 다 못 채우는 아키타입이 있으면 그 자체가 설계 결함이므로 굳이 보충하지 않는다.
+func _archetype_build(c: RefCounted, archetype: String) -> Dictionary:
+	var frame: Dictionary = c.frames["pool_frame"]
+	var pool: Array[String] = []
+	var faction: String = ""
+	for id: String in c.parts:
+		var def: Dictionary = c.parts[id]
+		if str(def.get("archetype", "")) != archetype:
+			continue
+		pool.append(id)
+		faction = str(def["faction"])
+	var slots: Dictionary = {}
+	var used: Array[String] = []
+	for slot_def: Dictionary in frame["slots"]:
+		var role: String = str(slot_def["role"])
+		if role == "core":
+			slots[str(slot_def["id"])] = {"part": _core_of(c, faction)}
+			continue
+		for id2: String in pool:
+			if used.has(id2):
+				continue
+			if role != "flexible" and str(c.parts[id2]["base_role"]) != role:
+				continue
+			used.append(id2)
+			# 남는 파츠 하나를 AUGMENT로 얹어 이중용도 경로도 함께 돌린다.
+			var aug: String = ""
+			for id3: String in pool:
+				if not used.has(id3):
+					aug = id3
+					used.append(id3)
+					break
+			slots[str(slot_def["id"])] = {"part": id2, "augment": aug} if aug != "" \
+				else {"part": id2}
+			break
+	return {"id": "archetype_%s" % archetype, "frame": "pool_frame", "slots": slots}
+
+func _core_of(c: RefCounted, faction: String) -> String:
+	for id: String in c.parts:
+		var def: Dictionary = c.parts[id]
+		if str(def["base_role"]) == "core" and str(def["faction"]) == faction:
+			return id
+	return ""
+
+## 파츠 하나를 자기 역할 슬롯에 꽂은 최소 보드를 조립한다. 실패하면 null.
+func _build_with(c: RefCounted, frame: Dictionary, part_id: String,
+		augment_id: String) -> RefCounted:
+	var role: String = str(c.parts[part_id]["base_role"])
+	var faction: String = str(c.parts[part_id]["faction"])
+	var slots: Dictionary = {}
+	for slot_def: Dictionary in frame["slots"]:
+		var slot_role: String = str(slot_def["role"])
+		if slot_role == "core":
+			slots[str(slot_def["id"])] = {"part": _core_of(c, faction)}
+		elif slot_role == role and not slots.has(str(slot_def["id"])):
+			var entry: Dictionary = {"part": part_id}
+			if augment_id != "":
+				entry["augment"] = augment_id
+			slots[str(slot_def["id"])] = entry
+			break
+	var loader: RefCounted = BuildLoader.new()
+	return loader.assemble({"id": "probe", "frame": str(frame["id"]), "slots": slots},
+		c, "player")
 
 ## Core가 실제로 선체 재질을 정하는가. 조립된 함선에서 확인한다 —
 ## JSON에 키워드를 적어도 build_loader가 읽지 않으면 조용히 기본값이 된다.
@@ -303,14 +442,14 @@ func _test_part_text_covers_vocabulary(t: RefCounted) -> void:
 			missing.append("condition:" + cond)
 	t.check(missing.is_empty(), "모든 어휘에 한국어 설명이 있다 — 누락: %s" % str(missing))
 
-	# 실제 콘텐츠 24종이 전부 설명 가능한가 (트리거의 on 이벤트까지)
+	# 실제 콘텐츠 93종이 전부 설명 가능한가 (트리거의 on 이벤트까지)
 	var c: RefCounted = Content.load_catalog()
 	var broken: Array[String] = []
 	for id: String in c.parts:
 		var text: String = PartText.detail(c.parts[id])
 		if text.contains("설명 없음") or text == "":
 			broken.append(id)
-	t.check(broken.is_empty(), "파츠 24종의 설명문이 온전하다 — 문제: %s" % str(broken))
+	t.check(broken.is_empty(), "파츠 93종의 설명문이 온전하다 — 문제: %s" % str(broken))
 	t.check(PartText.summary(c.parts["rotary_incinerator"]).contains("열 피해"),
 		"요약에 실제 효과가 들어간다")
 	t.check(PartText.detail(c.parts["scrap_autocannon"]).contains("AUGMENT"),

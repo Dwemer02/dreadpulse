@@ -1,0 +1,545 @@
+{
+  "_comment": "RC 산성 회수 — Corrosion 피해 → Material → 부식·시간·회복. 병목: 부식 공급이 제한되고 적이 느리거나 정지 상태면 회수 속도가 낮다. RC09로 현금화하면 이후 피해와 환급이 줄어든다.",
+  "archetype": "RC",
+  "parts": [
+    {
+      "_note": "RC01 신규. Plating 상대의 단순 출력. 부식을 자동 부여하지 않는다.",
+      "id": "acid_jet_cutter",
+      "name": "산분사 절단기",
+      "faction": "reclaimer",
+      "base_role": "weapon",
+      "archetype": "RC",
+      "keywords": [
+        "caustic",
+        "damage"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "caustic",
+            "amount": 7
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "caustic",
+          "damage"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "caustic",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RC02 신규. 낮은 빈도의 안정적 적층. 적이 발동하지 않으면 즉시 피해도 없다.",
+      "id": "corrosive_injector",
+      "name": "부식액 주입침",
+      "faction": "reclaimer",
+      "base_role": "weapon",
+      "archetype": "RC",
+      "keywords": [
+        "corrosion"
+      ],
+      "active": {
+        "cooldown": 5.0,
+        "on_fire": [
+          {
+            "op": "apply_corrosion",
+            "target": "designated_enemy",
+            "stacks": 2
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "corrosion"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "apply_corrosion",
+                "target": "designated_enemy",
+                "stacks": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RC03 신규. Active는 **적 행동**(부식 피해 발생)에, AUGMENT는 **숙주의 부여 총량**에 반응한다. 입력 축이 달라서 같은 파츠의 두 얼굴이 겹치지 않는다.",
+      "id": "acid_settling_tank",
+      "name": "산성 침전조",
+      "faction": "reclaimer",
+      "base_role": "system",
+      "archetype": "RC",
+      "keywords": [
+        "material",
+        "corrosion"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "corrosion_ticked",
+            "where": {
+              "enemy_ship": true,
+              "event_field_min": {
+                "field": "hull_damage",
+                "value": 1
+              },
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "corrosion"
+        ],
+        "triggers": [
+          {
+            "on": "corrosion_applied",
+            "where": {
+              "enemy_ship": true,
+              "source_is_host": true,
+              "every_nth_accumulated": {
+                "field": "stacks",
+                "n": 4
+              }
+            },
+            "do": [
+              {
+                "op": "gain_material",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RC04 신규. 자재로 적층을 크게 산다. 직접 피해와 초반 무자원 작동을 포기한다.",
+      "id": "pressurized_acid_cannon",
+      "name": "가압 산성포",
+      "faction": "reclaimer",
+      "base_role": "weapon",
+      "archetype": "RC",
+      "keywords": [
+        "material",
+        "corrosion"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "cost": {
+          "material": 2
+        },
+        "on_fire": [
+          {
+            "op": "apply_corrosion",
+            "target": "designated_enemy",
+            "stacks": 4
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "corrosion"
+        ],
+        "triggers": [
+          {
+            "on": "material_spent",
+            "where": {
+              "is_host": true,
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 3
+              }
+            },
+            "do": [
+              {
+                "op": "apply_corrosion",
+                "target": "designated_enemy",
+                "stacks": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RC05 신규. 부식 대응이 붙은 낮은 회복. 부식 없는 상대에게는 RF03보다 효율이 낮다 — 그것이 이 파츠의 대가다.",
+      "id": "neutralizing_washer",
+      "name": "중화 세척기",
+      "faction": "reclaimer",
+      "base_role": "defense",
+      "archetype": "RC",
+      "keywords": [
+        "repair",
+        "corrosion"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "repair",
+            "amount": 4
+          },
+          {
+            "op": "cleanse_corrosion",
+            "target": "most_corroded_own",
+            "stacks": 3
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "corrosion"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "cleanse_corrosion",
+                "target": "host",
+                "stacks": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RC06 신규. Reclaimer의 **희소** Charge. 자재 소비가 커서 일반 가속을 대체하지 못한다 — 아키타입의 Charge는 이 한 장에만 있다.",
+      "id": "acid_pressure_capacitor",
+      "name": "산압 축전기",
+      "faction": "reclaimer",
+      "base_role": "system",
+      "archetype": "RC",
+      "keywords": [
+        "material",
+        "charge"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "cost": {
+          "material": 3
+        },
+        "on_fire": [
+          {
+            "op": "charge",
+            "target": "slowest_other_own",
+            "seconds": 2.0
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "charge"
+        ],
+        "triggers": [
+          {
+            "on": "material_spent",
+            "where": {
+              "is_host": true,
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 6
+              }
+            },
+            "do": [
+              {
+                "op": "charge",
+                "target": "slowest_other_own",
+                "seconds": 1.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RC07 신규. 적 행동을 기다리지 않는 부식 출력. 분모가 1과 4로 다른 것이 Active와 AUGMENT의 차이 전부다 — RC09가 적층을 현금화하면 둘 다 약해진다.",
+      "id": "corrosion_piercer",
+      "name": "부식면 관통포",
+      "faction": "reclaimer",
+      "base_role": "weapon",
+      "archetype": "RC",
+      "keywords": [
+        "caustic",
+        "damage",
+        "corrosion"
+      ],
+      "active": {
+        "cooldown": 7.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "caustic",
+            "amount": 2,
+            "scale": {
+              "of": "designated_corrosion",
+              "per": 1
+            }
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "caustic",
+          "damage",
+          "corrosion"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "caustic",
+                "amount": 0,
+                "scale": {
+                  "of": "designated_corrosion",
+                  "per": 4
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RC08 신규. 소비 경제를 생존으로 전환한다. AUGMENT는 회복을 지연시키고 여러 사건으로 나눈다 — 회복 **횟수**를 세는 파츠와 궁합이 다르다.",
+      "id": "recovery_coolant_line",
+      "name": "회수액 냉각관",
+      "faction": "reclaimer",
+      "base_role": "defense",
+      "archetype": "RC",
+      "keywords": [
+        "material",
+        "repair"
+      ],
+      "active": {
+        "triggers": [
+          {
+            "on": "material_spent",
+            "where": {
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 6
+              }
+            },
+            "do": [
+              {
+                "op": "repair",
+                "amount": 3
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "regen",
+          "repair"
+        ],
+        "triggers": [
+          {
+            "on": "material_spent",
+            "where": {
+              "is_host": true,
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 6
+              }
+            },
+            "do": [
+              {
+                "op": "apply_regen",
+                "amount": 1,
+                "duration": 4.0
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RC09 신규. 미래의 부식 피해를 현재 자재로 바꾼다. 적층이 모자라면 **대기**한다 — require가 거짓이면 쿨타임을 소모하지 않는다. AUGMENT도 같은 조건을 where에 두어 부족한 발동은 횟수로 세지 않는다.",
+      "id": "acid_extractor",
+      "name": "산성 추출기",
+      "faction": "reclaimer",
+      "base_role": "system",
+      "archetype": "RC",
+      "keywords": [
+        "material",
+        "corrosion"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "require": {
+          "designated_corrosion_at_least": 3
+        },
+        "on_fire": [
+          {
+            "op": "cleanse_corrosion",
+            "target": "designated_enemy",
+            "stacks": 3
+          },
+          {
+            "op": "gain_material",
+            "amount": 2
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "material",
+          "corrosion"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true,
+              "every_nth_occurrence": 3
+            },
+            "do": [
+              {
+                "op": "cleanse_corrosion",
+                "target": "designated_enemy",
+                "stacks": 2
+              },
+              {
+                "op": "gain_material",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "_note": "RC10 신규. 소비를 장기 화력으로 저장한다. 부식 없이도 성장하지만 초기 출력과 성장 속도가 낮다.",
+      "id": "erosion_extruder",
+      "name": "침식 압출포",
+      "faction": "reclaimer",
+      "base_role": "weapon",
+      "archetype": "RC",
+      "keywords": [
+        "caustic",
+        "damage",
+        "material",
+        "growth"
+      ],
+      "active": {
+        "cooldown": 6.0,
+        "on_fire": [
+          {
+            "op": "deal_damage",
+            "type": "caustic",
+            "amount": 3,
+            "plus_growth": "self_caustic"
+          }
+        ],
+        "triggers": [
+          {
+            "on": "material_spent",
+            "where": {
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 6
+              }
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "self",
+                "stat": "self_caustic",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      },
+      "augment": {
+        "add_keywords": [
+          "caustic",
+          "damage",
+          "material",
+          "growth"
+        ],
+        "triggers": [
+          {
+            "on": "part_fired",
+            "where": {
+              "is_host": true
+            },
+            "do": [
+              {
+                "op": "deal_damage",
+                "type": "caustic",
+                "amount": 0,
+                "plus_growth": "aug_caustic"
+              }
+            ]
+          },
+          {
+            "on": "material_spent",
+            "where": {
+              "every_nth_accumulated": {
+                "field": "amount",
+                "n": 8
+              }
+            },
+            "do": [
+              {
+                "op": "grow",
+                "target": "host",
+                "stat": "aug_caustic",
+                "amount": 1
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

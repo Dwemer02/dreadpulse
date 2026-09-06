@@ -74,7 +74,9 @@ func _test_break_and_restore(t: RefCounted) -> void:
 	p.restore()
 	t.check(not p.broken, "복구되면 파손이 풀린다")
 	t.eq(p.progress_units, 0, "복구 시 쿨타임은 0에서 재시작")
-	t.eq(p.fires_remaining, 3, "복구 시 남은 횟수는 초기값으로 돌아간다")
+	# **채워주지 않는다** (기획서 §3.3). 복구는 "다시 켜는 것"이지 "새 파츠를 놓는 것"이
+	# 아니다. 횟수를 되돌리려는 파츠(AT08)는 자기 효과로 명시한다.
+	t.eq(p.fires_remaining, 1, "복구해도 남은 횟수는 그대로다")
 
 func _test_fires_drain_restore(t: RefCounted) -> void:
 	# 무제한 파츠가 처음 drain을 맞으면 DEFAULT_FIRE_LIMIT로 확정된다

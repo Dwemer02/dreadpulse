@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 71
+const EXPECTED_CHECKS := 74
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -123,16 +123,44 @@ func _test_resonance(t: RefCounted) -> void:
 	s.gain_resonance(3)
 	t.eq(s.resonance, 5, "직접 생성도 누적된다")
 
+## advance_effects()가 돌려준 회복 사건들의 실제 회복량 합.
+func _healed(effects: Dictionary) -> int:
+	var total: int = 0
+	for entry: Dictionary in (effects["regen_ticks"] as Array):
+		total += int(entry["healed"])
+	return total
+
 func _test_regen_overheat(t: RefCounted) -> void:
 	var s: RefCounted = _make_ship()
 	s.take_damage(100)
 
-	# 재생 2를 5초. 1초마다 2씩 5회 = 10
-	s.add_regen(2, K.secs_to_ticks(5.0))
+	# 재생 주기는 2초다 (기획서 §3.2.5). 6초짜리는 2·4·6초에 세 번 — 총 6.
+	# 마지막 한 번이 사라지면(지속시간을 먼저 깎으면) 4가 나온다.
+	s.add_regen(2, K.secs_to_ticks(6.0))
 	var healed: int = 0
 	for tick: int in range(1, 121):
-		healed += int(s.advance_effects(tick)["regen"])
-	t.eq(healed, 10, "재생 2(5초)는 총 10 회복한다")
+		healed += _healed(s.advance_effects(tick))
+	t.eq(healed, 6, "재생 2(6초)는 2·4·6초에 세 번, 총 6 회복한다")
+
+	# 부여마다 자기 시계다 — 같은 함선에 두 번 걸면 사건도 두 번씩 난다.
+	var two: RefCounted = _make_ship()
+	two.take_damage(100)
+	two.add_regen(1, K.secs_to_ticks(4.0), "weapon_1")
+	two.add_regen(1, K.secs_to_ticks(4.0), "weapon_2")
+	var events: int = 0
+	for tick2: int in range(1, 121):
+		events += (two.advance_effects(tick2)["regen_ticks"] as Array).size()
+	t.eq(events, 4, "부여 두 개 × 2회 = 회복 사건 4개 (합산되지 않는다)")
+
+	# 출처가 파괴되면 그 출처의 남은 재생은 종료한다.
+	var ended: RefCounted = _make_ship()
+	ended.take_damage(100)
+	ended.add_regen(5, K.secs_to_ticks(10.0), "weapon_1")
+	t.eq(ended.end_regen_from("weapon_1"), 1, "출처로 재생을 종료할 수 있다")
+	var after: int = 0
+	for tick3: int in range(1, 121):
+		after += _healed(ended.advance_effects(tick3))
+	t.eq(after, 0, "출처가 사라진 재생은 더 이상 회복하지 않는다")
 
 	# 과열은 Thermal 피해다. 기본 재질이 plating이므로 배율은 3/4다.
 	# 중첩 3 → 3*3/4=2, 2 → 1, 1 → 0이지만 원래 단위로 1 남았으므로 하한 1. 총 4.
@@ -172,15 +200,15 @@ func _test_regen_overheat(t: RefCounted) -> void:
 	p.add_regen(1, K.PERMANENT)
 	var perm_healed: int = 0
 	for tick: int in range(1, 121):
-		perm_healed += int(p.advance_effects(tick)["regen"])
-	t.eq(perm_healed, 6, "영구 재생 1은 120틱(6주기) 동안 계속 적용된다")
+		perm_healed += _healed(p.advance_effects(tick))
+	t.eq(perm_healed, 3, "영구 재생 1은 120틱(2초 주기 3회) 동안 계속 적용된다")
 	t.eq(p.regen_entries.size(), 1, "영구 재생 항목은 제거되지 않는다")
 
 	# 0틱 지속시간 재생은 발동 즉시 만료된 것으로 취급해 회복을 주지 않는다
 	var z: RefCounted = _make_ship()
 	z.take_damage(50)
 	z.add_regen(5, 0)
-	var zero_dur_heal: int = int(z.advance_effects(K.PERIOD_TICKS)["regen"])
+	var zero_dur_heal: int = _healed(z.advance_effects(K.REGEN_PERIOD_TICKS))
 	t.eq(zero_dur_heal, 0, "0틱 지속 재생은 회복을 주지 않는다")
 
 	# 틱 0에서는 아무것도 적용되지 않는다 — 전투 시작 즉시 재생·과열이 터지면 안 된다
@@ -189,7 +217,7 @@ func _test_regen_overheat(t: RefCounted) -> void:
 	zero.add_regen(5, K.secs_to_ticks(5.0))
 	zero.add_overheat(3)
 	var at_zero: Dictionary = zero.advance_effects(0)
-	t.eq(int(at_zero["regen"]), 0, "틱 0에서는 재생이 적용되지 않는다")
+	t.eq(_healed(at_zero), 0, "첫 틱에는 재생이 적용되지 않는다 (2초 주기)")
 	t.eq(int(at_zero["overheat"]), 0, "틱 0에서는 과열이 적용되지 않는다")
 	t.eq(zero.overheat_stacks, 3, "틱 0에서는 과열 스택도 줄지 않는다")
 

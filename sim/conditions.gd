@@ -9,14 +9,19 @@ extends RefCounted
 ## 역시 거짓으로 닫는다. null(조건 없음)만 예외로 참이다.
 
 const K = preload("res://sim/sim_const.gd")
+const Targeting = preload("res://sim/targeting.gd")
 
 const CONDITIONS: Array[String] = [
 	"resonance_at_least", "material_at_least",
 	"before_seconds", "after_seconds",
 	"every_nth_fire", "every_nth_accumulated",
 	"every_nth_occurrence",
-	"is_host", "source_is_host", "event_field", "source_faction", "source_keyword",
+	"is_host", "source_is_host", "event_field", "event_field_min",
+	"source_faction", "source_keyword",
 	"hull_below_ratio", "fires_remaining_at_most", "has_broken_own",
+	"has_exhausted_own", "has_other_own",
+	"enemy_overheat_at_least", "enemy_fracture_ratio_at_least",
+	"designated_corrosion_at_least",
 	"is_accelerated", "own_ship", "enemy_ship",
 ]
 
@@ -123,6 +128,43 @@ static func _one(key: String, value: Variant, ctx: Dictionary) -> bool:
 				and str(event.get("slot", "")) == part.slot_id \
 				and str(event.get("ship", "")) == ship.side
 			return same == bool(value)
+		"event_field_min":
+			# 금액 0의 피해·상태 제거는 보상 사건을 만들지 않는다 (기획서 §3.2.9).
+			# event_field는 정확히 같은 값만 보므로 "1 이상"을 표현할 수 없다.
+			var spec3: Dictionary = value
+			var field2: String = str(spec3.get("field", ""))
+			if not event.has(field2):
+				return false
+			return int(event[field2]) >= int(spec3.get("value", 1))
+		"has_exhausted_own":
+			var found: bool = false
+			for p: RefCounted in ship.alive_parts():
+				if p != part and p.is_exhausted():
+					found = true
+					break
+			return found == bool(value)
+		"has_other_own":
+			# RD08은 희생할 대상이 없으면 발동하지 않는다. 파괴 불가 파츠(Core)는
+			# 희생양이 될 수 없으므로 여기서도 세지 않는다.
+			var others: bool = false
+			for p2: RefCounted in ship.alive_parts():
+				if p2 != part and not p2.passive and not p2.is_indestructible():
+					others = true
+					break
+			return others == bool(value)
+		"enemy_overheat_at_least":
+			var foe2: RefCounted = ctx.get("enemy_ship", null)
+			return foe2 != null and foe2.overheat_stacks >= int(value)
+		"enemy_fracture_ratio_at_least":
+			# AE06 「임계 관측기」 — "적 Fracture가 현재 Hull의 절반 이상".
+			# 정수 비교로 둔다: fracture * 100 >= hull * (ratio * 100).
+			var foe3: RefCounted = ctx.get("enemy_ship", null)
+			if foe3 == null or foe3.hull <= 0:
+				return false
+			return foe3.fracture * 100 >= foe3.hull * int(round(float(value) * 100.0))
+		"designated_corrosion_at_least":
+			var target: Array = Targeting.resolve("designated_enemy", ctx)
+			return not target.is_empty() and (target[0] as RefCounted).corrosion_stacks >= int(value)
 		"event_field":
 			var spec2: Dictionary = value
 			var field: String = str(spec2.get("field", ""))

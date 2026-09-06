@@ -1,6 +1,6 @@
 extends RefCounted
 
-const EXPECTED_CHECKS := 55
+const EXPECTED_CHECKS := 63
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -207,6 +207,19 @@ func _test_unknown(t: RefCounted) -> void:
 	# null을 그대로 두면 세 셀렉터가 빈 배열을 돌려주고, 그것이 "match 분기 누락"과
 	# 구별되지 않는다.
 	ctx2["enemy_ship"] = _ship()
+	# 새 셀렉터들이 후보를 찾으려면 부식·소진·이벤트 원천이 함께 있어야 한다.
+	s2.get_part("weapon_1").corrosion_stacks = 3
+	s2.get_part("system_1").fires_remaining = 0
+	# 사건 원인(weapon_1)과 소진(system_1)을 뺀 뒤에도 남는 시간 조작 대상이
+	# 하나는 있어야 random_other_own_except_event가 후보를 찾는다.
+	var spare: RefCounted = Part.new()
+	spare.slot_id = "defense_1"
+	spare.role = "defense"
+	spare.base_role = "defense"
+	spare.cooldown_units = K.cooldown_to_units(4.0)
+	s2.add_part(spare)
+	ctx2["source_part"] = s2.get_part("weapon_1")
+	ctx2["event"] = {"ship": "player", "slot": "weapon_1"}
 	for selector: String in Targeting.SELECTORS:
 		t.check(Targeting.resolve(selector, ctx2).size() > 0,
 			"셀렉터 '%s'가 유효한 문맥에서 빈 배열을 돌려준다 — match 분기 누락 의심" % selector)

@@ -36,8 +36,16 @@ var links: Dictionary = {}           # slot_id -> Array[String]
 var thresholds: Array = []           # 내림차순 [0.75, 0.50, 0.25]
 var thresholds_crossed: Array = []
 
-var regen_entries: Array = []        # [{amount:int, ticks_left:int}]
+## 재생 부여 목록. **부여 하나하나가 독립된 유한 효과**다 (기획서 §3.2.5) —
+## 함선 전역 틱이 아니라 부여 시점부터 자기 시계로 2초마다 회복한다.
+## [{amount, ticks_left, elapsed, source_slot, triggers_repair}]
+var regen_entries: Array = []
 var overheat_stacks: int = 0
+
+## 이 함선이 지목한 **적** 파츠의 슬롯 id. 「적 지정 파츠」 셀렉터가 읽는다.
+## 전투 전 지목 UI가 생기면 여기에 값을 넣어주면 된다 — 비어 있거나 그 파츠가
+## 부적격이면 targeting이 §3.2.6의 재선정 규칙으로 다시 뽑아 여기에 적는다.
+var designated_slot: String = ""
 
 # --- Relic 수준 modifier (스펙 §9.4) ---
 var relic_ids: Array[String] = []
@@ -106,6 +114,13 @@ func take_damage(amount: int) -> Dictionary:
 
 func take_typed_damage(amount: int, attack_type: String) -> Dictionary:
 	return Damage.apply(self, amount, attack_type)
+
+## 적 함선의 과열 적층을 제거한다. 실제로 제거된 양을 돌려준다.
+## 과열은 파츠가 아니라 **함선**에 쌓이므로 셀렉터를 쓰지 않는다.
+func cleanse_overheat(stacks: int) -> int:
+	var actual: int = mini(maxi(0, stacks), overheat_stacks)
+	overheat_stacks -= actual
+	return actual
 
 func repair(amount: int) -> int:
 	var before: int = hull
@@ -204,53 +219,82 @@ func register_fire_for_resonance() -> int:
 
 # --- 지속 효과 ---
 
-func add_regen(amount: int, ticks: int) -> void:
+## 재생을 하나 부여한다. 부여마다 독립된 항목이 생긴다 —
+## 합치면 "이 파츠 출처의 재생"(VE03)을 구별할 수 없고, 재사용으로 같은 재생을
+## 여러 번 거는 것의 가치도 사라진다.
+func add_regen(amount: int, ticks: int, source_slot: String = "",
+		triggers_repair: bool = true) -> void:
 	if amount <= 0:
 		return
-	regen_entries.append({"amount": amount, "ticks_left": ticks})
+	regen_entries.append({
+		"amount": amount, "ticks_left": ticks, "elapsed": 0,
+		"source_slot": source_slot, "triggers_repair": triggers_repair,
+	})
+
+## 출처 파츠가 파괴되면 그 출처가 만든 남은 재생은 종료한다 (기획서 §3.2.5).
+## 출처를 적지 않은 재생(테스트 픽스처 등)은 건드리지 않는다.
+func end_regen_from(source_slot: String) -> int:
+	if source_slot == "":
+		return 0
+	var kept: Array = []
+	for entry: Dictionary in regen_entries:
+		if str(entry.get("source_slot", "")) != source_slot:
+			kept.append(entry)
+	var removed: int = regen_entries.size() - kept.size()
+	regen_entries = kept
+	return removed
 
 func add_overheat(stacks: int) -> void:
 	overheat_stacks += maxi(0, stacks)
 
-## 한 틱 진행. PERIOD_TICKS(1초)마다 재생과 과열이 적용된다.
-## 반환: {"regen": 회복량, "overheat": 과열 피해량}
-##
-## 남은 지속시간(ticks_left)은 "이번 주기 판정에 아직 유효한가"를 먼저 확인한 뒤에
-## 소모해야 한다 — 먼저 깎아버리면 지속시간이 정확히 주기 경계에서 끝나는 경우
-## (예: 100틱 지속 + 20틱 주기) 마지막 한 번의 적용이 통째로 사라진다.
+## 한 틱 진행. 과열은 1초마다, 재생은 부여별로 2초마다 적용된다.
+## 반환: {"regen_ticks": [{amount, healed, source_slot, triggers_repair}], "overheat": ...}
 func advance_effects(tick: int) -> Dictionary:
 	var result: Dictionary = {
-		"regen": 0, "overheat": 0, "overheat_fired": false, "overheat_absorbed": 0,
+		"regen_ticks": [], "overheat": 0, "overheat_fired": false, "overheat_absorbed": 0,
 	}
 
-	if tick > 0 and tick % K.PERIOD_TICKS == 0:
-		var total: int = 0
-		for entry: Dictionary in regen_entries:
-			var left: int = int(entry["ticks_left"])
-			if left > 0 or left == K.PERMANENT:
-				total += int(entry["amount"])
-		if total > 0:
-			result["regen"] = repair(total)
-		if overheat_stacks > 0:
-			# 과열은 Thermal 피해다. 보호막을 무시하지 않는다 —
-			# "Energy Shield로 Hull 보호"가 과열의 공용 대응책이기 때문이다.
-			# 실드가 전부 흡수해도 이번 틱에 과열이 작동한 것은 사실이므로
-			# 별도 플래그로 알린다. hull_damage만 보면 이벤트가 사라진다.
-			var r: Dictionary = take_typed_damage(overheat_stacks, "thermal")
-			result["overheat"] = int(r["hull_damage"])
-			result["overheat_absorbed"] = int(r["absorbed"])
-			result["overheat_fired"] = true
-			overheat_stacks -= 1
-
+	# 재생: 부여마다 자기 시계다. 부여 시점부터 REGEN_PERIOD_TICKS(2초)마다 한 번씩,
+	# 남은 지속시간이 아직 유효할 때만 회복한다.
+	#
+	# 남은 지속시간(ticks_left)은 "이번 주기 판정에 아직 유효한가"를 먼저 확인한 뒤에
+	# 소모해야 한다 — 먼저 깎아버리면 지속시간이 정확히 주기 경계에서 끝나는 경우
+	# (예: Regen 1 / 6초) 마지막 한 번의 적용이 통째로 사라진다.
 	for entry: Dictionary in regen_entries:
 		var left: int = int(entry["ticks_left"])
-		if left > 0:
-			entry["ticks_left"] = left - 1
+		if left == 0:
+			continue
+		entry["elapsed"] = int(entry["elapsed"]) + 1
+		if int(entry["elapsed"]) % K.REGEN_PERIOD_TICKS != 0:
+			continue
+		var healed: int = repair(int(entry["amount"]))
+		(result["regen_ticks"] as Array).append({
+			"amount": int(entry["amount"]), "healed": healed,
+			"source_slot": str(entry.get("source_slot", "")),
+			"triggers_repair": bool(entry.get("triggers_repair", true)),
+		})
 
-	var kept: Array = []
-	for entry: Dictionary in regen_entries:
-		if int(entry["ticks_left"]) != 0:
-			kept.append(entry)
-	regen_entries = kept
+	# 과열은 함선 단위이고 주기가 1초로 재생과 다르다.
+	if tick > 0 and tick % K.PERIOD_TICKS == 0 and overheat_stacks > 0:
+		# 과열은 Thermal 피해다. 보호막을 무시하지 않는다 —
+		# "Energy Shield로 Hull 보호"가 과열의 공용 대응책이기 때문이다.
+		# 실드가 전부 흡수해도 이번 틱에 과열이 작동한 것은 사실이므로
+		# 별도 플래그로 알린다. hull_damage만 보면 이벤트가 사라진다.
+		var r: Dictionary = take_typed_damage(overheat_stacks, "thermal")
+		result["overheat"] = int(r["hull_damage"])
+		result["overheat_absorbed"] = int(r["absorbed"])
+		result["overheat_fired"] = true
+		overheat_stacks -= 1
+
+	for entry2: Dictionary in regen_entries:
+		var left2: int = int(entry2["ticks_left"])
+		if left2 > 0:
+			entry2["ticks_left"] = left2 - 1
+
+	var kept2: Array = []
+	for entry3: Dictionary in regen_entries:
+		if int(entry3["ticks_left"]) != 0:
+			kept2.append(entry3)
+	regen_entries = kept2
 
 	return result

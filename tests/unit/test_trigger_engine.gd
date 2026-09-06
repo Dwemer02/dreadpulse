@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 72
+const EXPECTED_CHECKS := 77
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -105,6 +105,7 @@ func run(t: RefCounted) -> void:
 	_test_chain_depth_propagation(t)
 	_test_chain_depth_recursive_cap(t)
 	_test_broken_part_stops_triggers(t)
+	_test_broken_part_sees_only_its_own_destruction(t)
 	_test_relic_trigger(t)
 	_test_relic_every_nth_accumulated(t)
 	_test_traversal_order(t)
@@ -344,6 +345,50 @@ func _test_broken_part_stops_triggers(t: RefCounted) -> void:
 	t.eq(part.trigger_fires[0], 0, "파손 파츠의 ACTIVE 트리거는 발동하지 않는다")
 	t.eq(part.trigger_fires[1], 0, "붙어 있던 AUGMENT 트리거도 함께 정지한다")
 	t.eq(player.material, 0, "효과도 전혀 적용되지 않는다")
+
+## 예외가 정확히 하나 있다 — **자기 자신의 파손 사건**.
+##
+## 「숙주가 실제 Destroy될 때 …」 형태의 AUGMENT가 해체 순환의 절반이다
+## (RD01·RD02·RD03·RD06). 이 예외가 없으면 그 넷이 전부 조용히 죽고, 자기 파괴
+## 파츠는 대가만 있고 보상이 없는 파츠가 된다. 조용히 죽으므로 코드 리뷰로는
+## 잡히지 않는다 — 그래서 여기서 못을 박는다.
+func _test_broken_part_sees_only_its_own_destruction(t: RefCounted) -> void:
+	var player: RefCounted = _ship("player")
+	var enemy: RefCounted = _ship("enemy")
+	var part: RefCounted = _part("weapon_1")
+	var bystander: RefCounted = _part("weapon_2")
+	_add_trigger(part, _trig("part_destroyed", _gain_material_do(2), {"is_host": true}))
+	_add_trigger(part, _trig("tick", _gain_material_do(1)))
+	part.broken = true
+	player.add_part(part)
+	player.add_part(bystander)
+	var sim: RefCounted = FakeSim.new()
+
+	TriggerEngine.dispatch(
+		_event("part_destroyed", "player", {"slot": "weapon_1"}), [player, enemy], sim)
+	t.eq(part.trigger_fires[0], 1, "파손 파츠도 **자기** 파손 사건에는 반응한다")
+	t.eq(player.material, 2, "그 보상이 실제로 적용된다")
+
+	# 다른 파츠의 파손은 보지 않는다 — 예외는 딱 자기 것 하나다.
+	TriggerEngine.dispatch(
+		_event("part_destroyed", "player", {"slot": "weapon_2"}), [player, enemy], sim)
+	t.eq(part.trigger_fires[0], 1, "다른 파츠의 파손 사건에는 반응하지 않는다")
+
+	# 적함의 같은 슬롯 이름도 자기 것이 아니다 (양쪽이 같은 Frame을 쓰면 이름이 겹친다).
+	# where에 is_host를 걸지 않은 트리거로 검사한다 — 예외 판정이 조건에 기대면
+	# 조건 없는 트리거 하나로 적함 파손이 파손된 아군 파츠를 깨우게 된다.
+	var mirror: RefCounted = _part("weapon_1")
+	_add_trigger(mirror, _trig("part_destroyed", _gain_material_do(2),
+		{"enemy_ship": true}))
+	mirror.broken = true
+	enemy.add_part(mirror)
+	TriggerEngine.dispatch(
+		_event("part_destroyed", "player", {"slot": "weapon_1"}), [player, enemy], sim)
+	t.eq(mirror.trigger_fires[0], 0, "적함의 동명 슬롯 파손은 자기 파손이 아니다")
+
+	# 그 외의 사건은 여전히 전부 멈춘다.
+	TriggerEngine.dispatch(_event("tick", "player"), [player, enemy], sim)
+	t.eq(part.trigger_fires[1], 0, "파손 파츠는 그 밖의 사건은 계속 보지 않는다")
 
 func _test_relic_trigger(t: RefCounted) -> void:
 	var player: RefCounted = _ship("player")
