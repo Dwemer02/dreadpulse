@@ -210,8 +210,12 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 
 ## 아키텍처 규칙
 
-- **계층은 넷이고 의존은 한 방향이다**: `sim/`(전투 1판) ← `run/`(런 1회) ←
-  `debug/`·`tests/`. `sim/`은 런이 존재하는지 모른다. 런 계층이 sim에 **데이터를
+- **계층은 다섯이고 의존은 한 방향이다**: `sim/`(전투 1판) ← `run/`(런 1회) ·
+  `league/`(자동 조립 리그 배치) ← `debug/`·`tests/`.
+  `league/`는 `run/`의 형제다 — `sim/`과 `run/inventory.gd`(순수 컨테이너)만 쓴다.
+  리그 규칙(초과 피해·손실 상한·보관 한도)은 **본편 규칙이 아니다**.
+  전투 규칙이 필요하면 리그 안에 새로 구현하지 말고 `combat_sim.rules`로 주입한다 —
+  전투 구현이 두 벌이 되면 반드시 어긋난다. `sim/`은 런이 존재하는지 모른다. 런 계층이 sim에 **데이터를
   주입하는 방향**이어야 하고 그 반대가 되면 안 된다 (설계:
   `docs/superpowers/specs/2026-09-02-mini-iteration-design.md` §3).
   `run/`도 `sim/`과 같은 규약을 지킨다 — `RefCounted`만, `class_name` 금지, 주입 RNG만.
@@ -312,6 +316,8 @@ Always start by running `--help` to discover available commands. Use the CLI whe
   모든 테스트 모듈은 `run()`이 `t.done()`으로 끝나고 `const EXPECTED_CHECKS := N`을 선언해야 한다.
 - 배치 검증: `godot --headless --path . --script res://tests/run_batch.gd`
 - 미니 런 리포트: `godot --headless --path . --script res://tests/run_mini.gd`
+- 자동 조립 리그: `godot --headless --path . --script res://tests/run_league.gd -- --repeats=5`
+  (전략 4 × 풀 10 × 시드 N. 5면 200명. 출력은 `tests/out/league/`)
   (오토파일럿 60런. 완주율·노드별 벽·Tune 지표·파츠 선택률)
 - **직접 플레이: Godot 에디터에서 F5** (메인 씬 = `res://debug/run_view.tscn`)
   팩션·시드를 고르고 적 선택 → 보드 Tune → 전투 → Salvage 3택1을 6노드 반복한다.
