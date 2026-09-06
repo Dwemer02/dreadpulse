@@ -6,7 +6,7 @@ extends RefCounted
 ## 불가능한 조립이 통과하는가, 초과 피해가 규칙대로 들어가는가, 후보 평가가 원본을
 ## 오염시키는가, 같은 시드가 같은 결과를 내는가.
 
-const EXPECTED_CHECKS := 60
+const EXPECTED_CHECKS := 81
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -41,6 +41,9 @@ func run(t: RefCounted) -> void:
 	_test_overtime_ignores_triggers(t)
 	_test_timeout_is_draw(t)
 	_test_offer_pools(t)
+	_test_result_accounting(t)
+	_test_invalid_is_not_a_score(t)
+	_test_errors_are_isolated(t)
 	_test_determinism(t)
 	t.done()
 
@@ -314,6 +317,104 @@ func _test_offer_pools(t: RefCounted) -> void:
 	t.check(offers.raw_offer("r70_v30", 3, 5, 3) != offers.raw_offer("r70_v30", 4, 5, 3),
 		"다른 반복 시드는 다른 후보열을 낸다")
 
+## 승점·손실·탈락 회계 (§8.3·§14).
+##
+## 무승부를 통계에서 패배와 합치지 않으면서 탈락 계산에는 같은 비용을 매기는 것,
+## 그리고 탈락한 참가자에게 보상이 더 가지 않는 것이 여기서 갈린다.
+func _test_result_accounting(t: RefCounted) -> void:
+	var runner: RefCounted = _runner()
+
+	var winner: Dictionary = _participant()
+	runner._apply_result(winner, true, false, 1)
+	t.eq(int(winner["points"]), 1, "승리는 승점 +1")
+	t.eq(int(winner["losses"]), 0, "승리는 손실을 늘리지 않는다")
+
+	var drawer: Dictionary = _participant()
+	runner._apply_result(drawer, false, true, 1)
+	t.eq(int(drawer["points"]), 0, "무승부는 승점을 주지 않는다")
+	t.eq(int(drawer["losses"]), 1, "탈락 계산에는 패배와 같은 비용이다")
+
+	# 손실이 상한에 닿으면 그 자리에서 탈락한다. 상태가 바뀌어야 다음 라운드의
+	# 보상 지급 루프가 이 참가자를 건너뛴다 (§3.2의 "종료한 참가자에게 지급하지 않는다").
+	var doomed: Dictionary = _participant()
+	for i: int in runner.config.loss_limit:
+		runner._apply_result(doomed, false, false, 1)
+	t.eq(str(doomed["status"]), "eliminated", "손실 %d회면 탈락" % runner.config.loss_limit)
+	t.eq(int(doomed["end_round"]), 1, "탈락 라운드가 기록된다")
+
+	var acquired_before: int = int(doomed["acquisitions"])
+	# 탈락자는 active가 아니므로 보상 루프가 건너뛴다. 그 조건을 그대로 확인한다.
+	t.check(str(doomed["status"]) != "active", "탈락자는 더 이상 active가 아니다")
+	t.eq(int(doomed["acquisitions"]), acquired_before, "탈락 처리 자체가 보상을 주지 않는다")
+
+	# 마지막 라운드에서 손실이 차면 상한 생존이 아니라 탈락이 우선한다 (§3.2 마지막).
+	var last: Dictionary = _participant()
+	for j: int in runner.config.loss_limit:
+		runner._apply_result(last, false, false, runner.config.round_cap)
+	t.eq(str(last["status"]), "eliminated", "15라운드의 4번째 손실도 탈락이 우선한다")
+
+## 조립할 수 없는 상황을 **낮은 점수가 아니라 무효로** 표현하는가.
+##
+## 이것이 시작 조립 실패의 진짜 원인이었다. 초반 점수는 흔히 음수인데(빈 본체 자리·
+## 공격 불능 페널티) 실패를 0점으로 돌려주면 그것이 정상 후보를 이겨서,
+## 조립할 수 있는 파츠를 두고 "아무것도 안 함"을 고른다.
+func _test_invalid_is_not_a_score(t: RefCounted) -> void:
+	var config: RefCounted = _content_config()
+	var policy: RefCounted = AssemblyPolicy.new()
+	policy.setup("immediate", config)
+
+	# 본체 3개를 요구하는데 파츠가 하나뿐이다 — 깊이 2로도 도달할 수 없다.
+	var starved: RefCounted = Inventory.new()
+	_content.fresh_board(config, starved)
+	starved.add("scrap_autocannon")
+	var ctx: Dictionary = _ctx()
+	ctx["body_slots"] = _content.body_slot_count(config)
+	ctx["min_bodies"] = 3
+	ctx["require_operational"] = true
+	ctx["rng"] = Config.rng_for(["test", 2])
+	var impossible: Dictionary = policy.decide(starved, ctx)
+	t.check(not bool(impossible.get("valid", false)), "조립 불가는 valid: false로 표시된다")
+	t.check(float(impossible["score"]) < -1000.0,
+		"점수는 정상 후보와 겨룰 수 없는 값이어야 한다 (%.1f)" % float(impossible["score"]))
+
+	# 같은 요구를 **한 단계 안에** 채울 수 있으면 유효한 결정이 나온다.
+	# (탐색 깊이가 2이므로 실제 리그처럼 매 획득마다 요구가 하나씩 늘어야 도달한다.)
+	var enough: RefCounted = Inventory.new()
+	_content.fresh_board(config, enough)
+	enough.place("weapon_1", enough.add("scrap_autocannon"))
+	enough.place("defense_1", enough.add("field_welder"))
+	enough.add("regen_sac")
+	var ctx2: Dictionary = ctx.duplicate()
+	ctx2["rng"] = Config.rng_for(["test", 3])
+	var possible: Dictionary = policy.decide(enough, ctx2)
+	t.check(bool(possible.get("valid", false)), "조립할 수 있으면 valid: true다")
+	t.check(float(possible["score"]) > float(impossible["score"]),
+		"유효한 후보가 무효 신호를 이긴다 — 음수 점수여도 그렇다 (%.2f > %.1f)"
+			% [float(possible["score"]), float(impossible["score"])])
+
+## 오류 매치를 승리·무승부·0초 패배로 대체하지 않는다 (§8.3).
+## 조용히 결과로 바꾸면 그 배치의 승률이 조용히 거짓이 된다.
+func _test_errors_are_isolated(t: RefCounted) -> void:
+	var config: RefCounted = _content_config()
+	# Core가 빠진 빌드는 조립되지 않는다 — 실제 실행에서 났던 오류를 그대로 재현한다.
+	var broken: Dictionary = {"id": "broken", "frame": config.frame_id, "slots": {}}
+	var result: Dictionary = CombatAdapter.fight(_content.catalog, config, broken, broken, 1)
+	t.check(not bool(result["ok"]), "조립할 수 없는 빌드는 오류로 돌아온다")
+	t.eq(str(result["victory_kind"]), "simulation_error", "승리 방식이 오류로 분류된다")
+	t.eq(str(result["winner"]), "", "승자를 지어내지 않는다")
+	t.eq(float(result["elapsed"]), 0.0, "0초 패배로 바꾸지도 않는다")
+
+	# 오류는 승점에도 손실에도 반영되지 않는다.
+	var runner: RefCounted = _runner()
+	runner.participants = [_participant(), _participant()]
+	runner.participants[0]["build"] = broken
+	runner.participants[1]["build"] = broken
+	runner._fight(0, 1, 1, "duel")
+	t.eq(int(runner.participants[0]["losses"]), 0, "오류 매치는 손실을 만들지 않는다")
+	t.eq(int(runner.participants[0]["points"]), 0, "승점도 만들지 않는다")
+	t.eq(runner.matches.size(), 1, "그래도 매치 기록에는 남는다 — 재현할 수 있어야 한다")
+	t.check(not runner.errors.is_empty(), "오류 목록에도 남는다")
+
 ## 같은 입력·시드로 선택과 전투가 재현되는가 (§14 첫 항목).
 func _test_determinism(t: RefCounted) -> void:
 	var first: Dictionary = _decide_once()
@@ -336,6 +437,18 @@ func _test_determinism(t: RefCounted) -> void:
 	t.check(Config.mix(["a", 1]) != Config.mix(["a", 2]), "입력이 다르면 시드도 다르다")
 
 # --- 보조 ---
+
+## 라운드 회계만 쓰는 최소 러너. 배치를 돌리지 않는다.
+func _runner() -> RefCounted:
+	var runner: RefCounted = preload("res://league/league_runner.gd").new()
+	runner.setup(_content_config(), _content)
+	return runner
+
+func _participant() -> Dictionary:
+	return {"id": 0, "strategy": "immediate", "pool": "r100", "seed": 1,
+		"points": 0, "losses": 0, "status": "active", "acquisitions": 0,
+		"end_round": 0, "end_reason": "", "recent_opponents": [],
+		"build": {}, "history": []}
 
 func _content_config() -> RefCounted:
 	var config: RefCounted = Config.new()
