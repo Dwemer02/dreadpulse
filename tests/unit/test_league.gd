@@ -6,7 +6,7 @@ extends RefCounted
 ## 불가능한 조립이 통과하는가, 초과 피해가 규칙대로 들어가는가, 후보 평가가 원본을
 ## 오염시키는가, 같은 시드가 같은 결과를 내는가.
 
-const EXPECTED_CHECKS := 58
+const EXPECTED_CHECKS := 60
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -82,6 +82,21 @@ func _test_connection_direction(t: RefCounted) -> void:
 	t.eq(_links(emitter, right), 1, "방향이 맞으면 연결로 센다")
 	t.eq(_links(emitter, wrong), 0, "방향이 어긋나면 연결이 아니다")
 
+	# 숙주 한정 트리거(is_host)는 **자기 슬롯의 본체**하고만 연결된다.
+	# 이걸 무시하면 증강 하나가 보드의 모든 본체와 연결된 것으로 세어져
+	# 연결 특징이 상한에 붙어버리고, 전략 사이의 차이를 못 만든다.
+	var host_only: Dictionary = _meta({
+		"listens": [["part_fired", "own"]], "passive": true, "host_only": true})
+	var body_a: Dictionary = _meta({"emits": [["part_fired", "own"]]})
+	var body_b: Dictionary = _meta({"emits": [["part_fired", "own"]]})
+	var board: Dictionary = Graph.analyze([
+		{"slot": "weapon_1", "part_id": "a", "body_meta": body_a,
+			"augment_id": "aug", "augment_meta": host_only},
+		{"slot": "weapon_2", "part_id": "b", "body_meta": body_b,
+			"augment_id": "", "augment_meta": {}}])
+	t.eq((board["connections"] as Array).size(), 1,
+		"숙주 한정 증강은 숙주 하나와만 연결된다 (보드의 모든 본체가 아니다)")
+
 	# 태그가 같다는 이유만으로 연결이라고 부르지 않는다 (§6).
 	var same_tag: Dictionary = _meta({"listens": [["overheat_ticked", "own"]], "passive": true})
 	t.eq(_links(emitter, same_tag), 0, "같은 상태이상을 다뤄도 이벤트가 다르면 연결이 아니다")
@@ -129,8 +144,12 @@ func _test_candidate_legality(t: RefCounted) -> void:
 	for action: Dictionary in actions:
 		if str(action["kind"]) == "place":
 			slots[str(action["slot"])] = true
-	t.check(slots.has("weapon_1"), "무기는 무기 슬롯에 놓을 수 있다")
-	t.check(slots.has("flex_1"), "flexible 슬롯에도 놓을 수 있다")
+	# 빈 슬롯이 여럿이어도 후보는 하나다 — 서명에 슬롯 이름이 없으므로 같은 빌드로
+	# 접힌다. 남는 자리가 weapon_1 · flex ×3인데 후보가 넷이면 탐색만 네 배가 된다.
+	t.eq(slots.size(), 1, "역할이 맞는 빈 자리가 여럿이어도 배치 후보는 하나로 접힌다")
+	var chosen: String = slots.keys()[0]
+	t.check(chosen == "weapon_1" or chosen.begins_with("flex"),
+		"그 자리는 실제로 무기를 받을 수 있는 슬롯이다 (%s)" % chosen)
 	t.check(not slots.has("defense_1"), "무기를 방어 슬롯에 놓는 후보는 만들지 않는다")
 	t.check(not slots.has("core"), "Core 슬롯은 후보에서 제외한다")
 
@@ -165,6 +184,15 @@ func _test_candidates_do_not_mutate(t: RefCounted) -> void:
 	t.check(actions.size() > 0, "후보가 만들어진다 (%d개)" % actions.size())
 	t.eq(inv.owned.size(), owned_before, "후보를 만들어도 보유 수가 변하지 않는다")
 	t.eq(Generator.signature(inv), board_before, "원본 보드도 그대로다")
+
+	# 서명에 슬롯 이름이 없다 — flex_2와 flex_3은 같은 빌드다.
+	var here: RefCounted = inv.clone()
+	var there: RefCounted = inv.clone()
+	var uid: int = int((inv.owned[1] as Dictionary)["uid"])
+	here.place("flex_1", uid)
+	there.place("flex_2", uid)
+	t.eq(Generator.signature(here), Generator.signature(there),
+		"자리만 다른 같은 조립은 같은 서명이다 — 상위 3개가 같은 빌드로 채워지지 않는다")
 
 	# 비어 있는 본체 자리는 낭비로 센다 (§5.1의 본체 기회비용).
 	# 이게 없으면 증강이 순수 이득으로 보여 AI가 본체 자리를 비워둔 채 전부 증강으로 돌린다.

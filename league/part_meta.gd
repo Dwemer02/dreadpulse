@@ -135,6 +135,8 @@ static func _blank(def: Dictionary) -> Dictionary:
 		"prerequisites": [],     # material / accelerated / broken_own / ...
 		"functions": [],         # attack / defend / heal / time / produce / convert / ...
 		"damage_paths": [],      # direct / overheat / corrosion / fracture
+		# 숙주 한정 트리거만 갖는가. 참이면 이 단위는 자기 숙주하고만 연결된다.
+		"host_only": false,
 		"burst_output": 0,       # 1회 발동당 피해 상당량
 		"burst_sustain": 0,      # 1회 발동당 회복·보호막 상당량
 		"trigger_output": 0,     # 트리거 1회당 피해 상당량
@@ -147,6 +149,14 @@ static func _scan_trigger(meta: Dictionary, trigger: Dictionary) -> void:
 	var side: String = "own"
 	if where is Dictionary and bool((where as Dictionary).get("enemy_ship", false)):
 		side = "enemy"
+	# **숙주 한정 트리거는 숙주 하나만 듣는다.** is_host / source_is_host가 그 표시다.
+	#
+	# 이걸 무시하면 "숙주 발동 시" 증강이 보드의 **모든** 본체와 연결된 것으로 세어져,
+	# 연결 수가 정규화 상한을 넘어 포화한다. 포화한 특징은 어떤 후보를 골라도 1.0이라
+	# 전략 사이의 차이를 만들지 못한다 — 실측에서 네 전략 전부 연결 1.00이 나왔다.
+	if where is Dictionary and (bool((where as Dictionary).get("is_host", false))
+			or bool((where as Dictionary).get("source_is_host", false))):
+		meta["host_only"] = true
 	_add_event(meta["listens"], [str(trigger.get("on", "")), side])
 	_collect_conditions(meta, where)
 	_scan_block(meta, trigger.get("do", []), false)

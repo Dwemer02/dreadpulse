@@ -198,9 +198,15 @@ static func _connections(units: Array, active: Dictionary) -> Array:
 		var a: Dictionary = units[i]["meta"]
 		for key2: String in a["emits_keys"]:
 			for j2: Variant in listeners.get(key2, []):
-				if int(j2) != i:
-					out.append({"from": i, "to": int(j2), "kind": "event",
-						"key": key2.get_slice("@", 0)})
+				if int(j2) == i:
+					continue
+				# 숙주 한정 트리거는 **자기 슬롯의 본체**하고만 연결된다.
+				# 이걸 빼면 증강 하나가 보드의 모든 본체와 연결된 것으로 세어진다.
+				if bool(units[int(j2)]["meta"].get("host_only", false)) \
+						and str(units[int(j2)]["slot"]) != str(units[i]["slot"]):
+					continue
+				out.append({"from": i, "to": int(j2), "kind": "event",
+					"key": key2.get_slice("@", 0)})
 		for res2: String in a["produces"]:
 			for j3: Variant in consumers.get(res2, []):
 				if int(j3) != i:

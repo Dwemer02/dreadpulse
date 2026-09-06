@@ -79,13 +79,19 @@ static func apply(inv: RefCounted, action: Dictionary, ctx: Dictionary) -> RefCo
 			copy.place(slot_id, int(entry["active"]), uid)
 	return copy
 
-## 보드의 정규 서명. 슬롯 순서에 의존하지 않도록 정렬한다.
-## uid가 아니라 part_id로 만든다 — 같은 파츠의 다른 인스턴스는 같은 빌드다.
+## 보드의 정규 서명.
+##
+## **슬롯 이름을 넣지 않는다.** flex_2에 놓은 것과 flex_3에 놓은 것은 같은 빌드이고,
+## 슬롯을 서명에 넣으면 그 둘이 다른 후보로 세어져 두 가지가 함께 망가진다:
+## 탐색 상태 수가 자리 수만큼 부풀고, "중복 결과를 제거한 상위 3개"(§5.4)가
+## 사실상 같은 빌드 셋으로 채워진다 — 실측 로그에서 상위 3개가 전부 같은 조립이었다.
+##
+## uid도 넣지 않는다 — 같은 파츠의 다른 인스턴스는 같은 빌드다.
 static func signature(inv: RefCounted) -> String:
 	var rows: Array[String] = []
 	for slot_id: String in inv.board:
 		var entry: Dictionary = inv.board[slot_id]
-		rows.append("%s=%s+%s" % [slot_id, inv.part_id_of(int(entry["active"])),
+		rows.append("%s+%s" % [inv.part_id_of(int(entry["active"])),
 			inv.part_id_of(int(entry.get("augment", Inventory.NONE)))])
 	rows.sort()
 	return "|".join(rows)
