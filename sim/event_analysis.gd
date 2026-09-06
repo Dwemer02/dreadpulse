@@ -309,6 +309,10 @@ static func describe(e: Dictionary) -> String:
 			return "파열 +%d → %d (선체 %d, 붕괴까지 %d)" % [
 				int(e.get("amount", 0)), int(e.get("total", 0)),
 				int(e.get("hull", 0)), int(e.get("until_collapse", 0))]
+		"overtime_damage":
+			# 리그 전용 규칙. 보호막·상성·트리거를 전부 우회하는 유일한 피해다.
+			return "초과 피해 %d (%d번째 틱) → 선체 %d" % [
+				int(e.get("amount", 0)), int(e.get("k", 0)), int(e.get("to", 0))]
 		"collapsed":
 			return "붕괴! 파열 %d 폭발 → 선체 피해 %d" % [
 				int(e.get("fracture", 0)), int(e.get("hull_damage", 0))]

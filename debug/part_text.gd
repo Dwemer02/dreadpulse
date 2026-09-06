@@ -108,6 +108,7 @@ static func _event_phrase(type: String) -> String:
 		"part_destroyed": return "파츠가 파손될 때"
 		"part_restored": return "파츠가 복구될 때"
 		"stasis_ended": return "정지가 풀릴 때"
+		"overtime_damage": return "초과 피해가 들어올 때"
 		"overheat_cleansed": return "과열이 제거될 때"
 		"cooldown_shortened": return "쿨타임이 줄어들 때"
 		"regen_ended": return "재생이 끊길 때"

@@ -24,6 +24,27 @@ func add(part_id: String) -> int:
 	owned.append({"uid": uid, "part_id": part_id})
 	return uid
 
+## 폐기. 배치돼 있으면 먼저 떼낸다.
+## 보관 한도는 여기서 강제하지 않는다 — 한도는 리그 규칙이고 이 컨테이너는 규칙을
+## 모른다. 한도를 아는 쪽이 무엇을 버릴지 정해서 이 함수를 부른다.
+func discard(uid: int) -> bool:
+	_detach(uid)
+	for i: int in owned.size():
+		if int((owned[i] as Dictionary)["uid"]) == uid:
+			owned.remove_at(i)
+			return true
+	return false
+
+## 완전한 복제본. 자동 조립 AI가 "이 행동을 하면 어떻게 되는가"를 평가할 때
+## 원본을 건드리지 않기 위해 쓴다 (리그 기획서 §5.1의 마지막 문단).
+## uid 발급 카운터까지 함께 옮겨야 복제본에서 새로 얻은 파츠가 원본과 충돌하지 않는다.
+func clone() -> RefCounted:
+	var copy: RefCounted = new()
+	copy.owned = owned.duplicate(true)
+	copy.board = board.duplicate(true)
+	copy._next_uid = _next_uid
+	return copy
+
 func part_id_of(uid: int) -> String:
 	for item: Dictionary in owned:
 		if int(item["uid"]) == uid:

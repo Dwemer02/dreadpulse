@@ -1,0 +1,223 @@
+extends RefCounted
+## 전략 하나가 "무엇을 할지" 고른다. 기획서 §5.2·§5.4·§5.5.
+##
+## 팩션 이름·파츠 ID·완성 레시피를 우선순위로 하드코딩하지 않는다 (§5). 전략의 차이는
+## 전부 build_evaluator의 가중치와 목표 유지 규칙에서만 나온다 — 그래야 "AI가 이 파츠를
+## 이해하지 못한 것인가, 파츠가 약한 것인가"를 나중에 구분할 수 있다.
+##
+## 상대 빌드·비공개 보상·전투 난수·미래 제안을 받지 않는다 (§5.5 마지막).
+
+const Generator = preload("res://league/candidate_generator.gd")
+const Graph = preload("res://league/build_graph.gd")
+const Evaluator = preload("res://league/build_evaluator.gd")
+const Inventory = preload("res://run/inventory.gd")
+
+var strategy: String = "immediate"
+var config: RefCounted            # LeagueConfig
+
+## 엔진 투자형의 목표. **특정 파츠 ID가 아니라 필요한 자원·이벤트·기능 이름**이다 (§5.5).
+var goal: String = ""
+var goal_stale_choices: int = 0
+
+func setup(strategy_id: String, league_config: RefCounted) -> void:
+	strategy = strategy_id
+	config = league_config
+
+## 보상 하나를 이미 인벤토리에 넣은 상태에서, 무엇을 할지 정한다.
+##
+## ctx: {catalog, slots, meta_index, allow_augment, require_operational, rng}
+## 반환: {inventory, chain, score, features, shortlist, goal, goal_reason}
+func decide(inv: RefCounted, ctx: Dictionary) -> Dictionary:
+	var before: Dictionary = _analyze(inv, ctx)
+	_refresh_goal(before)
+
+	# 폭 우선 탐색. **통과 못 한 상태도 계속 펼친다**는 것이 요점이다.
+	#
+	# 첫 전투 준비는 "획득한 파츠를 전부 본체로 놓아라"를 요구한다. 파츠 하나를 놓은
+	# 중간 상태는 그 요구를 아직 만족하지 못하지만, 거기서 하나 더 놓아야 만족한다 —
+	# 중간 상태를 탐색에서 버리면 유효한 조립에 영원히 도달하지 못한다.
+	var seen: Dictionary = {}
+	var accepted: Array = []
+	var frontier: Array = []
+	var root: Dictionary = _visit(inv, [], before, ctx, seen, accepted)
+	if not root.is_empty():
+		frontier.append(root)
+
+	for _depth: int in config.candidate_depth:
+		var next: Array = []
+		for state: Dictionary in frontier:
+			for action: Dictionary in Generator.expand(state["inventory"], ctx):
+				var chain: Array = (state["chain"] as Array).duplicate()
+				chain.append(action)
+				var entry: Dictionary = _visit(action["result"], chain, before, ctx,
+					seen, accepted)
+				if not entry.is_empty():
+					next.append(entry)
+		if next.is_empty():
+			break
+		# 깊이·후보 수는 모든 AI에 동일하다 — 성능을 이유로 특정 전략만 좁히지 않는다 (§5.2).
+		next.sort_custom(_by_score)
+		frontier = next.slice(0, mini(config.beam_width, next.size()))
+
+	if accepted.is_empty():
+		# **0점으로 돌려주면 안 된다.** 초반 점수는 흔히 음수다(빈 본체 자리·공격 불능
+		# 페널티). 실패 신호가 0이면 그것이 정상 후보를 이겨서, 조립할 수 있는 파츠를
+		# 두고 "아무것도 안 함"을 고르는 일이 생긴다 — 실제로 시작 조립 실패의 원인이었다.
+		return {"valid": false, "inventory": inv, "chain": [], "score": -INF,
+			"features": {}, "shortlist": [], "goal": goal,
+			"goal_reason": "유효한 조립 후보 없음"}
+
+	accepted.sort_custom(_by_score)
+	var shortlist: Array = _shortlist(accepted)
+	var picked: Dictionary = _pick(shortlist, ctx["rng"])
+	_note_progress(before, picked)
+	return {
+		"valid": true,
+		"inventory": picked["inventory"], "chain": picked["chain"],
+		"score": picked["score"], "features": picked["features"],
+		"shortlist": _log_of(shortlist),
+		"goal": goal, "goal_reason": _goal_reason,
+	}
+
+# --- 내부 ---
+
+var _goal_reason: String = ""
+
+func _analyze(inv: RefCounted, ctx: Dictionary) -> Dictionary:
+	return Graph.analyze(Generator.placed_units(inv, ctx["catalog"], ctx["meta_index"]),
+		int(ctx.get("body_slots", 0)))
+
+## 상태 하나를 평가한다. 이미 본 보드면 null.
+##
+## 반환하는 것과 accepted에 넣는 것은 다르다:
+##   반환  = 계속 펼칠 수 있는 상태 (제약을 아직 못 채워도 된다)
+##   채택  = 실제로 고를 수 있는 상태 (제약을 전부 만족한다)
+##
+## 첫 전투 준비의 두 요구는 시점이 다르다 (§4.2).
+##   min_bodies   획득한 파츠를 전부 본체로 놓아야 한다 — 매 선택마다
+##   operational  실제 공격 경로가 있어야 한다 — 마지막 선택에서만
+func _visit(inv: RefCounted, chain: Array, before: Dictionary, ctx: Dictionary,
+		seen: Dictionary, accepted: Array) -> Dictionary:
+	var sig: String = Generator.signature(inv)
+	if seen.has(sig):
+		return {}
+	seen[sig] = true
+
+	var after: Dictionary = _analyze(inv, ctx)
+	var result: Dictionary = Evaluator.score(before, after, strategy, goal)
+	var entry: Dictionary = {
+		"inventory": inv, "chain": chain, "signature": sig,
+		"score": float(result["total"]), "features": result["features"],
+		"analysis": after,
+	}
+
+	var bodies: int = inv.board.size() - _core_slots(inv, ctx)
+	var ok: bool = bodies >= int(ctx.get("min_bodies", 0))
+	if ok and bool(ctx.get("require_operational", false)) and not bool(after["operational"]):
+		ok = false
+	# 유지 행동은 항상 후보에 있다 (§5.4). 시작 준비만 예외이고, 그건 min_bodies가 막는다.
+	if ok:
+		accepted.append(entry)
+	return entry
+
+func _core_slots(inv: RefCounted, ctx: Dictionary) -> int:
+	var count: int = 0
+	for slot_def: Dictionary in ctx["slots"]:
+		if str(slot_def["role"]) == "core" and inv.board.has(str(slot_def["id"])):
+			count += 1
+	return count
+
+static func _by_score(a: Dictionary, b: Dictionary) -> bool:
+	if not is_equal_approx(float(a["score"]), float(b["score"])):
+		return float(a["score"]) > float(b["score"])
+	# 동점 정렬은 안정적인 행동 ID로 (§5.4). 보드 서명이 그 역할을 한다 —
+	# 사전순은 임의지만 **재현 가능**하다는 것이 요점이다.
+	return str(a["signature"]) < str(b["signature"])
+
+## 최고점에서 고정 허용 폭 이내인 후보만 남기고, 중복을 없앤 상위 3개를 돌려준다.
+func _shortlist(scored: Array) -> Array:
+	var best: float = float(scored[0]["score"])
+	var out: Array = []
+	for entry: Dictionary in scored:
+		if float(entry["score"]) < best - config.shortlist_score_gap:
+			break
+		out.append(entry)
+		if out.size() >= config.shortlist_size:
+			break
+	return out
+
+## 순위 확률 60/30/10. 후보가 적으면 정규화한다 (§5.4).
+## 확률 선택은 별도 시드를 쓴다 — 전투 난수와 섞이면 재현이 흐려진다.
+func _pick(shortlist: Array, rng: RandomNumberGenerator) -> Dictionary:
+	if shortlist.size() == 1:
+		return shortlist[0]
+	var total: int = 0
+	for i: int in shortlist.size():
+		total += config.rank_weights[mini(i, config.rank_weights.size() - 1)]
+	var roll: int = rng.randi_range(0, total - 1)
+	for i2: int in shortlist.size():
+		var w: int = config.rank_weights[mini(i2, config.rank_weights.size() - 1)]
+		if roll < w:
+			return shortlist[i2]
+		roll -= w
+	return shortlist[shortlist.size() - 1]
+
+## 엔진 투자형의 목표 유지 (§5.5). 다른 전략은 목표를 갖지 않는다.
+##
+## 목표는 **지금 가장 많은 파츠를 침묵시키고 있는 병목**이다. 파츠 ID가 아니라
+## 자원·이벤트 이름이므로, 그 병목을 푸는 파츠가 무엇이든 진전으로 인정된다.
+func _refresh_goal(before: Dictionary) -> void:
+	if strategy != "engine":
+		goal = ""
+		return
+	var missing: Dictionary = before["missing"]
+	if goal != "" and int(missing.get(goal, 0)) > 0 \
+			and goal_stale_choices < config.goal_reconsider_after:
+		_goal_reason = "목표 유지: %s" % goal
+		return
+	var best: String = ""
+	var best_count: int = 0
+	for need: String in missing:
+		if int(missing[need]) > best_count:
+			best_count = int(missing[need])
+			best = need
+	if best == goal:
+		_goal_reason = "목표 유지: %s (대안 없음)" % goal if goal != "" else "목표 없음"
+		return
+	_goal_reason = "목표 %s → %s" % [goal if goal != "" else "없음", best if best != "" else "없음"]
+	goal = best
+	goal_stale_choices = 0
+
+## 이번 선택이 목표에 진전이 있었는지 센다. 3회 연속 진전이 없으면 목표를 다시 고른다.
+func _note_progress(before: Dictionary, picked: Dictionary) -> void:
+	if strategy != "engine" or goal == "":
+		return
+	var after: Dictionary = picked["analysis"]
+	var was: int = int((before["missing"] as Dictionary).get(goal, 0))
+	var now: int = int((after["missing"] as Dictionary).get(goal, 0))
+	if now < was:
+		goal_stale_choices = 0
+	else:
+		goal_stale_choices += 1
+
+## 선택 로그에 남길 상위 후보들. 점수만이 아니라 요소별 점수까지 남긴다 (§11.1) —
+## "왜 이걸 골랐나"를 나중에 사람이 읽어야 하기 때문이다.
+func _log_of(shortlist: Array) -> Array:
+	var out: Array = []
+	for entry: Dictionary in shortlist:
+		var steps: Array[String] = []
+		for action: Variant in entry["chain"]:
+			steps.append(Generator.describe(action as Dictionary, entry["inventory"]))
+		out.append({
+			"action": "유지" if steps.is_empty() else " → ".join(steps),
+			"score": snappedf(float(entry["score"]), 0.01),
+			"features": _rounded(entry["features"]),
+		})
+	return out
+
+static func _rounded(features: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	for key: String in features:
+		var value: Variant = features[key]
+		out[key] = snappedf(float(value), 0.01) if value is float else value
+	return out

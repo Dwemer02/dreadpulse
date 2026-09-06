@@ -30,6 +30,29 @@ var _chain_seq: int = 0
 var finished: bool = false
 var winner: String = ""
 
+## 선택적 전투 규칙. **기본값은 지금까지의 동작 그대로**이고, 비어 있으면
+## 아무것도 바뀌지 않는다.
+##
+## 자동 조립 리그가 초과 피해와 시간 초과 무승부를 필요로 한다. 리그 안에서 전투
+## 로직을 따로 구현하면 두 벌이 생기고 반드시 어긋나므로, **같은 시뮬레이터에
+## 옵션을 붙이고 리그가 주입한다** (리그 기획서 §1.3 마지막 문단).
+## 리그용 규칙이지 본편 확정 규칙이 아니다.
+##
+## 키:
+##   overtime_start_seconds  0이면 끔. 이 초를 **넘긴** 매초 초과 피해가 들어온다.
+##   overtime_reference_hull 피해 기준. 참가자의 현재/최대 선체가 아니다.
+##   overtime_base_fraction  기준 선체 대비 1틱째 비율 (기본 0.001)
+##   timeout_result          "hull_ratio"(기존) 또는 "draw"
+var rules: Dictionary = {}
+
+## 초과 피해의 소수점 잔여. 정수 선체에 0.1씩 넣으면 버림으로 전부 사라지므로
+## 천분율로 누적했다가 1 이상이 될 때 꺼낸다 (리그 기획서 §9.2 마지막 항목).
+var _overtime_remainder: int = 0
+## 지금까지 적용한 초과 피해 틱 수. damage(k) = 기준선체 × 0.001 × k의 k다.
+var _overtime_ticks: int = 0
+## 초과 피해로 선체가 깎인 총량. 승리 방식 분류(§9.4)에 쓴다.
+var overtime_damage_total: int = 0
+
 ## 전체 이벤트 스트림. 소비자(tests/, debug/)가 읽는 유일한 것이다.
 var log: Array = []
 ## 아직 트리거에 전달되지 않은 이벤트
@@ -161,6 +184,11 @@ func step() -> void:
 
 	# 7. 승패 판정
 	_check_end()
+
+	# 8. 초과 피해 — **정상 종료 판정 다음**이다 (리그 기획서 §9.2).
+	# 그 시각의 정상 전투로 이미 승부가 났으면 그 결과를 쓰고, 아니면 양측에 같은
+	# 절대량을 넣은 뒤 동시 사망을 다시 판정한다.
+	_apply_overtime()
 
 # --- sim 인터페이스 (actions.gd / trigger_engine.gd가 부른다) ---
 
@@ -401,7 +429,51 @@ func _check_end() -> void:
 		winner = "enemy"
 	_finish("hull")
 
+## 초과 피해. 보호막·피해 감소·파괴 불가를 전부 무시하고 선체를 직접 깎는다.
+##
+## `take_typed_damage`를 지나지 않는 유일한 피해 경로다 — 지나면 상성 배율과
+## 보호막이 걸리고, 그러면 "양쪽에 같은 절대량"이라는 전제가 깨진다.
+## 파츠의 피해 수신 트리거도 발동시키지 않는다. 대신 자기서술적인 전용 이벤트를
+## 남긴다 — 이것이 없으면 리포트가 "왜 둘 다 죽었는가"를 복원할 수 없다.
+func _apply_overtime() -> void:
+	if finished:
+		return
+	var start: float = float(rules.get("overtime_start_seconds", 0.0))
+	if start <= 0.0 or tick % K.PERIOD_TICKS != 0:
+		return
+	if K.ticks_to_secs(tick) <= start:
+		return
+
+	_overtime_ticks += 1
+	var reference: int = int(rules.get("overtime_reference_hull", 0))
+	var fraction: float = float(rules.get("overtime_base_fraction", 0.001))
+	# 천분율 정수 산술. 부동소수를 누적하면 드리프트가 생기고 결정론이 깨진다.
+	_overtime_remainder += int(round(float(reference) * fraction * 1000.0)) * _overtime_ticks
+	var amount: int = _overtime_remainder / 1000
+	_overtime_remainder -= amount * 1000
+	if amount <= 0:
+		return
+
+	for ship: RefCounted in [player, enemy]:
+		var before: int = ship.hull
+		ship.hull = maxi(0, ship.hull - amount)
+		overtime_damage_total += before - ship.hull
+		_begin_chain()
+		emit("overtime_damage", ship.side, {
+			"amount": amount, "k": _overtime_ticks,
+			"from": before, "to": ship.hull, "ratio": ship.hull_ratio(),
+		})
+	# 초과 피해는 트리거를 발동시키지 않는다. 큐를 비워 이벤트가 파츠에 닿지 않게 한다 —
+	# 로그에는 남고 트리거 엔진에는 가지 않는다.
+	_pending.clear()
+	_check_end()
+
 func _finish_by_timeout() -> void:
+	# 리그는 시간 초과를 무승부로 처리한다 (§8.3). 본편은 잔여 선체 비율로 가른다.
+	if str(rules.get("timeout_result", "hull_ratio")) == "draw":
+		winner = "draw"
+		_finish("timeout")
+		return
 	var player_ratio: float = player.hull_ratio()
 	var enemy_ratio: float = enemy.hull_ratio()
 	if player_ratio > enemy_ratio:

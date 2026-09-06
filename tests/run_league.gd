@@ -1,0 +1,52 @@
+extends SceneTree
+## 자동 조립 리그 배치 러너.
+##
+## 실행:
+##   godot --headless --path . --script res://tests/run_league.gd -- --repeats=5
+##
+## `--repeats=N`은 조건당 반복 시드 수다. 참가자 수 = 전략 4 × 풀 10 × N.
+##   1  → 40명   기능 검수
+##   5  → 200명  소규모 탐색 (선택 의도·사망 원인 확인)
+##   20 → 800명  1차 탐색
+##
+## **이 리그의 승률을 실제 PvE 난이도나 인간 승률로 해석하지 않는다** (기획서 §1.3).
+
+const Config = preload("res://league/league_config.gd")
+const LeagueContent = preload("res://league/league_content.gd")
+const Runner = preload("res://league/league_runner.gd")
+const Reporter = preload("res://league/reporter.gd")
+const PartMeta = preload("res://league/part_meta.gd")
+
+func _init() -> void:
+	var config: RefCounted = Config.new()
+	config.repeats_per_condition = _arg_int("repeats", 5)
+	config.batch_id = "r%d" % config.repeats_per_condition
+
+	var content: RefCounted = LeagueContent.new()
+	content.load_all()
+	if not content.ok():
+		for e: String in content.errors:
+			print("  CONTENT  %s" % e)
+		quit(1)
+		return
+
+	var coverage: Dictionary = PartMeta.coverage_report(content.meta_index)
+	var started: int = Time.get_ticks_msec()
+
+	var runner: RefCounted = Runner.new()
+	runner.setup(config, content)
+	runner.run()
+
+	var elapsed: float = float(Time.get_ticks_msec() - started) / 1000.0
+	print(Reporter.new().report(runner, coverage))
+	print("")
+	print("실행 시간 %.1f초 · 매치 %d회 · 선택 %d회"
+		% [elapsed, runner.matches.size(), runner.choices.size()])
+	print("출력: res://tests/out/league/")
+	quit(0)
+
+func _arg_int(name: String, fallback: int) -> int:
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--%s=" % name):
+			return int(arg.split("=")[1])
+	return fallback
