@@ -26,14 +26,15 @@ const SEEDS: Array[int] = [9001, 9002, 9003]
 ## 반환: {matches, wins, losses, draws, unresolved, errors, win_rate,
 ##        avg_elapsed, overtime_decided, per_stage, per_opponent}
 static func run(catalog: RefCounted, config: RefCounted, build: Dictionary,
-		opponents: Array, rules: Dictionary, label: String = "") -> Dictionary:
+		opponents: Array, rules: Dictionary, label: String = "",
+		seeds: Array[int] = SEEDS) -> Dictionary:
 	var totals: Dictionary = _blank()
 	var per_stage: Dictionary = {}
 	var per_opponent: Array = []
 
 	for opponent: Dictionary in opponents:
 		var row: Dictionary = _blank()
-		for combat_seed: int in SEEDS:
+		for combat_seed: int in seeds:
 			# 좌우 교환. 같은 시드에서 두 번 싸우고 둘 다 센다.
 			_fight_into(row, catalog, config, build, opponent["build"],
 				combat_seed, true, rules)
@@ -55,7 +56,7 @@ static func run(catalog: RefCounted, config: RefCounted, build: Dictionary,
 	for stage2: String in per_stage:
 		(out["per_stage"] as Dictionary)[stage2] = _summed(per_stage[stage2])
 	out["per_opponent"] = per_opponent
-	out["seeds"] = SEEDS
+	out["seeds"] = seeds
 	out["opponents"] = opponents.size()
 	return out
 
