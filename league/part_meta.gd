@@ -137,6 +137,9 @@ static func _blank(def: Dictionary) -> Dictionary:
 		"damage_paths": [],      # direct / overheat / corrosion / fracture
 		# 숙주 한정 트리거만 갖는가. 참이면 이 단위는 자기 숙주하고만 연결된다.
 		"host_only": false,
+		# 발동 뒤 스스로 파괴되는가. 초당 출력 추정이 이걸 반드시 봐야 한다 —
+		# 보지 않으면 한 발 쏘고 죽는 파츠가 영구 무기보다 높게 평가된다 (r5 §7.1).
+		"one_shot": false,
 		"burst_output": 0,       # 1회 발동당 피해 상당량
 		"burst_sustain": 0,      # 1회 발동당 회복·보호막 상당량
 		"trigger_output": 0,     # 트리거 1회당 피해 상당량
@@ -176,6 +179,8 @@ static func _scan_block(meta: Dictionary, block: Array, on_fire: bool) -> void:
 			_add_event(meta["emits"], pair as Array)
 		for pair2: Variant in spec.get("after", []):
 			_add_event(meta["emits"], pair2 as Array)
+		if op == "destroy_self":
+			meta["one_shot"] = true
 		var fn: String = str(spec.get("fn", ""))
 		if fn != "" and not (meta["functions"] as Array).has(fn):
 			(meta["functions"] as Array).append(fn)
@@ -251,8 +256,58 @@ static func _freeze(meta: Dictionary) -> void:
 			keys["%s@%s" % [str((pair as Array)[0]), str((pair as Array)[1])]] = true
 		meta[field + "_keys"] = keys
 
+## 이 파츠가 **채워줄 수 있는 전제**의 이름. build_graph의 병목 이름과 같은 어휘다.
+##
+## 미래 가치 평가의 재료다 (r5 피드백 §2.3): "가까운 획득으로 실제 열릴 수 있는 연결"을
+## 재려면 "누가 이 병목을 풀 수 있는가"를 알아야 한다. 병목 개수만 세면 **작동하지 않는
+## 상태 자체가 미래 가치로 보상된다** — r5에서 실제로 그랬다.
+static func supplies_of(meta: Dictionary) -> Dictionary:
+	var out: Dictionary = {}
+	var emits: Dictionary = meta.get("emits_keys", {})
+	if int((meta["produces"] as Dictionary).get("material", 0)) > 0:
+		out["material"] = true
+	if int((meta["produces"] as Dictionary).get("resonance", 0)) > 0:
+		out["resonance"] = true
+	for pair: Array in [
+			["speed_changed@own", "accelerate"],
+			["overheat_applied@enemy", "overheat"],
+			["corrosion_applied@target", "corrosion"],
+			["fracture_applied@enemy", "fracture"],
+			["part_destroyed@own", "has_broken_own"],
+			["fires_changed@own", "has_exhausted_own"],
+	]:
+		if emits.has(str(pair[0])):
+			out[str(pair[1])] = true
+	# 이벤트 병목은 "event:<이름>"으로 적힌다. 방향은 병목 쪽에서 이미 걸렀으므로
+	# 여기서는 이름만 맞추면 된다.
+	for key: String in emits:
+		out["event:" + key.get_slice("@", 0)] = true
+	return out
+
+## 파츠 여러 종이 함께 채울 수 있는 전제의 합집합.
+## 창고 보유분과 팩션 풀 전체에 각각 쓴다.
+static func supplies_of_parts(index: Dictionary, part_ids: Array) -> Dictionary:
+	var out: Dictionary = {}
+	for part_id: Variant in part_ids:
+		if not index.has(str(part_id)):
+			continue
+		for slot: String in ["body", "augment"]:
+			var meta: Dictionary = (index[str(part_id)] as Dictionary)[slot]
+			if not bool(meta.get("usable", true)):
+				continue
+			for need: String in supplies_of(meta):
+				out[need] = true
+	return out
+
 static func _finish(meta: Dictionary) -> void:
 	_freeze(meta)
+	# 어휘가 하나도 없는 단위 — 효과 없는 리그 Core가 이것이다.
+	# **평가 단위로 세면 안 된다.** r5에서는 이 Core가 늘 "침묵 파츠"로 잡혀
+	# dead가 한 번도 0이 되지 않았고, potential에 0.25가 상수로 깔렸다.
+	meta["inert"] = (meta["emits"] as Array).is_empty() \
+		and (meta["listens"] as Array).is_empty() \
+		and (meta["produces"] as Dictionary).is_empty() \
+		and (meta["consumes"] as Dictionary).is_empty()
 	# 시동 요구 — 처음부터 그냥 도는 파츠인가, 무언가를 받아야 시작하는가.
 	meta["startup_required"] = not (meta["prerequisites"] as Array).is_empty() \
 		or bool(meta["passive"])

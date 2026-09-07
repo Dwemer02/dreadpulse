@@ -6,7 +6,7 @@ extends RefCounted
 ## 불가능한 조립이 통과하는가, 초과 피해가 규칙대로 들어가는가, 후보 평가가 원본을
 ## 오염시키는가, 같은 시드가 같은 결과를 내는가.
 
-const EXPECTED_CHECKS := 81
+const EXPECTED_CHECKS := 100
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -18,6 +18,7 @@ const Config = preload("res://league/league_config.gd")
 const LeagueContent = preload("res://league/league_content.gd")
 const PartMeta = preload("res://league/part_meta.gd")
 const Graph = preload("res://league/build_graph.gd")
+const Evaluator = preload("res://league/build_evaluator.gd")
 const Generator = preload("res://league/candidate_generator.gd")
 const AssemblyPolicy = preload("res://league/assembly_policy.gd")
 const OfferGenerator = preload("res://league/offer_generator.gd")
@@ -35,6 +36,10 @@ func run(t: RefCounted) -> void:
 	_test_meta_covers_every_op(t)
 	_test_connection_direction(t)
 	_test_material_gating(t)
+	_test_inert_units_are_not_bottlenecks(t)
+	_test_potential_needs_real_supply(t)
+	_test_relief_names_the_bottleneck(t)
+	_test_one_shot_is_not_sustained(t)
 	_test_candidate_legality(t)
 	_test_candidates_do_not_mutate(t)
 	_test_overtime_schedule(t)
@@ -132,6 +137,128 @@ func _test_material_gating(t: RefCounted) -> void:
 	t.check(float(thin_pair["output"]) < float(pair["output"]),
 		"공급이 소비보다 적으면 출력 추정이 낮아진다 (%.2f < %.2f)"
 			% [float(thin_pair["output"]), float(pair["output"])])
+
+# --- r5 피드백의 고정 판단 사례 (§2.4·§7.1) ---
+
+## 효과 없는 단위는 병목이 아니다.
+##
+## r5에서 리그 Core(효과 없음)가 늘 "침묵 파츠"로 잡혀 dead가 1,777개 기록 전부에서
+## 1 이상이었다. 그 결과 potential에 상수가 깔렸다 (피드백 §2.3.1).
+func _test_inert_units_are_not_bottlenecks(t: RefCounted) -> void:
+	var config: RefCounted = _content_config()
+	var inv: RefCounted = Inventory.new()
+	_content.fresh_board(config, inv)   # Core만 꽂힌 보드
+	var core_meta: Dictionary = (_content.meta_index["league_core"] as Dictionary)["body"]
+	t.check(bool(core_meta["inert"]), "효과 없는 Core는 inert로 표시된다")
+
+	var alone: Dictionary = Graph.analyze(
+		Generator.placed_units(inv, _content.catalog, _content.meta_index), 5)
+	t.eq((alone["units"] as Array).size(), 0, "평가 단위에 들어가지 않는다")
+	t.eq((alone["dead"] as Array).size(), 0, "따라서 침묵 파츠로도 세지 않는다")
+
+	inv.place("weapon_1", inv.add("scrap_autocannon"))
+	var working: Dictionary = Graph.analyze(
+		Generator.placed_units(inv, _content.catalog, _content.meta_index), 5)
+	t.eq((working["dead"] as Array).size(), 0,
+		"자족 무기 하나만 있는 보드의 dead는 0이다 — r5에서는 1이었다")
+
+## potential은 **작동하지 않는 상태 자체**가 아니라, 실제로 열릴 수 있는 연결을 센다.
+##
+## r5에서는 potential = min(dead/4, 1)이 1,769/1,777 기록에서 성립했다. 즉 침묵
+## 파츠를 늘리는 것만으로 미래 가치가 올랐다 (피드백 §2.2).
+func _test_potential_needs_real_supply(t: RefCounted) -> void:
+	# 가압 산성포는 자재를 요구한다. 보드는 그대로 두고 **공급 정보만** 바꾼다.
+	var board: RefCounted = _pair_board("acid_jet_cutter", "pressurized_acid_cannon")
+	var none: float = _potential(board, {})
+	var pool: float = _potential(board, {"material": 0.15})
+	var stored: float = _potential(board, {"material": 1.0})
+	t.check(is_zero_approx(none),
+		"이 풀에서 구할 수 없는 병목은 미래 가치가 0이다 (%.3f)" % none)
+	t.check(pool > none and stored > pool,
+		"근접도가 오르면 미래 가치도 오른다 — 없음 %.3f < 풀 %.3f < 창고 %.3f"
+			% [none, pool, stored])
+
+	# **침묵 장치를 추가하는 것만으로 자동 상승하지 않는다** (§2.4).
+	# 두 조건으로 갈라 본다 — 공급이 없을 때와, 풀에 있을 때.
+	var base: RefCounted = _pair_board("scrap_autocannon", "")
+	var with_idle: RefCounted = _pair_board("scrap_autocannon", "acid_extractor")
+
+	# (1) 그 병목을 이 풀에서 구할 수 없으면 상승이 **전혀** 없다.
+	var no_corrosion: Dictionary = {"material": 0.5}
+	t.check(is_equal_approx(_potential(with_idle, no_corrosion),
+			_potential(base, no_corrosion)),
+		"부식을 구할 수 없는 풀에서는 부식 소비기를 넣어도 미래 가치가 그대로다")
+
+	# (2) 풀에서 구할 수 있으면 오르지만, **옛 판본의 dead/4 = 0.25보다 훨씬 작다.**
+	# 근접도(풀 비중)와 열렸을 때의 가치를 함께 곱하기 때문이다.
+	var realistic: Dictionary = {"corrosion": 0.15, "material": 0.15}
+	var rise: float = _potential(with_idle, realistic) - _potential(base, realistic)
+	t.check(rise > 0.0 and rise < 0.1,
+		"풀에 공급이 있으면 조금 오른다 — 옛 판본의 0.25와 달리 %.3f" % rise)
+
+## relief는 **어떤 병목이 사라졌는지** 이름으로 남아야 한다.
+##
+## r5에서는 침묵 파츠 개수의 감소를 셌다. 그러면 침묵 파츠를 그냥 빼도 병목이 풀린
+## 것으로 세어지고, 병목을 풀면서 다른 침묵 장치를 넣으면 상쇄되어 0이 된다 (§2.3.4).
+func _test_relief_names_the_bottleneck(t: RefCounted) -> void:
+	var supply: Dictionary = {"material": 0.5, "corrosion": 0.5}
+	var before: RefCounted = _pair_board("acid_jet_cutter", "pressurized_acid_cannon")
+	var a: Dictionary = _analyze_with(before, supply)
+	t.eq(int((a["missing"] as Dictionary).get("material", 0)), 1, "자재 병목이 하나 있다")
+
+	# 공급기를 넣으면 그 이름이 해소 목록에 남는다.
+	var fixed: RefCounted = _pair_board("acid_jet_cutter", "pressurized_acid_cannon")
+	fixed.place("flex_2", fixed.add("scrap_compactor"))
+	var f: Dictionary = Evaluator.features(a, _analyze_with(fixed, supply), 0.4, "")
+	t.check((f["resolved"] as Array).has("material"),
+		"해소된 병목이 이름으로 남는다: %s" % str(f["resolved"]))
+	t.check(float(f["relief"]) > 0.0, "relief가 오른다")
+
+	# 다른 침묵 장치를 넣는 것만으로는 아무 병목도 해소되지 않는다.
+	var noise: RefCounted = _pair_board("acid_jet_cutter", "pressurized_acid_cannon")
+	noise.place("flex_2", noise.add("acid_extractor"))
+	var f2: Dictionary = Evaluator.features(a, _analyze_with(noise, supply), 0.4, "")
+	t.eq((f2["resolved"] as Array).size(), 0,
+		"침묵 장치를 하나 더 넣는 것은 병목 해소가 아니다")
+	t.check(is_zero_approx(float(f2["relief"])), "relief도 오르지 않는다")
+
+	# **두 공식이 갈라지는 자리다.** 병목을 풀면서 동시에 다른 침묵 장치를 넣으면
+	# 침묵 파츠 **개수**는 그대로다 — 개수 차이로 재면 해소가 0으로 상쇄된다.
+	# 이름으로 재야 "자재는 실제로 풀렸다"가 남는다.
+	var both: RefCounted = _pair_board("acid_jet_cutter", "pressurized_acid_cannon")
+	both.place("flex_2", both.add("scrap_compactor"))    # 자재 병목 해소
+	# 야전 재조립기는 **파손된 아군**을 요구한다. 이 보드에는 파츠를 파괴하는 것이
+	# 없으므로 계속 침묵한다 — 산성 추출기를 쓰면 안 된다(가압 산성포가 자재를 받아
+	# 돌기 시작하면서 부식을 공급해 함께 살아난다).
+	both.place("flex_3", both.add("field_reassembler"))
+	var after_both: Dictionary = _analyze_with(both, supply)
+	t.eq((after_both["dead"] as Array).size(), (a["dead"] as Array).size(),
+		"침묵 파츠 개수는 변하지 않았다")
+	var f3: Dictionary = Evaluator.features(a, after_both, 0.4, "")
+	t.check((f3["resolved"] as Array).has("material"),
+		"그래도 자재 병목은 실제로 해소됐다: %s" % str(f3["resolved"]))
+	t.check(float(f3["relief"]) > 0.0,
+		"개수가 같아도 relief가 오른다 — 개수 차이로 재면 0이 된다 (%.2f)"
+			% float(f3["relief"]))
+
+## 한 발 쏘고 죽는 파츠를 영구 무기보다 높게 평가하면 안 된다.
+##
+## r5에서 일회용 파쇄탄(물리 12/3초, 발동 뒤 자폭)의 초당 추정이 4.00이었고
+## 고철 기관포(물리 6/3초, 영구)가 2.00이었다 — 선택률 1위(75%)의 이유다 (§7.1).
+func _test_one_shot_is_not_sustained(t: RefCounted) -> void:
+	var shredder: float = _output_of("disposable_shredder")
+	var autocannon: float = _output_of("scrap_autocannon")
+	t.check(bool((_content.meta_index["disposable_shredder"] as Dictionary)["body"]["one_shot"]),
+		"자기 파괴가 메타데이터에 표시된다")
+	t.check(shredder < autocannon,
+		"일회용 고피해가 반복 공격보다 낮게 추정된다 (%.2f < %.2f)"
+			% [shredder, autocannon])
+
+	# 발동 제한도 같은 방향으로 깎인다.
+	var limited: float = _output_of("forward_loan_beam")   # Energy 10 / 3초 / Fire Limit 3
+	var unlimited: float = _output_of("photon_lance")      # Energy 8 / 5초 / 무제한
+	t.check(limited < unlimited,
+		"발동 제한 3회는 영구 무기보다 낮게 추정된다 (%.2f < %.2f)" % [limited, unlimited])
 
 # --- 조립 후보 ---
 
@@ -449,6 +576,33 @@ func _participant() -> Dictionary:
 		"points": 0, "losses": 0, "status": "active", "acquisitions": 0,
 		"end_round": 0, "end_reason": "", "recent_opponents": [],
 		"build": {}, "history": []}
+
+## 파츠 하나 또는 둘을 놓은 보드. 두 번째가 빈 문자열이면 하나만 놓는다.
+func _pair_board(first: String, second: String) -> RefCounted:
+	var inv: RefCounted = Inventory.new()
+	_content.fresh_board(_content_config(), inv)
+	for pair: Array in [["weapon_1", first], ["flex_1", second]]:
+		if str(pair[1]) == "":
+			continue
+		inv.place(str(pair[0]), inv.add(str(pair[1])))
+	return inv
+
+func _analyze_with(inv: RefCounted, supply: Dictionary) -> Dictionary:
+	return Graph.analyze(
+		Generator.placed_units(inv, _content.catalog, _content.meta_index),
+		_content.body_slot_count(_content_config()), supply)
+
+func _potential(inv: RefCounted, supply: Dictionary) -> float:
+	var a: Dictionary = _analyze_with(inv, supply)
+	return float(Evaluator.features(a, a, 0.4, "")["potential"])
+
+## 파츠 하나만 놓은 보드의 초당 출력 추정.
+func _output_of(part_id: String) -> float:
+	var inv: RefCounted = Inventory.new()
+	_content.fresh_board(_content_config(), inv)
+	var role: String = str(_content.catalog.parts[part_id]["base_role"])
+	inv.place("weapon_1" if role == "weapon" else "flex_1", inv.add(part_id))
+	return float(_analyze_with(inv, {})["output"])
 
 func _content_config() -> RefCounted:
 	var config: RefCounted = Config.new()

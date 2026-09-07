@@ -13,6 +13,7 @@ const Matchmaker = preload("res://league/matchmaker.gd")
 const Generator = preload("res://league/candidate_generator.gd")
 const Graph = preload("res://league/build_graph.gd")
 const Inventory = preload("res://run/inventory.gd")
+const PartMeta = preload("res://league/part_meta.gd")
 
 var config: RefCounted
 var content: RefCounted
@@ -24,9 +25,16 @@ var participants: Array = []
 var matches: Array = []
 ## 선택 기록 [{participant, index, round, raw, final, action, shortlist, ...}]
 var choices: Array = []
+## 전투 직전 스냅샷. **이것만으로 재전투가 가능해야 한다** (r5 피드백 §8.1) —
+## 선택 문자열을 역으로 해석해 프리셋을 복원하는 것은 방법이 아니다.
+var snapshots: Array = []
 var errors: Array[String] = []
 ## 관측 중단된 라운드 (0이면 없음)
 var censored_round: int = 0
+
+## 풀 id -> (병목 이름 -> 0.5). 배치 시작에 한 번 만든다.
+## "이 참가자가 앞으로 이 병목을 풀 파츠를 만날 수 있는가"이므로 풀마다 고정이다.
+var _pool_supply_cache: Dictionary = {}
 
 func setup(league_config: RefCounted, league_content: RefCounted) -> void:
 	config = league_config
@@ -66,7 +74,7 @@ func _create_participants() -> void:
 					"acquisitions": 0, "offers_seen": 0,
 					"end_round": 0, "end_reason": "",
 					"recent_opponents": [], "start_part": "",
-					"build": {}, "history": [],
+					"build": {}, "history": [], "snapshot_id": "",
 				})
 
 ## §3.2의 1~4단계: 시작 파츠 1개 + 3택1 두 번 + 본체 3개 조립.
@@ -103,6 +111,7 @@ func _acquire(p: Dictionary, index: int, round_index: int, guarantee: bool,
 	var offer: Dictionary = offers.offer_for(str(p["pool"]), int(p["seed"]), index,
 		p["inventory"], guarantee)
 	p["offers_seen"] = int(p["offers_seen"]) + 1
+	var before_signature: String = Generator.signature(p["inventory"])
 
 	# AI 선택용 난수는 제안 난수와 **분리**한다 (§4.4·§10.2).
 	var rng: RandomNumberGenerator = Config.rng_for(["choice", p["id"], index])
@@ -135,19 +144,43 @@ func _acquire(p: Dictionary, index: int, round_index: int, guarantee: bool,
 	_enforce_storage(p)
 
 	var steps: Array[String] = []
+	var operations: Array = []
 	for action: Variant in best["chain"]:
 		steps.append(Generator.describe(action as Dictionary, p["inventory"]))
+		operations.append(Generator.operation_of(action as Dictionary, p["inventory"]))
 	choices.append({
 		"participant": p["id"], "strategy": p["strategy"], "pool": p["pool"],
 		"index": index, "round": round_index,
 		"raw": offer["raw"], "final": offer["final"], "guarantee": offer["guarantee"],
+		# taken = 실제로 획득한 파츠. 무엇을 했는지는 reward_result와 operations가 말한다 —
+		# r5에서는 action이 '유지'인데 taken에 id가 있어 획득/패스/보관을 구별할 수 없었다
+		# (피드백 §3.2).
 		"taken": best["taken"],
+		"reward_result": _reward_result(best["taken"], operations),
+		"operations": operations,
 		"action": "유지" if steps.is_empty() else " → ".join(steps),
-		"score": snappedf(float(best["score"]), 0.01),
+		"before_signature": before_signature,
+		"after_signature": Generator.signature(p["inventory"]),
+		# 점수는 원 정밀도로 남긴다. 소수 둘째 자리로 깎으면 "동점"이 실제 동점인지
+		# 반올림 결과인지 구별할 수 없다 (피드백 §7.2).
+		"score": float(best["score"]),
 		"features": best["features"],
 		"shortlist": best["shortlist"],
 		"goal": best["goal"], "goal_reason": best["goal_reason"],
 	})
+
+## 획득한 보상이 실제로 어떻게 쓰였는가. 조작 목록에서 그 파츠를 찾아 판정한다.
+## '유지'로 기록된 선택도 파츠는 획득했고 창고에 들어간 것이다 — 패스가 아니다.
+static func _reward_result(taken: String, operations: Array) -> String:
+	for op: Dictionary in operations:
+		if str(op["part_id"]) != taken:
+			continue
+		match str(op["kind"]):
+			"place": return "installed"
+			"augment": return "augmented"
+			"discard": return "discarded"
+			"store": return "stored"
+	return "stored"
 
 ## 보관 한도 (§15). 넘으면 AI가 버린다 — 여기서는 "지금 보드에 없고 점수 기여가 없는
 ## 것부터"라는 단순 규칙을 쓴다. 폐기 보상은 없다.
@@ -172,6 +205,7 @@ func _policy_ctx(p: Dictionary, min_bodies: int, require_operational: bool,
 		"catalog": content.catalog, "meta_index": content.meta_index,
 		"slots": content.slots_of(config),
 		"body_slots": content.body_slot_count(config),
+		"pool_supply": _pool_supply(str(p["pool"])),
 		# 첫 전투 전에는 증강을 허용하지 않는다 (§4.2).
 		"allow_augment": not (starting and not config.start_allow_augment),
 		"min_bodies": min_bodies,
@@ -180,13 +214,55 @@ func _policy_ctx(p: Dictionary, min_bodies: int, require_operational: bool,
 		"rng": rng,
 	}
 
+## 이 풀에서 앞으로 구할 수 있는 병목들과 그 **근접도**.
+##
+## "구할 수 있다/없다"의 이분법으로 두면 안 된다. 한 팩션 풀 안에서도 거의 모든 병목은
+## 누군가가 채울 수 있으므로 근접도가 상수가 되고, 그러면 potential이 다시
+## 침묵 파츠 개수에 비례해진다 — r5의 결함이 그대로 돌아온다.
+##
+## 그래서 기획서가 말한 "대략적인 비중"을 쓴다: 풀에서 그 병목을 채울 수 있는 파츠의
+## 비율에 비례한다. 자재(생산자 다수)는 높고 공명(거의 없음)은 낮다.
+## 상한은 0.5 — 창고 보유분(1.0)이 늘 더 가깝다.
+func _pool_supply(pool_id: String) -> Dictionary:
+	if _pool_supply_cache.has(pool_id):
+		return _pool_supply_cache[pool_id]
+	var ids: Array[String] = []
+	var weights: Dictionary = Config.POOLS[pool_id]
+	for part_id: String in content.catalog.parts:
+		var def: Dictionary = content.catalog.parts[part_id]
+		if str(def["base_role"]) == "core":
+			continue
+		if int(weights.get(str(def["faction"]), 0)) > 0:
+			ids.append(part_id)
+	var counts: Dictionary = {}
+	for part_id2: String in ids:
+		for need: String in PartMeta.supplies_of_parts(content.meta_index, [part_id2]):
+			counts[need] = int(counts.get(need, 0)) + 1
+	var out: Dictionary = {}
+	for need2: String in counts:
+		out[need2] = 0.5 * float(int(counts[need2])) / float(maxi(1, ids.size()))
+	_pool_supply_cache[pool_id] = out
+	return out
+
 func _assemble(p: Dictionary, round_index: int, starting: bool) -> void:
 	p["build"] = p["inventory"].to_build("league_%d_r%d" % [p["id"], round_index],
 		config.frame_id)
+	var storage: Array[String] = []
+	for item: Dictionary in p["inventory"].unplaced():
+		storage.append(str(item["part_id"]))
+	p["snapshot_id"] = "p%d_r%d" % [int(p["id"]), round_index]
+	snapshots.append({
+		"snapshot_id": p["snapshot_id"],
+		"participant": p["id"], "strategy": p["strategy"], "pool": p["pool"],
+		"seed": p["seed"], "round": round_index,
+		"frame": config.frame_id, "core": config.core_id,
+		"build": p["build"], "storage": storage,
+		"acquisitions": p["acquisitions"], "points": p["points"], "losses": p["losses"],
+	})
 
 func _analyze(p: Dictionary) -> Dictionary:
 	return Graph.analyze(Generator.placed_units(p["inventory"], content.catalog,
-		content.meta_index))
+		content.meta_index), content.body_slot_count(config), _pool_supply(str(p["pool"])))
 
 # --- 라운드 ---
 
@@ -241,6 +317,8 @@ func _fight(left: int, right: int, round_index: int, kind: String) -> void:
 
 	matches.append({
 		"round": round_index, "kind": kind, "left": left, "right": right,
+		"left_snapshot": str(a.get("snapshot_id", "")),
+		"right_snapshot": str(b.get("snapshot_id", "")),
 		"left_strategy": a["strategy"], "right_strategy": b["strategy"],
 		"left_pool": a["pool"], "right_pool": b["pool"],
 		"winner": result["winner"], "reason": result["reason"],

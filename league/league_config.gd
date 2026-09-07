@@ -9,6 +9,10 @@ extends RefCounted
 ## 없는 것만 여기 있다: 보관 한도, 초과 피해, 손실·라운드 상한, 팩션 풀.
 
 const Inventory = preload("res://run/inventory.gd")
+const Evaluator = preload("res://league/build_evaluator.gd")
+
+## 시드 도출 규칙의 버전. 이 문자열이 바뀌면 같은 반복 시드라도 다른 배치다.
+const SEED_RULE := "fnv1a-mix-v1"
 
 # --- 리그 진행 ---
 var loss_limit: int = 4
@@ -99,12 +103,28 @@ func combat_rules() -> Dictionary:
 	}
 
 ## 리포트 머리에 찍는 재현 정보. 여기 없는 값으로 결과가 달라지면 재현이 깨진 것이다.
+##
+## **결과 파일만 받은 사람이 실험을 점검할 수 있어야 한다** (r5 피드백 §8.2).
+## r5 manifest에는 커밋·엔진 버전·실제 가중치·시드 도출 규칙이 없어서, 코드를
+## 함께 받지 않으면 무엇을 돌린 것인지 확인할 방법이 없었다.
 func manifest() -> Dictionary:
 	return {
 		"batch_id": batch_id,
+		"git_commit": git_commit(),
+		"godot_version": Engine.get_version_info()["string"],
 		"game_version": game_version,
 		"ai_version": ai_version,
 		"league_version": league_version,
+		"seed_rule": SEED_RULE,
+		"strategy_weights": Evaluator.WEIGHTS,
+		"normalizers": {
+			"output_full": Evaluator.OUTPUT_FULL, "sustain_full": Evaluator.SUSTAIN_FULL,
+			"connection_full": Evaluator.CONNECTION_FULL, "dead_full": Evaluator.DEAD_FULL,
+			"surplus_full": Evaluator.SURPLUS_FULL, "unlock_full": Evaluator.UNLOCK_FULL,
+			"resolved_full": Evaluator.RESOLVED_FULL,
+		},
+		"pools": POOLS,
+		"repeat_seeds": range(1, repeats_per_condition + 1),
 		"loss_limit": loss_limit, "round_cap": round_cap,
 		"protected_rounds": protected_rounds,
 		"storage_limit": storage_limit,
@@ -137,6 +157,20 @@ static func _scalar(value: Variant) -> int:
 	for i: int in text.length():
 		acc = (acc * 131 + text.unicode_at(i)) & MASK
 	return acc
+
+## 현재 커밋. `.git`을 직접 읽는다 — 결과 파일만 보고 코드를 되찾을 수 있어야 한다.
+## 읽을 수 없으면 빈 문자열이고, 그것도 정보다 (내보낸 빌드에서 돌렸다는 뜻).
+static func git_commit() -> String:
+	var head: FileAccess = FileAccess.open("res://.git/HEAD", FileAccess.READ)
+	if head == null:
+		return ""
+	var text: String = head.get_as_text().strip_edges()
+	if not text.begins_with("ref: "):
+		return text
+	var ref: FileAccess = FileAccess.open("res://.git/" + text.substr(5), FileAccess.READ)
+	if ref == null:
+		return ""
+	return ref.get_as_text().strip_edges()
 
 static func rng_for(parts: Array) -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()

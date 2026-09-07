@@ -38,11 +38,12 @@ func _init() -> void:
 	runner.run()
 
 	var elapsed: float = float(Time.get_ticks_msec() - started) / 1000.0
-	print(Reporter.new().report(runner, coverage))
+	var reporter: RefCounted = Reporter.new()
+	print(reporter.report(runner, coverage))
 	print("")
-	print("실행 시간 %.1f초 · 매치 %d회 · 선택 %d회"
-		% [elapsed, runner.matches.size(), runner.choices.size()])
-	print("출력: res://tests/out/league/")
+	print("실행 시간 %.1f초 · 매치 %d회 · 선택 %d회 · 스냅샷 %d개"
+		% [elapsed, runner.matches.size(), runner.choices.size(), runner.snapshots.size()])
+	print("출력: %s (실행마다 새 폴더 — 덮어쓰지 않는다)" % reporter.out_dir)
 	quit(0)
 
 func _arg_int(name: String, fallback: int) -> int:

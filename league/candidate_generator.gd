@@ -134,6 +134,16 @@ static func _offer(out: Array, seen: Dictionary, inv: RefCounted, ctx: Dictionar
 	action["result"] = result
 	out.append(action)
 
+## 행동 하나를 **구조로** 기록한다. 리포트가 행동 문자열을 파싱하면 안 된다 —
+## r5에서 "X를 창고로 → Y를 장착" 같은 복합 행동이 '본체'로만 분류되어 창고 이동
+## 72건이 통째로 가려졌다 (피드백 §3.1).
+static func operation_of(action: Dictionary, inv: RefCounted) -> Dictionary:
+	return {
+		"kind": str(action["kind"]),
+		"part_id": inv.part_id_of(int(action.get("uid", Inventory.NONE))),
+		"slot": str(action.get("slot", "")),
+	}
+
 ## 사람이 읽는 행동 이름. 선택 로그가 "왜 이걸 골랐나"를 설명할 수 있어야 한다.
 static func describe(action: Dictionary, inv: RefCounted) -> String:
 	var uid: int = int(action.get("uid", Inventory.NONE))

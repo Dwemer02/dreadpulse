@@ -28,7 +28,14 @@ const SEED_EVENTS: Array = [["combat_start", "own"]]
 ## body_slots는 Core를 뺀 본체 자리 수다. 비어 있는 자리가 곧 **본체 기회비용**이므로
 ## (기획서 §5.1) 분석 결과에 함께 싣는다 — 이게 없으면 파츠를 전부 증강으로 돌려
 ## 본체 자리를 비워두는 조립이 감점 없이 통과한다.
-static func analyze(placed: Array, body_slots: int = 0) -> Dictionary:
+##
+## supply는 병목 이름 -> 근접도(0~1)다. "이 병목을 지금 채울 수 있는가"를 뜻한다:
+##   1.0  이미 창고에 있는 파츠로 채울 수 있다
+##   0.5  이 참가자의 팩션 풀에 채울 수 있는 파츠가 존재한다
+##   없음 이 풀에서는 구할 수 없다 — 미래 가치로 인정하지 않는다
+## r5 피드백 §2.3의 "가까운 획득으로 실제 열릴 수 있는 연결"이 이 값이다.
+static func analyze(placed: Array, body_slots: int = 0,
+		supply: Dictionary = {}) -> Dictionary:
 	var units: Array = _units(placed)
 
 	var reachable: Dictionary = {}
@@ -81,6 +88,9 @@ static func analyze(placed: Array, body_slots: int = 0) -> Dictionary:
 		"coverage_gaps": _coverage_gaps(units),
 		"body_slots": body_slots,
 		"empty_slots": maxi(0, body_slots - _body_count(placed)),
+		# 지금 침묵하지만 **한 번의 획득으로 실제로 열릴 수 있고, 열리면 뭔가를 하는**
+		# 단위의 가치 합. potential이 이 값을 쓴다 (개수가 아니다).
+		"unlockable": _unlockable(units, active, reachable, produced, supply),
 	}
 
 ## Core를 뺀 본체 수. Core는 고정 조건이라 자리를 차지해도 "채운 것"이 아니다.
@@ -96,11 +106,17 @@ static func _body_count(placed: Array) -> int:
 static func _units(placed: Array) -> Array:
 	var out: Array = []
 	for entry: Dictionary in placed:
-		out.append({
-			"slot": str(entry["slot"]), "kind": "body",
-			"part_id": str(entry["part_id"]), "meta": entry["body_meta"],
-		})
-		if str(entry.get("augment_id", "")) != "":
+		# **어휘가 없는 단위는 평가에서 뺀다.** 효과 없는 리그 Core가 그것이다 —
+		# r5에서는 이 Core가 늘 "침묵 파츠"로 잡혀 dead가 한 번도 0이 되지 않았고,
+		# potential에 0.25가 상수로 깔렸다 (피드백 §2.3.1).
+		# 효과가 없는 것이 설계인 파츠를 병목으로 세면 안 된다.
+		if not bool((entry["body_meta"] as Dictionary).get("inert", false)):
+			out.append({
+				"slot": str(entry["slot"]), "kind": "body",
+				"part_id": str(entry["part_id"]), "meta": entry["body_meta"],
+			})
+		if str(entry.get("augment_id", "")) != "" \
+				and not bool((entry["augment_meta"] as Dictionary).get("inert", false)):
 			out.append({
 				"slot": str(entry["slot"]), "kind": "augment",
 				"part_id": str(entry["augment_id"]), "meta": entry["augment_meta"],
@@ -170,6 +186,48 @@ static func _unmet_of(meta: Dictionary, reachable: Dictionary,
 				pass  # 보드에 파츠가 둘 이상이면 항상 참이다 — 병목이 아니다
 	return out
 
+## 한 번의 획득으로 열릴 수 있는 침묵 단위의 **가치 합**. 0~단위 수.
+##
+## r5 피드백 §2.3이 지적한 것을 그대로 고친 자리다. 옛 판본은 "전제가 1개 이하인
+## 침묵 단위의 개수"를 셌는데, 패시브는 전제 0개 + 트리거 1개라 거의 전부가 세어졌고
+## 결과적으로 potential ≈ dead/4가 됐다 — **작동하지 않는 상태 자체가 보상됐다.**
+##
+## 세 조건을 모두 만족해야 센다:
+##   1. 미충족 전제가 정확히 하나다 (한 번의 획득으로 닿는다)
+##   2. 그 전제를 채울 수 있는 공급원이 창고나 풀에 실제로 존재한다
+##   3. 열렸을 때 실제로 뭔가를 한다 (출력·지속·자원 중 하나라도 있다)
+## 3을 빼면 "입력만 늘리고 출력이 없는" 장치를 넣어도 미래 가치가 오른다.
+static func _unlockable(units: Array, active: Dictionary, reachable: Dictionary,
+		produced: Dictionary, supply: Dictionary) -> float:
+	var total: float = 0.0
+	for i: int in units.size():
+		if active.has(i):
+			continue
+		var needs: Array[String] = _unmet(units[i], reachable, produced)
+		if needs.size() != 1:
+			continue
+		var proximity: float = float(supply.get(needs[0], 0.0))
+		if proximity <= 0.0:
+			continue
+		if not _does_something(units[i]["meta"]):
+			continue
+		total += proximity * _payoff(units[i]["meta"])
+	return total
+
+## 이 단위가 열렸을 때의 가치. 0.25~1.0.
+## 기획서 §2.3의 "새로 열릴 기능의 가치"다 — 켜지기만 하면 다 같은 값이라고 두면
+## 작은 변환기와 큰 무기가 같은 미래 가치를 갖는다.
+static func _payoff(meta: Dictionary) -> float:
+	var magnitude: float = float(int(meta["burst_output"]) + int(meta["burst_sustain"])
+		+ int(meta["trigger_output"]) + int(meta["trigger_sustain"]))
+	return clampf(magnitude / 8.0, 0.25, 1.0)
+
+## 열렸을 때 실제로 기여하는 단위인가.
+static func _does_something(meta: Dictionary) -> bool:
+	return int(meta["burst_output"]) > 0 or int(meta["burst_sustain"]) > 0 \
+		or int(meta["trigger_output"]) > 0 or int(meta["trigger_sustain"]) > 0 \
+		or not (meta["produces"] as Dictionary).is_empty()
+
 ## 실제 연결. 이벤트 연결과 자원 연결 두 종류다.
 ## 자기 자신과의 연결은 세지 않는다 — 한 파츠가 자기 이벤트를 듣는 것은
 ## 엔진이 아니라 그 파츠의 내부 구조다.
@@ -222,9 +280,19 @@ static func _operational(units: Array, active: Dictionary) -> bool:
 			return true
 	return false
 
-## 거친 초당 추정. 본체는 쿨타임으로 나누고, 트리거는 명목 빈도를 쓴다 —
-## 트리거 빈도를 정확히 알려면 전투를 돌려야 하는데 그건 이 계층이 하지 않는 일이다.
+## 거친 초당 추정. 트리거 빈도를 정확히 알려면 전투를 돌려야 하는데 그건 이 계층이
+## 하지 않는 일이다 (기획서 §5.2).
 const NOMINAL_TRIGGER_PERIOD: float = 4.0
+
+## 추정 지평선. 이 시간 안에 몇 번 발동하는지로 초당 출력을 환산한다.
+##
+## **쿨타임으로만 나누면 안 된다.** 그러면 한 발 쏘고 자폭하는 파츠(피해 12 / 3초)가
+## 초당 4로, 영구히 도는 무기(피해 6 / 3초)의 두 배로 평가된다 — r5에서 실제로
+## 일회용 파쇄탄이 선택률 1위(75%)였던 이유다 (피드백 §7.1의 첫 판단 사례).
+##
+## 60초인 이유: 리그의 시계가 성격을 바꾸는 지점이다(초과 피해 시작). 그 뒤는
+## 전투가 다른 규칙으로 흘러가므로 지속 출력의 의미가 달라진다.
+const NOMINAL_HORIZON: float = 60.0
 
 static func _rate(units: Array, active: Dictionary, kind: String,
 		produced: Dictionary) -> float:
@@ -239,9 +307,20 @@ static func _rate(units: Array, active: Dictionary, kind: String,
 		var share: float = ratio if (meta["consumes"] as Dictionary).has("material") else 1.0
 		var cooldown: float = float(meta.get("cooldown", 0.0))
 		if cooldown > 0.0:
-			total += float(meta["burst_" + kind]) / cooldown * share
+			total += float(meta["burst_" + kind]) * activations(meta, cooldown) \
+				/ NOMINAL_HORIZON * share
 		total += float(meta["trigger_" + kind]) / NOMINAL_TRIGGER_PERIOD * share
 	return total
+
+## 지평선 안의 실제 발동 횟수. 쿨타임이 정한 상한을 **자기 파괴와 발동 제한이 깎는다**.
+static func activations(meta: Dictionary, cooldown: float) -> float:
+	var by_cooldown: float = NOMINAL_HORIZON / cooldown
+	if bool(meta.get("one_shot", false)):
+		return 1.0
+	var limit: int = int(meta.get("fire_limit", -1))
+	if limit > 0:
+		return minf(by_cooldown, float(limit))
+	return by_cooldown
 
 ## 자재 공급 비율. 생산이 소비 이상이면 1.0, 아니면 그 비율.
 static func _supply_ratio(units: Array, active: Dictionary, produced: Dictionary) -> float:

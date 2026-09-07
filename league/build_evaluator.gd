@@ -18,6 +18,10 @@ const SUSTAIN_FULL: float = 6.0     # 초당 회복·보호막 상당량
 const CONNECTION_FULL: float = 8.0  # 실제 연결 수
 const DEAD_FULL: float = 4.0        # 침묵 중인 파츠 수
 const SURPLUS_FULL: float = 8.0     # 쓰이지 않는 자원량
+## 미래 가치의 "1". 근접도 1.0짜리 잠금 해제가 이만큼 모이면 만점이다.
+const UNLOCK_FULL: float = 2.0
+## 해소된 병목의 "1". 이름 붙은 병목이 이만큼 사라지면 만점이다.
+const RESOLVED_FULL: float = 2.0
 
 ## 전략별 가중치 (§5.3의 표 그대로).
 ## 앞의 넷은 더하고 뒤의 둘은 뺀다.
@@ -71,18 +75,24 @@ static func features(before: Dictionary, after: Dictionary, sustain_bias: float,
 	var links_before: int = (before["connections"] as Array).size()
 	var connection: float = _unit(float(links_after) / CONNECTION_FULL)
 
-	# 병목 해소 = 침묵하던 파츠가 실제로 돌기 시작한 수.
-	# 목표 병목을 콕 집어 없앴으면 가산한다 (엔진 투자형의 목표 유지, §5.5).
-	var dead_before: int = (before["dead"] as Array).size()
+	# 병목 해소 = **이름 붙은 병목이 실제로 사라진 것**.
+	#
+	# 옛 판본은 침묵 파츠 개수의 감소를 봤다. 그러면 침묵 파츠를 하나 빼기만 해도
+	# 병목이 풀린 것으로 세어지고, 반대로 병목을 풀면서 다른 침묵 장치를 함께
+	# 넣으면 상쇄되어 0이 된다 — 둘 다 틀렸다 (r5 피드백 §2.3.4).
+	# 어떤 병목이 얼마나 해결됐는지를 그대로 세고, 로그에도 이름을 남긴다.
 	var dead_after: int = (after["dead"] as Array).size()
-	var relief: float = _unit(float(maxi(0, dead_before - dead_after)) / DEAD_FULL)
-	if goal != "" and int((before["missing"] as Dictionary).get(goal, 0)) > 0 \
-			and int((after["missing"] as Dictionary).get(goal, 0)) == 0:
+	var resolved: Array[String] = resolved_needs(before, after)
+	var relief: float = _unit(float(resolved.size()) / RESOLVED_FULL)
+	# 목표 병목을 콕 집어 없앴으면 가산한다 (엔진 투자형의 목표 유지, §5.5).
+	if goal != "" and resolved.has(goal):
 		relief = _unit(relief + 0.5)
 
-	# 추가 획득 하나로 열릴 연결 = "딱 하나만 더 있으면 도는" 파츠 수.
-	# 이미 도는 것에는 점수를 주지 않는다 — 그건 current가 세는 몫이다.
-	var potential: float = _unit(float(_near_misses(after)) / DEAD_FULL)
+	# 추가 획득 하나로 열릴 연결. **개수가 아니라 근접도의 합**이다 —
+	# "이 풀에서 실제로 구할 수 있고, 열리면 뭔가를 하는" 것만 센다 (§2.3.2).
+	# 옛 판본은 침묵 파츠 개수를 셌고, 그래서 potential = dead/4가 되어
+	# 작동하지 않는 상태 자체를 미래 가치로 보상했다.
+	var potential: float = _unit(float(after.get("unlockable", 0.0)) / UNLOCK_FULL)
 
 	# 상실 페널티 — 연결이 끊기거나 출력이 줄어든 만큼.
 	var lost_links: float = _unit(float(maxi(0, links_before - links_after)) / CONNECTION_FULL)
@@ -109,20 +119,25 @@ static func features(before: Dictionary, after: Dictionary, sustain_bias: float,
 		"potential": potential, "loss": loss, "waste": waste,
 		"attack": attack, "defend": defend,
 		"links": links_after, "dead": dead_after,
+		# 원시 재료도 함께 남긴다 — 정규화된 0~1만 보면 "왜 이 값인가"를 복원할 수 없다.
+		# r5에서 potential이 무엇을 세는지 로그만으로 알 수 없었던 것이 이 때문이다.
+		"unlockable": snappedf(float(after.get("unlockable", 0.0)), 0.01),
+		"resolved": resolved,
+		"empty_slots": int(after.get("empty_slots", 0)),
 	}
 
-## "딱 하나만 더 채우면 도는" 파츠 수. 전제가 두 개 이상 비면 한 번의 획득으로
-## 열리지 않으므로 세지 않는다.
-static func _near_misses(analysis: Dictionary) -> int:
-	var count: int = 0
-	for unit: Variant in analysis["dead"]:
-		var meta: Dictionary = (unit as Dictionary)["meta"]
-		var needs: int = (meta["prerequisites"] as Array).size()
-		if bool(meta["passive"]):
-			needs += 1
-		if needs <= 1:
-			count += 1
-	return count
+## 이번 변경으로 **사라진 병목의 이름**. relief가 이걸 세고 로그가 이걸 남긴다.
+##
+## 이름을 남기는 것이 요점이다: "병목 2개 해소"만 적으면 나중에 그것이 실제 해소인지
+## 침묵 파츠를 뺀 것인지 구별할 수 없다 (r5에서 정확히 그랬다).
+static func resolved_needs(before: Dictionary, after: Dictionary) -> Array[String]:
+	var out: Array[String] = []
+	var was: Dictionary = before["missing"]
+	var now: Dictionary = after["missing"]
+	for need: String in was:
+		if int(was[need]) > 0 and int(now.get(need, 0)) == 0:
+			out.append(need)
+	return out
 
 static func _unit(value: float) -> float:
 	return clampf(value, 0.0, 1.0)

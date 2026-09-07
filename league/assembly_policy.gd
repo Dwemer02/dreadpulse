@@ -11,6 +11,7 @@ const Generator = preload("res://league/candidate_generator.gd")
 const Graph = preload("res://league/build_graph.gd")
 const Evaluator = preload("res://league/build_evaluator.gd")
 const Inventory = preload("res://run/inventory.gd")
+const PartMeta = preload("res://league/part_meta.gd")
 
 var strategy: String = "immediate"
 var config: RefCounted            # LeagueConfig
@@ -83,9 +84,23 @@ func decide(inv: RefCounted, ctx: Dictionary) -> Dictionary:
 
 var _goal_reason: String = ""
 
+## 공급 근접도는 **후보 상태마다 다시 계산한다**. 창고에 무엇이 남았는지가
+## 후보마다 달라지기 때문이다 — 창고 파츠를 보드에 올리면 그 파츠는 더 이상
+## "곧 채울 수 있는 공급원"이 아니다.
 func _analyze(inv: RefCounted, ctx: Dictionary) -> Dictionary:
 	return Graph.analyze(Generator.placed_units(inv, ctx["catalog"], ctx["meta_index"]),
-		int(ctx.get("body_slots", 0)))
+		int(ctx.get("body_slots", 0)), _supply(inv, ctx))
+
+## 병목 이름 -> 근접도. 창고에 있으면 1.0, 이 참가자의 풀에서 구할 수 있으면 0.5.
+## 풀에서 아예 구할 수 없는 병목은 넣지 않는다 — 미래 가치로 인정하지 않는다.
+func _supply(inv: RefCounted, ctx: Dictionary) -> Dictionary:
+	var out: Dictionary = (ctx.get("pool_supply", {}) as Dictionary).duplicate()
+	var stored: Array[String] = []
+	for item: Dictionary in inv.unplaced():
+		stored.append(str(item["part_id"]))
+	for need: String in PartMeta.supplies_of_parts(ctx["meta_index"], stored):
+		out[need] = 1.0
+	return out
 
 ## 상태 하나를 평가한다. 이미 본 보드면 null.
 ##
