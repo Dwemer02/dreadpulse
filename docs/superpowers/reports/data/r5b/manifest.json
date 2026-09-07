@@ -1,0 +1,140 @@
+{
+  "ai_version": "league-ai-1",
+  "batch_id": "r5",
+  "beam_width": 8,
+  "candidate_depth": 2,
+  "combat": {
+    "overtime_base_fraction": 0.001,
+    "overtime_reference_hull": 100,
+    "overtime_start_seconds": 60.0,
+    "timeout_result": "draw"
+  },
+  "core_id": "league_core",
+  "frame_id": "pool_frame",
+  "game_version": "parts-90",
+  "git_commit": "b9a992569650b239cb7ed7db6530fab646e28e4f",
+  "godot_version": "4.6.2-stable (official)",
+  "league_version": "league-1",
+  "loss_limit": 4,
+  "normalizers": {
+    "connection_full": 8.0,
+    "dead_full": 4.0,
+    "output_full": 8.0,
+    "resolved_full": 2.0,
+    "surplus_full": 8.0,
+    "sustain_full": 6.0,
+    "unlock_full": 2.0
+  },
+  "out_dir": "res://tests/out/league/r5-20260907T111238",
+  "output_rows": {
+    "choices.jsonl": 1773,
+    "matches.csv": 789,
+    "participants.csv": 201,
+    "report.txt": 146,
+    "snapshots.jsonl": 1773
+  },
+  "pools": {
+    "a100": {
+      "aeonic": 100,
+      "reclaimer": 0,
+      "viridia": 0
+    },
+    "a70_r30": {
+      "aeonic": 70,
+      "reclaimer": 30,
+      "viridia": 0
+    },
+    "a70_v30": {
+      "aeonic": 70,
+      "reclaimer": 0,
+      "viridia": 30
+    },
+    "equal": {
+      "aeonic": 33,
+      "reclaimer": 34,
+      "viridia": 33
+    },
+    "r100": {
+      "aeonic": 0,
+      "reclaimer": 100,
+      "viridia": 0
+    },
+    "r70_a30": {
+      "aeonic": 30,
+      "reclaimer": 70,
+      "viridia": 0
+    },
+    "r70_v30": {
+      "aeonic": 0,
+      "reclaimer": 70,
+      "viridia": 30
+    },
+    "v100": {
+      "aeonic": 0,
+      "reclaimer": 0,
+      "viridia": 100
+    },
+    "v70_a30": {
+      "aeonic": 30,
+      "reclaimer": 0,
+      "viridia": 70
+    },
+    "v70_r30": {
+      "aeonic": 0,
+      "reclaimer": 30,
+      "viridia": 70
+    }
+  },
+  "protected_rounds": 0,
+  "repeat_seeds": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "repeats_per_condition": 5,
+  "round_cap": 15,
+  "seed_rule": "fnv1a-mix-v1",
+  "shortlist_score_gap": 1.0,
+  "shortlist_size": 3,
+  "storage_limit": 6,
+  "strategy_weights": {
+    "bridge": {
+      "connection": 5,
+      "current": 2,
+      "loss": 3,
+      "potential": 3,
+      "relief": 3,
+      "sustain_bias": 0.4,
+      "waste": 2
+    },
+    "engine": {
+      "connection": 4,
+      "current": 2,
+      "loss": 4,
+      "potential": 4,
+      "relief": 4,
+      "sustain_bias": 0.4,
+      "waste": 2
+    },
+    "immediate": {
+      "connection": 2,
+      "current": 5,
+      "loss": 3,
+      "potential": 0,
+      "relief": 3,
+      "sustain_bias": 0.35,
+      "waste": 2
+    },
+    "sustain": {
+      "connection": 2,
+      "current": 3,
+      "loss": 4,
+      "potential": 1,
+      "relief": 5,
+      "sustain_bias": 0.7,
+      "waste": 4
+    }
+  }
+}

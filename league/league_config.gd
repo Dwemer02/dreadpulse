@@ -111,6 +111,10 @@ func manifest() -> Dictionary:
 	return {
 		"batch_id": batch_id,
 		"git_commit": git_commit(),
+		# 작업 트리가 커밋과 다른가. r5b 배치가 이 구멍을 그대로 보여줬다 —
+		# 찍힌 커밋은 배치를 띄운 시점의 HEAD이고 실제 평가 코드는 작업 트리에만
+		# 있었다. dirty를 모르면 그 manifest로 재현할 수 없다 (피드백 §8.2).
+		"git_dirty": git_dirty(),
 		"godot_version": Engine.get_version_info()["string"],
 		"game_version": game_version,
 		"ai_version": ai_version,
@@ -171,6 +175,31 @@ static func git_commit() -> String:
 	if ref == null:
 		return ""
 	return ref.get_as_text().strip_edges()
+
+## 작업 트리에 커밋되지 않은 변경이 있는가.
+##
+## git 없이 판정한다: 추적 파일의 수정 시각이 인덱스보다 새로우면 dirty로 본다.
+## 정확한 판정은 아니지만 **"이 manifest를 그대로 재현할 수 있다"는 거짓 확신을
+## 막는 것**이 목적이므로 보수적으로 참을 낸다.
+static func git_dirty() -> bool:
+	var index_time: int = FileAccess.get_modified_time("res://.git/index")
+	if index_time == 0:
+		return false
+	for path: String in ["res://league", "res://sim", "res://run"]:
+		if _newer_than(path, index_time):
+			return true
+	return false
+
+static func _newer_than(dir_path: String, stamp: int) -> bool:
+	var dir: DirAccess = DirAccess.open(dir_path)
+	if dir == null:
+		return false
+	for file: String in dir.get_files():
+		if not file.ends_with(".gd"):
+			continue
+		if FileAccess.get_modified_time("%s/%s" % [dir_path, file]) > stamp:
+			return true
+	return false
 
 static func rng_for(parts: Array) -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()

@@ -37,8 +37,10 @@ func report(runner: RefCounted, coverage: Dictionary) -> String:
 	_say("Core: %s (효과 없음, 재질 plating) — **재질 편향은 알려진 조건이다**: "
 		% runner.config.core_id)
 	_say("  caustic을 1.5배로 맞고 thermal을 0.75배로 맞는다. 재질 축은 별도 배치다.")
-	_say("커밋 %s · Godot %s · 시드 규칙 %s"
-		% [str(m["git_commit"]).substr(0, 10), m["godot_version"], m["seed_rule"]])
+	_say("커밋 %s%s · Godot %s · 시드 규칙 %s"
+		% [str(m["git_commit"]).substr(0, 10),
+			" (작업 트리 변경 있음 — 이 커밋으로 그대로 재현되지 않는다)" 				if bool(m["git_dirty"]) else "",
+			m["godot_version"], m["seed_rule"]])
 
 	_coverage(coverage)
 	_termination(runner)
