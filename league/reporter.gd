@@ -32,12 +32,20 @@ func report(runner: RefCounted, coverage: Dictionary) -> String:
 	_say("참가자 %d명 = 전략 %d × 풀 %d × 시드 %d"
 		% [runner.participants.size(), Config.STRATEGIES.size(),
 			Config.pool_ids().size(), runner.config.repeats_per_condition])
-	_say("규칙: %d손실 탈락 · 최대 %d라운드 · 보관 %d · 초과 피해 %d초부터 · %s"
+	_say("규칙: %d손실 탈락 · 최대 %d라운드 · 보관 %d · 초과 피해 %d초부터 · %s · 제안 K=%d"
 		% [m["loss_limit"], m["round_cap"], m["storage_limit"],
-			int(runner.config.overtime_start_seconds), runner.config.frame_id])
-	_say("Core: %s (효과 없음, 재질 plating) — **재질 편향은 알려진 조건이다**: "
-		% runner.config.core_id)
-	_say("  caustic을 1.5배로 맞고 thermal을 0.75배로 맞는다. 재질 축은 별도 배치다.")
+			int(runner.config.overtime_start_seconds), runner.config.frame_id,
+			runner.config.options_per_choice])
+	_say("Core: %s (효과 없음) · 피해 타입 배율 %s"
+		% [runner.config.core_id,
+			"**전부 1.0 (중립)**" if runner.config.neutral_damage_types
+				else "상성표 그대로 — plating 편향 있음"])
+	if runner.config.neutral_damage_types:
+		_say("  단계 D의 결정이다. 재질 축은 접전 보드에서 선체 격차를 평균 11.7 ·")
+		_say("  최대 24.4 움직였고(선체 100 기준) 그만큼이 팩션·AI 비교의 교란이었다.")
+		_say("  **본편 규칙이 아니다** — 재질 상성은 게임에 그대로 있다.")
+	else:
+		_say("  caustic을 1.5배로 맞고 thermal을 0.75배로 맞는다 — 알려진 편향이다.")
 	_say("커밋 %s%s · Godot %s · 시드 규칙 %s"
 		% [str(m["git_commit"]).substr(0, 10),
 			" (작업 트리 변경 있음 — 이 커밋으로 그대로 재현되지 않는다)" 				if bool(m["git_dirty"]) else "",
@@ -48,6 +56,7 @@ func report(runner: RefCounted, coverage: Dictionary) -> String:
 	_by_condition(runner)
 	_early_failure(runner)
 	_choices(runner)
+	_offer_quality(runner)
 	_investment(runner)
 	_fixed_recipe(runner)
 	_combat(runner)
@@ -195,6 +204,69 @@ func _choices(runner: RefCounted) -> void:
 	_say("  제안됐지만 한 번도 선택되지 않은 파츠: %s" % str(_never(runner, taken, false)))
 	_say("  ※ 선택률이 낮다고 약한 파츠라고 단정하지 않는다. AI가 연결을 못 읽었을 수도")
 	_say("     있고, 그 구분은 위의 coverage 절과 함께 읽어야 한다 (§1.1).")
+
+## §9.1 제안의 질. **"92%가 즉시 배치됐다"는 제안이 충분하다는 증거가 아니다** —
+## 획득한 것 중 그나마 나은 것을 붙였을 수 있다. 그래서 넷을 따로 센다.
+##
+##   즉시 유효   아무것도 안 하는 것보다 나은 후보가 하나라도 있었는가
+##   근거리 투자 1~3회 안에 완성 경로가 보이는 후보가 있었는가
+##   대안 수     서로 다른 사용법(본체/증강/보관)을 가진 유효 후보가 몇 갈래였는가
+##   후보 부재   즉시 개선도 합리적 투자도 없는 제안의 비율
+func _offer_quality(runner: RefCounted) -> void:
+	_head("제안의 질 (§9.1)")
+	var g: Dictionary = {}
+	for choice: Dictionary in runner.choices:
+		var key: String = str(choice["strategy"])
+		if not g.has(key):
+			g[key] = {"offers": 0, "immediate": 0, "future": 0, "none": 0,
+				"alternatives": 0, "k": 0}
+		var row: Dictionary = g[key]
+		row["offers"] = int(row["offers"]) + 1
+		row["k"] = int(row["k"]) + (choice["final"] as Array).size()
+		var any_immediate: bool = false
+		var any_future: bool = false
+		var lanes: Dictionary = {}
+		for entry: Variant in choice.get("offer_candidates", []):
+			var offer: Dictionary = entry
+			if bool(offer.get("improves", false)):
+				any_immediate = true
+			if bool((offer.get("future", {}) as Dictionary).get("future", false)):
+				any_future = true
+			# 대안은 **서로 다른 사용법**이다. 같은 파츠를 다섯 자리에 놓을 수 있다는
+			# 것은 다섯 갈래가 아니라 한 갈래다.
+			var uses: Dictionary = offer.get("uses", {})
+			for lane: String in ["body", "augment", "storage"]:
+				if int(uses.get(lane, 0)) > 0:
+					lanes["%s/%s" % [str(offer["part_id"]), lane]] = true
+		if any_immediate:
+			row["immediate"] = int(row["immediate"]) + 1
+		if any_future:
+			row["future"] = int(row["future"]) + 1
+		if not any_immediate and not any_future:
+			row["none"] = int(row["none"]) + 1
+		row["alternatives"] = int(row["alternatives"]) + lanes.size()
+
+	_say("  %-13s %7s %6s %9s %11s %8s %9s" % ["전략", "제안수", "평균K",
+		"즉시 유효", "근거리 투자", "대안 수", "후보 부재"])
+	for strategy: String in Config.STRATEGIES:
+		var row2: Dictionary = g.get(strategy, {})
+		if row2.is_empty():
+			continue
+		var n: int = maxi(1, int(row2["offers"]))
+		_say("  %-13s %7d %6.1f %8.1f%% %10.1f%% %8.1f %8.1f%%" % [strategy,
+			int(row2["offers"]), float(row2["k"]) / float(n),
+			100.0 * float(row2["immediate"]) / float(n),
+			100.0 * float(row2["future"]) / float(n),
+			float(row2["alternatives"]) / float(n),
+			100.0 * float(row2["none"]) / float(n)])
+	_say("")
+	_say("  ※ '즉시 유효'는 **유지보다 나은 후보가 있었는가**다. 최고 점수의 절대값이")
+	_say("     아니다 — 초반 점수는 흔히 음수이고, 그 절대값으로는 '이 제안이 이")
+	_say("     참가자에게 쓸모가 있었는가'를 말할 수 없다.")
+	_say("  ※ '대안 수'는 **보상별 서로 다른 사용법**의 개수다. 같은 파츠를 여러 자리에")
+	_say("     놓을 수 있다는 것은 여러 갈래가 아니라 한 갈래다.")
+	_say("  ※ 이 표는 AI 점수로 유효성을 정의한다 — **평가기 편향을 다시 재는 것**일 수")
+	_say("     있다 (§9.1 마지막). 고정 상대군 재전투와 함께 읽어야 한다.")
 
 ## §5.1의 네 단계를 **나란히** 낸다. 하나로 뭉치면 r5b의 오독이 되풀이된다:
 ## "미래 가치가 양수인 선택 2.9%"만 보면 준비 후보가 제안되지 않은 것인지, 후보

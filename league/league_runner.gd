@@ -65,7 +65,7 @@ func run() -> void:
 func _create_participants() -> void:
 	for strategy: String in Config.STRATEGIES:
 		for pool_id: String in Config.pool_ids():
-			for repeat: int in range(1, config.repeats_per_condition + 1):
+			for repeat: int in config.seeds():
 				var inv: RefCounted = Inventory.new()
 				content.fresh_board(config, inv)
 				var policy: RefCounted = AssemblyPolicy.new()
@@ -172,6 +172,10 @@ func _acquire(p: Dictionary, index: int, round_index: int, guarantee: bool,
 			# 만들었는가"를 말하지 못한다 — 이미 있던 잠금 해제 여지가 그대로
 			# 남은 것도 양수로 나온다. 늘었는지는 차이로만 알 수 있다.
 			"best_potential": snappedf(float(decision.get("best_potential", 0.0)), 0.001),
+			# §9.1 — 이 보상이 "아무것도 안 하기"보다 나았는가.
+			"keep_score": float(decision.get("keep_score", -INF)),
+			"improves": bool(decision.get("valid", false))
+				and float(decision["score"]) > float(decision.get("keep_score", -INF)) + 0.001,
 			"potential_before": snappedf(
 				clampf(float(before["unlockable"]) / Evaluator.UNLOCK_FULL, 0.0, 1.0),
 				0.001),

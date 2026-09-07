@@ -64,7 +64,14 @@ func _attacks_alone(part_id: String) -> bool:
 ## 제안 하나. 원시 후보열은 전략과 무관하게 결정된다.
 ##
 ## index는 이 참가자의 몇 번째 획득인가다. 시작 파츠가 0, 첫 선택이 1, ...
-func raw_offer(pool_id: String, repeat_seed: int, index: int, count: int) -> Array[String]:
+##
+## 공통 후보열 (§8.2). **K와 무관하게 항상 OFFER_COLUMN개를 뽑는다.**
+##
+## count를 K로 받아 그때그때 뽑으면 K=3과 K=6의 앞 3개가 달라진다 —
+## 재추첨 루프가 다른 횟수만큼 rng를 소비하기 때문이다. 그러면 K 비교가
+## "제안 수의 효과"가 아니라 "다른 후보열의 효과"가 된다.
+func raw_offer(pool_id: String, repeat_seed: int, index: int,
+		count: int = Config.OFFER_COLUMN) -> Array[String]:
 	var rng: RandomNumberGenerator = Config.rng_for(["offer", pool_id, repeat_seed, index])
 	var out: Array[String] = []
 	var attempts: int = 0
@@ -101,11 +108,16 @@ func _draw_faction(pool_id: String, rng: RandomNumberGenerator) -> String:
 
 ## 최종 제안. 시작 보장만 원시 후보열을 바꿀 수 있다 (§4.2).
 ##
-## 반환: {raw, final, guarantee}
+## 반환: {raw, final, guarantee, column, k}
+##   column  전체 후보열 (실험 시스템만 보유, AI에게 가지 않는다)
+##   raw     그중 앞 K개 — AI가 보는 것
 ##   guarantee가 빈 문자열이 아니면 그 사유로 후보 하나를 갈아끼웠다는 뜻이다.
 func offer_for(pool_id: String, repeat_seed: int, index: int, inv: RefCounted,
 		guarantee_attack: bool) -> Dictionary:
-	var raw: Array[String] = raw_offer(pool_id, repeat_seed, index, config.options_per_choice)
+	# 전체 열을 뽑고 앞에서 K개만 공개한다 (§8.2).
+	var column: Array[String] = raw_offer(pool_id, repeat_seed, index)
+	var k: int = mini(config.options_per_choice, column.size())
+	var raw: Array[String] = column.slice(0, k)
 	var final: Array[String] = raw.duplicate()
 	var reason: String = ""
 
@@ -117,7 +129,9 @@ func offer_for(pool_id: String, repeat_seed: int, index: int, inv: RefCounted,
 			# 마지막 자리를 갈아끼운다. 앞자리를 바꾸면 원시 후보열과의 대응이 흐려진다.
 			final[final.size() - 1] = pick
 			reason = "공격 불능 해소 후보 삽입"
-	return {"raw": raw, "final": final, "guarantee": reason}
+	# 전체 열도 함께 남긴다 — AI에게는 가지 않고 로그에만 들어간다 (§8.2).
+	return {"raw": raw, "final": final, "guarantee": reason,
+		"column": column, "k": k}
 
 ## 이 제안들 중 하나라도 지금 조합을 공격 가능하게 만드는가.
 ## 실제로 놓아 보고 판정한다 — 태그가 아니라 실행 경로로 본다 (§4.2).

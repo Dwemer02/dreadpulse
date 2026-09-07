@@ -59,10 +59,24 @@ var overtime_start_seconds: float = 60.0
 var overtime_base_fraction: float = 0.001
 ## 기준 선체는 **배치 공통값**이지 참가자의 현재/최대 선체가 아니다 (§9.2).
 var overtime_reference_hull: int = 100
-## **진단 전용.** 참이면 공격/방어 타입 배율을 전부 1.0으로 본다 (§11.1의
+## **리그 표준 조건.** 참이면 공격/방어 타입 배율을 전부 1.0으로 본다.
+##
+## 단계 D에서 켜기로 결정했다. 리그 Core(`league_core`)는 애초에 "Core 효과나
+## 재질이 조건마다 다르면 AI 4종 비교에 교란이 섞인다"는 이유로 만든 중립
+## 장치인데, 재질이 plating이라 그 목적을 절반만 달성하고 있었다.
+##
+## 단계 D의 측정: 접전하는 보드 10개에서 중립으로 바꾸면 선체 격차가
+## **평균 11.7 · 최대 24.4** 움직이고(선체 100 기준) 승률은 최대 13.7%p
+## 움직인다. 방향은 보드마다 다르다 — 받는 피해 타입이 무엇이냐를 따른다.
+## 그 정도면 팩션·AI 비교의 교란으로 충분히 크다.
+##
+## **본편 규칙이 아니다.** 재질 상성은 게임에 그대로 있고, 이것은 리그가
+## 그 축을 실험에서 빼기 위해 combat_sim.rules로 주입하는 선택 규칙이다
+## (초과 피해와 같은 자리). 리그 결과로 재질 밸런스를 논하지 않는다.
+## 원래 §11.1의 진단 조건이었다:
 ## "관련 피해 배율 전부 1.0인 중립 기준"). 배치에서는 항상 false다 —
 ## 이 플래그로 돌린 결과를 밸런스 근거로 쓰지 않는다.
-var diagnostic_neutral_types: bool = false
+var neutral_damage_types: bool = true
 
 var timeout_result: String = "draw"
 
@@ -76,11 +90,29 @@ var core_id: String = "league_core"
 
 # --- 실행 규모 ---
 var repeats_per_condition: int = 20
+## 반복 시드 목록. 비어 있으면 1..repeats_per_condition을 쓴다.
+##
+## 단계 E는 **새 시드 101~105**를 쓴다 (§8.3). 기존 1~5는 레시피를 발견하는 데
+## 썼으므로, 그 시드로 레시피의 강도를 다시 재면 발견에 쓴 자료로 검증하는 것이다.
+var repeat_seeds: Array[int] = []
+
+## 실제로 돌릴 시드 목록.
+func seeds() -> Array[int]:
+	if not repeat_seeds.is_empty():
+		return repeat_seeds
+	var out: Array[int] = []
+	for i: int in range(1, repeats_per_condition + 1):
+		out.append(i)
+	return out
 
 # --- 버전 (재현용 — 리포트 머리에 그대로 찍는다) ---
 var game_version: String = "parts-90"
 var ai_version: String = "league-ai-1"
-var league_version: String = "league-1"
+## 리그 규칙 버전. **전투 조건이 바뀌면 올린다** — 배치 간 비교가
+## 조용히 깨지는 것을 막는 유일한 표시다.
+##   league-1  초과 피해 + plating Core
+##   league-2  + 중립 피해 배율 (단계 D 결정)
+var league_version: String = "league-2"
 ## 조건 이름 (규모·K 등). 실행 식별자가 아니다.
 var batch_id: String = "batch"
 ## 실행 식별자. 폴더 이름과 같고 실행마다 다르다. Reporter가 채운다.
@@ -113,6 +145,13 @@ const POOLS: Dictionary = {
 ## 유연형 4종 + 비교군 1종. **fixed_recipe는 AI 승률 비교 대상이 아니라 비교군이다**
 ## (r5b §7.2) — "유연한 조립이 고정 조합 반복보다 평균적으로 낫다"를 재려면
 ## 고정 조합을 실제로 돌려 보는 쪽이 있어야 한다.
+## 공통 후보열의 길이 (§8.2). **K와 무관하게 항상 이만큼 뽑는다.**
+##
+## K=3은 앞의 3개, K=5는 앞의 5개, K=6은 전부를 AI에게 보여준다. 전체 열은
+## 실험 시스템만 보유한다. 이렇게 해야 K가 달라도 **같은 (풀,시드,인덱스)의
+## 앞자리가 완전히 같다** — K 비교가 후보열 차이와 섞이지 않는다.
+const OFFER_COLUMN: int = 6
+
 const STRATEGIES: Array[String] = ["immediate", "engine", "sustain", "bridge",
 	"fixed_recipe"]
 
@@ -136,7 +175,7 @@ func combat_rules() -> Dictionary:
 		"overtime_base_fraction": overtime_base_fraction,
 		"overtime_reference_hull": overtime_reference_hull,
 		"timeout_result": timeout_result,
-		"neutral_damage_types": diagnostic_neutral_types,
+		"neutral_damage_types": neutral_damage_types,
 	}
 
 ## 리포트 머리에 찍는 재현 정보. 여기 없는 값으로 결과가 달라지면 재현이 깨진 것이다.
@@ -169,7 +208,8 @@ func manifest() -> Dictionary:
 		# 고정 레시피 비교군의 목표. **결과 파일만 받은 사람이 "무엇을 목표로
 		# 삼았는가"를 알 수 있어야 한다** (§10.1).
 		"fixed_recipes": Recipes.manifest(),
-		"repeat_seeds": range(1, repeats_per_condition + 1),
+		"repeat_seeds": seeds(),
+		"offer_column": OFFER_COLUMN,
 		# 파생 기본값까지 펼친 설정. 결과 파일만 받은 사람이 실험을 점검할 수 있어야
 		# 한다 (§10.1) — 제안 수·증강·중복·보관 정책이 여기 다 있다.
 		"resolved_config": {

@@ -3,6 +3,7 @@ extends SceneTree
 ##
 ## 실행:
 ##   godot --headless --path . --script res://tests/run_league.gd -- --repeats=5
+##   godot --headless --path . --script res://tests/run_league.gd -- --k=5 --seeds=101,102,103,104,105
 ##
 ## `--repeats=N`은 조건당 반복 시드 수다. 참가자 수 = 전략 5 × 풀 10 × N
 ## (유연형 4 + 고정 레시피 비교군 1, r5b §7.2).
@@ -21,7 +22,15 @@ const PartMeta = preload("res://league/part_meta.gd")
 func _init() -> void:
 	var config: RefCounted = Config.new()
 	config.repeats_per_condition = _arg_int("repeats", 5)
-	config.batch_id = "r%d" % config.repeats_per_condition
+	# 제안 수 K (§8.1). 공통 후보열은 항상 6개이고 앞 K개만 공개된다.
+	config.options_per_choice = _arg_int("k", config.options_per_choice)
+	# 반복 시드. 단계 E는 새 시드 101~105를 쓴다 (§8.3) — 기존 1~5는 레시피
+	# 발견에 썼으므로 그 시드로 검증하면 발견 자료로 검증하는 것이 된다.
+	var chosen: Array[int] = _arg_ints("seeds")
+	if not chosen.is_empty():
+		config.repeat_seeds = chosen
+		config.repeats_per_condition = chosen.size()
+	config.batch_id = "k%d-n%d" % [config.options_per_choice, config.seeds().size()]
 
 	# 커밋·dirty를 **실행 시작에** 캡처한다. 끝에 읽으면 배치 도중의 커밋이 잡힌다 —
 	# r5b의 manifest가 실제로 그렇게 됐다 (r5b 피드백 §10.1).
@@ -50,6 +59,16 @@ func _init() -> void:
 		% [elapsed, runner.matches.size(), runner.choices.size(), runner.snapshots.size()])
 	print("출력: %s (실행마다 새 폴더 — 덮어쓰지 않는다)" % reporter.out_dir)
 	quit(0)
+
+## `--seeds=101,102,103` 형태. 비어 있으면 빈 배열.
+func _arg_ints(name: String) -> Array[int]:
+	var out: Array[int] = []
+	for arg: String in OS.get_cmdline_user_args():
+		if arg.begins_with("--%s=" % name):
+			for piece: String in arg.split("=", true, 1)[1].split(","):
+				if piece.strip_edges() != "":
+					out.append(int(piece.strip_edges()))
+	return out
 
 func _arg_int(name: String, fallback: int) -> int:
 	for arg: String in OS.get_cmdline_user_args():

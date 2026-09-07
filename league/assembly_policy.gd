@@ -80,7 +80,7 @@ func decide(inv: RefCounted, ctx: Dictionary) -> Dictionary:
 			"candidate_counts": {"visited": seen.size(), "accepted": 0,
 				"shortlisted": 0,
 				"reward_uses": {"body": 0, "augment": 0, "storage": 0, "gone": 0}},
-			"best_potential": 0.0, "chosen_use": "",
+			"best_potential": 0.0, "chosen_use": "", "keep_score": -INF,
 			"recipe": Recipes.progress(recipe_id, inv), "recipe_id": recipe_id,
 			"goal_reason": "유효한 조립 후보 없음"}
 
@@ -107,6 +107,10 @@ func decide(inv: RefCounted, ctx: Dictionary) -> Dictionary:
 		# 이 선택에서 가장 높게 평가된 **미래 가치**. 최종 선택의 potential만 보면
 		# 준비 후보가 있었는데 낮게 평가된 경우가 0으로 보인다 (§5.1).
 		"best_potential": _best_of(accepted, "potential"),
+		# §9.1의 "즉시 유효 제안률"을 재려면 **아무것도 안 했을 때의 점수**가
+		# 있어야 한다. 그것보다 나은 후보가 하나도 없으면 그 제안은 이 참가자에게
+		# 쓸모가 없었던 것이고, 최고 점수의 절대값만으로는 그것을 알 수 없다.
+		"keep_score": _keep_score(accepted),
 		"chosen_use": str(picked["reward_use"]),
 		"recipe": picked["recipe"],
 		"recipe_id": recipe_id,
@@ -138,6 +142,14 @@ static func _count_reward_uses(accepted: Array) -> Dictionary:
 		if out.has(use):
 			out[use] = int(out[use]) + 1
 	return out
+
+## 아무 조작도 하지 않은 상태의 점수. 보상은 이미 창고에 들어와 있으므로
+## "유지"는 곧 **그 보상을 창고에 둔 채 보드를 그대로 두는 것**이다.
+static func _keep_score(accepted: Array) -> float:
+	for entry: Dictionary in accepted:
+		if (entry["chain"] as Array).is_empty():
+			return float(entry["score"])
+	return -INF
 
 ## 합법 후보 전체에서 그 특징의 최대값.
 static func _best_of(accepted: Array, key: String) -> float:

@@ -2,12 +2,14 @@
   "_comment": "자동 조립 리그 전용 콘텐츠. sim/content.gd의 PART_PATHS에 **넣지 않는다** — 본편 카탈로그를 오염시키지 않고, Salvage 후보로도 새지 않는다. league/content_adapter.gd만 이 파일을 덧붙여 읽는다.",
   "parts": [
     {
-      "_note": "리그 공통 Core. 효과가 없는 것이 요점이다 (리그 기획서 §4.1) — Core 효과나 재질이 조건마다 다르면 AI 4종 비교에 교란이 섞인다. 팩션은 `first`로 둔다. 3팩션 중 하나를 쓰면 그 팩션 파츠의 source_faction 조건이 조용히 참이 되기 때문이고, `first`는 리그 풀에 등장하지 않아 부작용이 없다.\n\n재질 plating은 **알려진 편향**이다: caustic을 1.5배로 맞고 thermal을 0.75배로 맞는다. Viridia(caustic 주력)에게 유리하고 Reclaimer(thermal 주력)에게 불리한 방향이며, 리포트에 그대로 표시한다. 재질 축은 별도 배치로 분리한다.",
+      "_note": "리그 공통 Core. 효과가 없는 것이 요점이다 (리그 기획서 §4.1) — Core 효과나 재질이 조건마다 다르면 AI 4종 비교에 교란이 섞인다. 팩션은 `first`로 둔다. 3팩션 중 하나를 쓰면 그 팩션 파츠의 source_faction 조건이 조용히 참이 되기 때문이고, `first`는 리그 풀에 등장하지 않아 부작용이 없다.\n\n재질은 plating이지만 **단계 D 이후 리그는 피해 타입 배율을 전부 1.0으로 돌린다** (league_config.neutral_damage_types). 재질 축이 접전 보드에서 선체 격차를 평균 11.7 · 최대 24.4 움직여 팩션·AI 비교의 교란으로 충분히 컸기 때문이다. 본편 규칙이 아니며 재질 상성은 게임에 그대로 있다 — 리그 결과로 재질 밸런스를 논하지 않는다.",
       "id": "league_core",
       "name": "리그 표준 노심",
       "faction": "first",
       "base_role": "core",
-      "keywords": ["plating"],
+      "keywords": [
+        "plating"
+      ],
       "active": {}
     }
   ]

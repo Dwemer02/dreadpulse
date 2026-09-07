@@ -155,7 +155,7 @@ static func _with_rules(config: RefCounted, rules: Dictionary) -> RefCounted:
 	copy.overtime_base_fraction = float(rules.get("overtime_base_fraction", 0.001))
 	copy.overtime_reference_hull = int(rules.get("overtime_reference_hull", 0))
 	copy.timeout_result = str(rules.get("timeout_result", "draw"))
-	copy.diagnostic_neutral_types = bool(rules.get("neutral_damage_types", false))
+	copy.neutral_damage_types = bool(rules.get("neutral_damage_types", false))
 	return copy
 
 ## 리그 기본 규칙 (초과 피해 ON). 진단의 대조군이다.
