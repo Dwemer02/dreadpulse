@@ -6,7 +6,7 @@ extends RefCounted
 ## 불가능한 조립이 통과하는가, 초과 피해가 규칙대로 들어가는가, 후보 평가가 원본을
 ## 오염시키는가, 같은 시드가 같은 결과를 내는가.
 
-const EXPECTED_CHECKS := 118
+const EXPECTED_CHECKS := 155
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -17,6 +17,8 @@ const Actions = preload("res://sim/actions.gd")
 const Config = preload("res://league/league_config.gd")
 const LeagueContent = preload("res://league/league_content.gd")
 const PartMeta = preload("res://league/part_meta.gd")
+const Recipes = preload("res://league/recipes.gd")
+const InvestmentLog = preload("res://league/investment_log.gd")
 const Graph = preload("res://league/build_graph.gd")
 const Evaluator = preload("res://league/build_evaluator.gd")
 const Generator = preload("res://league/candidate_generator.gd")
@@ -43,6 +45,12 @@ func run(t: RefCounted) -> void:
 	_test_augment_scales_with_host_speed(t)
 	_test_action_condition_does_not_kill_part(t)
 	_test_time_horizons_split(t)
+	_test_recipe_counts_role_and_host(t)
+	_test_recipe_unreachable_is_not_failure(t)
+	_test_recipe_progress_is_a_level(t)
+	_test_offer_stage_does_not_saturate(t)
+	_test_investment_unresolved_is_not_failure(t)
+	_test_reward_uses_split_by_disposition(t)
 	_test_candidate_legality(t)
 	_test_candidates_do_not_mutate(t)
 	_test_overtime_schedule(t)
@@ -331,6 +339,186 @@ func _test_time_horizons_split(t: RefCounted) -> void:
 	t.check(is_equal_approx(steady_early, steady_late),
 		"무제한 무기는 두 지평선이 같다 (%.2f = %.2f)" % [steady_early, steady_late])
 
+## 고정 레시피의 완성 판정은 **역할과 숙주 관계까지** 본다 (r5b §7.3).
+##
+## "증강이 핵심이면 본체로 소유한 것만으로 완성 판정하지 않는다"가 그 문장이다.
+## 이걸 빼면 photon_lance+fracture_engraver 엔진을 두 파츠를 각각 본체로 놓은
+## 보드가 완성으로 세어지고, "반복 성공 조합"의 위험을 실제보다 낮게 본다.
+func _test_recipe_counts_role_and_host(t: RefCounted) -> void:
+	var rid: String = "a70_r30_photon_engine"
+	var inv: RefCounted = Inventory.new()
+	_content.fresh_board(_content_config(), inv)
+	# 핵심 본체 4종을 다 놓는다. 증강 2종은 아직 없다.
+	var photon: int = 0
+	for pair: Array in [["weapon_1", "helios_lance"], ["flex_1", "photon_lance"],
+			["flex_2", "returning_photon_shell"], ["flex_3", "scrap_autocannon"]]:
+		var uid: int = inv.add(str(pair[1]))
+		inv.place(str(pair[0]), uid)
+		if str(pair[1]) == "photon_lance":
+			photon = uid
+	var body_only: Dictionary = Recipes.progress(rid, inv)
+	t.eq(int(body_only["have"]), 4, "본체 4종은 세어진다")
+	t.check(not bool(body_only["complete"]), "증강 2종이 없으면 완성이 아니다")
+
+	# fracture_engraver를 **엉뚱한 숙주**에 붙인다. 개수는 맞지만 관계가 틀렸다.
+	var wrong: RefCounted = inv.clone()
+	wrong.place("weapon_1", int(wrong.board["weapon_1"]["active"]),
+		wrong.add("fracture_engraver"))
+	t.eq(int(Recipes.progress(rid, wrong)["have"]), 4,
+		"숙주가 다른 증강은 세지 않는다")
+
+	# 지정된 숙주(photon_lance)에 붙이면 센다.
+	var right: RefCounted = inv.clone()
+	right.place("flex_1", photon, right.add("fracture_engraver"))
+	t.eq(int(Recipes.progress(rid, right)["have"]), 5,
+		"지정 숙주에 붙은 증강은 세어진다")
+
+## 도달 불가한 풀에서의 실패를 **약함의 근거로 쓰지 않는다** (§7.3).
+## 그 판정이 코드에 있어야 리포트가 그 참가자를 표에서 뺄 수 있다.
+func _test_recipe_unreachable_is_not_failure(t: RefCounted) -> void:
+	# 세 레시피의 핵심 파츠에 Viridia가 없다 — v100은 어느 것도 못 만든다.
+	t.eq(Recipes.recipe_id_for("v100"), "",
+		"도달 불가한 풀에는 레시피를 배정하지 않는다")
+	for pool_id: String in Config.pool_ids():
+		var rid: String = Recipes.recipe_id_for(pool_id)
+		if rid == "":
+			continue
+		t.check(Recipes.reachable_in(rid, Config.POOLS[pool_id], _content.catalog),
+			"%s에 배정된 %s는 그 풀에서 전부 구할 수 있다" % [pool_id, rid])
+
+## 진행도는 **수준**이지 증분이 아니다.
+##
+## 증분으로 두면 완성한 엔진을 그대로 유지하는 선택이 0점이 되어, 완성 직후
+## 목표를 허무는 쪽이 이긴다. 그리고 창고 보유는 장착보다 낮아야 한다 —
+## 같으면 영원히 쟁여두는 것이 최적이 된다.
+func _test_recipe_progress_is_a_level(t: RefCounted) -> void:
+	var rid: String = "equal_helios_pair"
+	var placed: RefCounted = Inventory.new()
+	_content.fresh_board(_content_config(), placed)
+	placed.place("weapon_1", placed.add("helios_lance"))
+	var second: int = placed.add("helios_lance")
+	placed.place("flex_1", second)
+	var done: Dictionary = Recipes.progress(rid, placed)
+	t.check(bool(done["complete"]), "본체 2개면 완성이다")
+	t.check(is_equal_approx(float(done["progress"]), 1.0),
+		"완성 진행도는 1.0 (%.2f)" % float(done["progress"]))
+
+	# 창고에 둔 것은 부분 점수만.
+	var stored: RefCounted = Inventory.new()
+	_content.fresh_board(_content_config(), stored)
+	stored.add("helios_lance")
+	stored.add("helios_lance")
+	var waiting: Dictionary = Recipes.progress(rid, stored)
+	t.check(not bool(waiting["complete"]), "창고에 있으면 완성이 아니다")
+	t.check(float(waiting["progress"]) < float(done["progress"]),
+		"보관(%.2f)은 장착(%.2f)보다 낮다"
+			% [float(waiting["progress"]), float(done["progress"])])
+	t.check(float(waiting["progress"]) > 0.0, "그래도 0은 아니다 — 보관은 합법이다")
+
+	# 완성한 엔진을 그대로 유지하는 것이 허무는 것보다 높아야 한다.
+	var broken: RefCounted = placed.clone()
+	broken._detach(second)
+	t.check(float(Recipes.progress(rid, broken)["progress"])
+		< float(done["progress"]), "엔진을 허물면 진행도가 내려간다")
+
+## 1단계 지표가 **포화하지 않는가**.
+##
+## 처음 판본은 "제안 파츠와 보드의 이벤트 키가 겹치는가"로 쟀고, 그것은 거의 항상
+## 참이었다 — part_fired@own을 거의 모든 파츠가 내고 거의 모든 증강이 듣는다.
+## 항상 참인 신호는 §5.1이 요구한 1·2·3단계의 분리를 만들어 주지 못한다.
+## connection 특징이 네 전략 모두 1.00으로 포화했던 것과 같은 결함이다.
+func _test_offer_stage_does_not_saturate(t: RefCounted) -> void:
+	var inv: RefCounted = Inventory.new()
+	_content.fresh_board(_content_config(), inv)
+	inv.place("weapon_1", inv.add("scrap_autocannon"))
+	var before: Dictionary = _analyze_with(inv, {})
+
+	var future: int = 0
+	var total: int = 0
+	for part_id: String in _content.catalog.parts:
+		if str(_content.catalog.parts[part_id]["base_role"]) == "core":
+			continue
+		total += 1
+		if bool(InvestmentLog.offer_stage(part_id, _content.meta_index,
+				before)["future"]):
+			future += 1
+	t.check(total > 50, "카탈로그 전체를 훑었다 (%d종)" % total)
+	t.check(future < total, "모든 파츠가 미래 연결로 잡히지는 않는다 (%d/%d)"
+		% [future, total])
+	t.check(float(future) / float(total) < 0.9,
+		"1단계가 포화하지 않는다 (%d/%d)" % [future, total])
+
+## **미해결을 실패로 적지 않는다** (§5.2).
+## "런이 끝나 관측이 없는 보관을 투자 실패로 처리해서도 안 된다"가 그 문장이다.
+func _test_investment_unresolved_is_not_failure(t: RefCounted) -> void:
+	var inv: RefCounted = Inventory.new()
+	_content.fresh_board(_content_config(), inv)
+	inv.place("weapon_1", inv.add("scrap_autocannon"))
+	var stored_uid: int = inv.add("photon_lance")
+	var analysis: Dictionary = _analyze_with(inv, {})
+
+	var log: RefCounted = InvestmentLog.new()
+	log.open(3, 2, inv, stored_uid, "storage", analysis, ["material"])
+	t.eq(log.pending.size(), 1, "보관은 투자로 등록된다")
+	log.finish(9)
+	t.eq(log.closed.size(), 1, "런이 끝나면 결론이 난다")
+	t.eq(str((log.closed[0] as Dictionary)["outcome"]), "unresolved",
+		"관측이 끝난 보관은 미해결이다 — 실패가 아니다")
+
+	# 즉시 도는 파츠를 장착한 것은 투자가 아니다. 회수율이 희석되면 안 된다.
+	var immediate: RefCounted = InvestmentLog.new()
+	immediate.open(1, 1, inv, int(inv.board["weapon_1"]["active"]), "body",
+		analysis, [])
+	t.eq(immediate.pending.size(), 0, "이미 도는 장착은 투자로 세지 않는다")
+
+	# 실제 발동이 관측되면 미해결이 아니라 기여로 닫는다.
+	var paid: RefCounted = InvestmentLog.new()
+	var fired: RefCounted = inv.clone()
+	fired.place("flex_1", stored_uid)
+	paid.open(3, 2, fired, stored_uid, "storage", _analyze_with(fired, {}),
+		["material"])
+	t.eq(paid.pending.size(), 1, "투자가 등록됐다")
+	paid.observe_combat(4, fired,
+		[{"type": "part_fired", "ship": "player", "slot": "flex_1"},
+			{"type": "part_fired", "ship": "enemy", "slot": "flex_1"}], "player")
+	t.eq(paid.closed.size(), 1, "발동이 관측되면 닫힌다")
+	t.eq(str((paid.closed[0] as Dictionary)["outcome"]), "contributed",
+		"슬롯이 실제로 발동하면 기여로 닫는다")
+	t.eq(int((paid.closed[0] as Dictionary)["fires"]), 1,
+		"상대 진영의 같은 슬롯 발동은 세지 않는다")
+
+## 보상 처분을 **본체·증강·보관으로 나눠** 세는가 (§5.1의 2단계).
+## 합계만 남기면 "본체 후보가 아예 없었다"와 "있었지만 낮게 평가됐다"를
+## 구별할 수 없다 — r5b가 정확히 그 상태였다.
+func _test_reward_uses_split_by_disposition(t: RefCounted) -> void:
+	var config: RefCounted = _content_config()
+	var policy: RefCounted = AssemblyPolicy.new()
+	policy.setup("immediate", config)
+
+	var inv: RefCounted = Inventory.new()
+	_content.fresh_board(config, inv)
+	inv.place("weapon_1", inv.add("scrap_autocannon"))
+	inv.place("flex_1", inv.add("photon_lance"))
+	var reward: int = inv.add("field_welder")
+
+	var ctx: Dictionary = _ctx()
+	ctx["body_slots"] = _content.body_slot_count(config)
+	ctx["reward_uid"] = reward
+	ctx["rng"] = Config.rng_for(["test", 1])
+	var decision: Dictionary = policy.decide(inv, ctx)
+	t.check(bool(decision["valid"]), "조립 가능한 상태다")
+	var counts: Dictionary = decision["candidate_counts"]
+	var uses: Dictionary = counts["reward_uses"]
+	t.check(int(uses["body"]) > 0, "본체 후보가 세어진다 (%d)" % int(uses["body"]))
+	t.check(int(uses["augment"]) > 0, "증강 후보가 세어진다 (%d)" % int(uses["augment"]))
+	t.check(int(uses["storage"]) > 0, "보관 후보가 세어진다 (%d)" % int(uses["storage"]))
+	t.eq(int(uses["body"]) + int(uses["augment"]) + int(uses["storage"])
+		+ int(uses["gone"]), int(counts["accepted"]),
+		"처분 합계가 합법 후보 수와 같다")
+	t.check(["body", "augment", "storage"].has(str(decision["chosen_use"])),
+		"고른 후보의 처분이 기록된다 (%s)" % str(decision["chosen_use"]))
+
+
 # --- 조립 후보 ---
 
 ## 불가능한 Base Role 배치와 증강 숙주를 실제로 막는가 (§14).
@@ -435,7 +623,7 @@ func _test_overtime_schedule(t: RefCounted) -> void:
 
 	t.eq(sim.winner, "draw", "아무도 공격하지 않으면 초과 피해로 동시 사망한다")
 	t.check(is_equal_approx(K.ticks_to_secs(sim.tick), 105.0),
-		"105초에 누적 103.5%가 되어 양측이 함께 죽는다 (%.1f초)"
+		"105초에 누적 103.5%%가 되어 양측이 함께 죽는다 (%.1f초)"
 			% K.ticks_to_secs(sim.tick))
 
 ## 초과 피해는 파츠의 피해 수신 트리거를 발동시키지 않는다 (§9.2·§14).
@@ -646,7 +834,9 @@ func _participant() -> Dictionary:
 	return {"id": 0, "strategy": "immediate", "pool": "r100", "seed": 1,
 		"points": 0, "losses": 0, "status": "active", "acquisitions": 0,
 		"end_round": 0, "end_reason": "", "recent_opponents": [],
-		"build": {}, "history": []}
+		"build": {}, "history": [],
+		"recipe_id": "", "recipe_reachable": false, "recipe_progress": 0.0,
+		"recipe_complete_round": 0, "investments": InvestmentLog.new()}
 
 ## 파츠 하나 또는 둘을 놓은 보드. 두 번째가 빈 문자열이면 하나만 놓는다.
 func _pair_board(first: String, second: String) -> RefCounted:

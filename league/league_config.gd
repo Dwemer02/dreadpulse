@@ -11,6 +11,7 @@ extends RefCounted
 const Inventory = preload("res://run/inventory.gd")
 const Evaluator = preload("res://league/build_evaluator.gd")
 const Content = preload("res://sim/content.gd")
+const Recipes = preload("res://league/recipes.gd")
 
 ## 시드 도출 규칙의 버전. 이 문자열이 바뀌면 같은 반복 시드라도 다른 배치다.
 const SEED_RULE := "fnv1a-mix-v1"
@@ -104,7 +105,18 @@ const POOLS: Dictionary = {
 	"equal":   {"reclaimer": 34,  "viridia": 33,  "aeonic": 33},
 }
 
-const STRATEGIES: Array[String] = ["immediate", "engine", "sustain", "bridge"]
+## 유연형 4종 + 비교군 1종. **fixed_recipe는 AI 승률 비교 대상이 아니라 비교군이다**
+## (r5b §7.2) — "유연한 조립이 고정 조합 반복보다 평균적으로 낫다"를 재려면
+## 고정 조합을 실제로 돌려 보는 쪽이 있어야 한다.
+const STRATEGIES: Array[String] = ["immediate", "engine", "sustain", "bridge",
+	"fixed_recipe"]
+
+## 고정 레시피를 추종하는 전략들. 리포트가 유연형과 비교군을 섞어 평균 내지 않도록
+## 이 목록으로 가른다.
+const RECIPE_STRATEGIES: Array[String] = ["fixed_recipe"]
+
+static func is_recipe_strategy(strategy: String) -> bool:
+	return RECIPE_STRATEGIES.has(strategy)
 
 static func pool_ids() -> Array[String]:
 	var out: Array[String] = []
@@ -148,6 +160,9 @@ func manifest() -> Dictionary:
 			"resolved_full": Evaluator.RESOLVED_FULL,
 		},
 		"pools": POOLS,
+		# 고정 레시피 비교군의 목표. **결과 파일만 받은 사람이 "무엇을 목표로
+		# 삼았는가"를 알 수 있어야 한다** (§10.1).
+		"fixed_recipes": Recipes.manifest(),
 		"repeat_seeds": range(1, repeats_per_condition + 1),
 		# 파생 기본값까지 펼친 설정. 결과 파일만 받은 사람이 실험을 점검할 수 있어야
 		# 한다 (§10.1) — 제안 수·증강·중복·보관 정책이 여기 다 있다.

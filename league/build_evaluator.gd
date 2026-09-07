@@ -34,7 +34,24 @@ const WEIGHTS: Dictionary = {
 				  "loss": 4, "waste": 4, "sustain_bias": 0.70},
 	"bridge":    {"current": 2, "connection": 5, "relief": 3, "potential": 3,
 				  "loss": 3, "waste": 2, "sustain_bias": 0.40},
+	# 고정 레시피 추종형 — 비교군이다 (r5b §7.2). 유연형 4종과 **같은 평가기·같은
+	# 특징**을 쓰고, 열린 미래 가치(potential) 자리에 고정 목표 진행(recipe)을 넣는다.
+	#
+	# 나머지 가중치는 즉시 전력형을 그대로 복사했다. 새 가중치 조합을 발명하면
+	# "고정 목표가 불리한가"와 "이 가중치가 불리한가"를 구별할 수 없기 때문이고,
+	# §7.2가 허용한 "임시 전력·생존용 부품"을 실제로 쓸 수 있어야 하기 때문이다
+	# (current 5). potential을 0으로 둔 것은 이 AI의 미래 가치가 전부 레시피
+	# 진행이기 때문이다 — 열린 잠금 해제까지 함께 주면 이중 계산이 된다.
+	#
+	# recipe 가중치 4는 엔진 투자형의 potential 4와 같다. 계획 항의 크기를
+	# 유연형 중 가장 강한 계획가와 맞춰야 "고정이라서 진 것"과 "계획 항이 작아서
+	# 진 것"이 섞이지 않는다.
+	"fixed_recipe": {"current": 5, "connection": 2, "relief": 3, "potential": 0,
+				  "recipe": 4, "loss": 3, "waste": 2, "sustain_bias": 0.35},
 }
+
+## 이 전략이 고정 레시피를 추종하는가. 러너·리포터가 이 이름을 직접 쓰지 않도록 한다.
+const RECIPE_STRATEGY := "fixed_recipe"
 
 ## 공격 불능은 큰 결점이다 (§4.2). 점수로 표현하되 첫 전투에서는 아예 무효 처리한다.
 const NOT_OPERATIONAL_PENALTY: float = 12.0
@@ -47,16 +64,22 @@ static func weights_of(strategy: String) -> Dictionary:
 
 ## 행동 하나의 점수. before/after는 Graph.analyze()의 결과다.
 ## goal은 엔진 투자형이 들고 있는 목표 병목 이름(없으면 빈 문자열).
+## extras: {recipe_progress} — 고정 레시피형의 목표 진행도 0~1. 다른 전략은 안 쓴다.
+## Graph.analyze()의 결과에 섞지 않고 따로 받는다 — 빌드 그래프는 레시피를 모른다.
 static func score(before: Dictionary, after: Dictionary, strategy: String,
-		goal: String = "") -> Dictionary:
+		goal: String = "", extras: Dictionary = {}) -> Dictionary:
 	var w: Dictionary = weights_of(strategy)
 	var f: Dictionary = features(before, after, float(w["sustain_bias"]), goal)
+	f["recipe"] = clampf(float(extras.get("recipe_progress", 0.0)), 0.0, 1.0)
 
 	var total: float = 0.0
 	total += float(w["current"]) * float(f["current"])
 	total += float(w["connection"]) * float(f["connection"])
 	total += float(w["relief"]) * float(f["relief"])
 	total += float(w["potential"]) * float(f["potential"])
+	# 진행도는 **수준**이지 증분이 아니다. 증분으로 두면 완성한 엔진을 그대로
+	# 유지하는 선택이 0점이 되어, 완성 직후 목표를 허무는 쪽이 이긴다.
+	total += float(w.get("recipe", 0)) * float(f["recipe"])
 	total -= float(w["loss"]) * float(f["loss"])
 	total -= float(w["waste"]) * float(f["waste"])
 	if not bool(after["operational"]):

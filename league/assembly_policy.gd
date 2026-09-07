@@ -6,12 +6,18 @@ extends RefCounted
 ## 이해하지 못한 것인가, 파츠가 약한 것인가"를 나중에 구분할 수 있다.
 ##
 ## 상대 빌드·비공개 보상·전투 난수·미래 제안을 받지 않는다 (§5.5 마지막).
+##
+## **예외가 하나 있다: 고정 레시피 추종형** (r5b §7.2). 그 비교군의 존재 이유가
+## "이전에 성공한 조합을 목표로 고정한다"이므로 파츠 ID 목록을 미리 안다. 목표는
+## 첫 시작 파츠를 받기 전에 정해지고 런 도중 바뀌지 않으며, 미래 제안은 여전히
+## 보지 않는다. 유연형 4종은 이 경로를 타지 않는다 — recipe_id가 빈 문자열이다.
 
 const Generator = preload("res://league/candidate_generator.gd")
 const Graph = preload("res://league/build_graph.gd")
 const Evaluator = preload("res://league/build_evaluator.gd")
 const Inventory = preload("res://run/inventory.gd")
 const PartMeta = preload("res://league/part_meta.gd")
+const Recipes = preload("res://league/recipes.gd")
 
 var strategy: String = "immediate"
 var config: RefCounted            # LeagueConfig
@@ -20,9 +26,14 @@ var config: RefCounted            # LeagueConfig
 var goal: String = ""
 var goal_stale_choices: int = 0
 
-func setup(strategy_id: String, league_config: RefCounted) -> void:
+## 고정 레시피형의 목표 레시피 id. 유연형은 빈 문자열이고, 한번 정해지면 바뀌지 않는다.
+var recipe_id: String = ""
+
+func setup(strategy_id: String, league_config: RefCounted,
+		fixed_recipe_id: String = "") -> void:
 	strategy = strategy_id
 	config = league_config
+	recipe_id = fixed_recipe_id
 
 ## 보상 하나를 이미 인벤토리에 넣은 상태에서, 무엇을 할지 정한다.
 ##
@@ -66,10 +77,16 @@ func decide(inv: RefCounted, ctx: Dictionary) -> Dictionary:
 		# 두고 "아무것도 안 함"을 고르는 일이 생긴다 — 실제로 시작 조립 실패의 원인이었다.
 		return {"valid": false, "inventory": inv, "chain": [], "score": -INF,
 			"features": {}, "shortlist": [], "goal": goal,
+			"candidate_counts": {"visited": seen.size(), "accepted": 0,
+				"shortlisted": 0,
+				"reward_uses": {"body": 0, "augment": 0, "storage": 0, "gone": 0}},
+			"best_potential": 0.0, "chosen_use": "",
+			"recipe": Recipes.progress(recipe_id, inv), "recipe_id": recipe_id,
 			"goal_reason": "유효한 조립 후보 없음"}
 
 	accepted.sort_custom(_by_score)
 	var shortlist: Array = _shortlist(accepted)
+	var reward_uses: Dictionary = _count_reward_uses(accepted)
 	var picked: Dictionary = _pick(shortlist, ctx["rng"])
 	_note_progress(before, picked)
 	return {
@@ -82,13 +99,52 @@ func decide(inv: RefCounted, ctx: Dictionary) -> Dictionary:
 		"candidate_counts": {
 			"visited": seen.size(), "accepted": accepted.size(),
 			"shortlisted": shortlist.size(),
+			# 이 보상을 본체/증강/보관으로 쓴 **합법 후보 수**를 따로 센다.
+			# accepted 합계만으로는 "본체 후보가 아예 없었다"와 "있었지만 낮게
+			# 평가됐다"를 구별할 수 없다 — §5.1이 요구한 2단계와 3단계의 분리다.
+			"reward_uses": reward_uses,
 		},
+		# 이 선택에서 가장 높게 평가된 **미래 가치**. 최종 선택의 potential만 보면
+		# 준비 후보가 있었는데 낮게 평가된 경우가 0으로 보인다 (§5.1).
+		"best_potential": _best_of(accepted, "potential"),
+		"chosen_use": str(picked["reward_use"]),
+		"recipe": picked["recipe"],
+		"recipe_id": recipe_id,
 		"goal": goal, "goal_reason": _goal_reason,
 	}
 
 # --- 내부 ---
 
 var _goal_reason: String = ""
+
+## 이번 보상 개체가 이 보드에서 어떻게 쓰였는가. "body" | "augment" | "storage" | "gone".
+static func _reward_use(inv: RefCounted, uid: int) -> String:
+	if uid == Inventory.NONE:
+		return ""
+	if inv.part_id_of(uid) == "":
+		return "gone"          # 폐기됐다
+	for slot_id: String in inv.board:
+		var entry: Dictionary = inv.board[slot_id]
+		if int(entry.get("active", Inventory.NONE)) == uid:
+			return "body"
+		if int(entry.get("augment", Inventory.NONE)) == uid:
+			return "augment"
+	return "storage"
+
+static func _count_reward_uses(accepted: Array) -> Dictionary:
+	var out: Dictionary = {"body": 0, "augment": 0, "storage": 0, "gone": 0}
+	for entry: Dictionary in accepted:
+		var use: String = str(entry["reward_use"])
+		if out.has(use):
+			out[use] = int(out[use]) + 1
+	return out
+
+## 합법 후보 전체에서 그 특징의 최대값.
+static func _best_of(accepted: Array, key: String) -> float:
+	var best: float = 0.0
+	for entry: Dictionary in accepted:
+		best = maxf(best, float((entry["features"] as Dictionary).get(key, 0.0)))
+	return best
 
 ## 공급 근접도는 **후보 상태마다 다시 계산한다**. 창고에 무엇이 남았는지가
 ## 후보마다 달라지기 때문이다 — 창고 파츠를 보드에 올리면 그 파츠는 더 이상
@@ -125,11 +181,16 @@ func _visit(inv: RefCounted, chain: Array, before: Dictionary, ctx: Dictionary,
 	seen[sig] = true
 
 	var after: Dictionary = _analyze(inv, ctx)
-	var result: Dictionary = Evaluator.score(before, after, strategy, goal)
+	var recipe: Dictionary = Recipes.progress(recipe_id, inv)
+	var result: Dictionary = Evaluator.score(before, after, strategy, goal,
+		{"recipe_progress": float(recipe["progress"])})
 	var entry: Dictionary = {
 		"inventory": inv, "chain": chain, "signature": sig,
 		"score": float(result["total"]), "features": result["features"],
-		"analysis": after,
+		"analysis": after, "recipe": recipe,
+		# 이번 보상 개체가 이 후보에서 어떻게 쓰였는가. §5.1의 2단계
+		# "합법적인 본체·증강·보관 후보가 생성됐는가"를 세는 자리다.
+		"reward_use": _reward_use(inv, int(ctx.get("reward_uid", Inventory.NONE))),
 	}
 
 	var bodies: int = inv.board.size() - _core_slots(inv, ctx)
@@ -245,6 +306,7 @@ func _log_of(shortlist: Array) -> Array:
 			# 결과인지 구별할 수 없다 — r5b에서 정확히 그랬다 (§6.3·§10.1).
 			"score": float(entry["score"]),
 			"signature": str(entry["signature"]),
+			"reward_use": str(entry["reward_use"]),
 			"features": _rounded(entry["features"]),
 		})
 	return out

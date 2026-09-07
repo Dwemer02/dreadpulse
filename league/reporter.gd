@@ -8,6 +8,7 @@ extends RefCounted
 ##   · 적은 표본의 순위는 확정하지 않는다
 
 const Config = preload("res://league/league_config.gd")
+const Recipes = preload("res://league/recipes.gd")
 
 const OUT_ROOT := "res://tests/out/league"
 
@@ -47,6 +48,8 @@ func report(runner: RefCounted, coverage: Dictionary) -> String:
 	_by_condition(runner)
 	_early_failure(runner)
 	_choices(runner)
+	_investment(runner)
+	_fixed_recipe(runner)
 	_combat(runner)
 	_diversity(runner)
 	_matching(runner)
@@ -192,6 +195,178 @@ func _choices(runner: RefCounted) -> void:
 	_say("  제안됐지만 한 번도 선택되지 않은 파츠: %s" % str(_never(runner, taken, false)))
 	_say("  ※ 선택률이 낮다고 약한 파츠라고 단정하지 않는다. AI가 연결을 못 읽었을 수도")
 	_say("     있고, 그 구분은 위의 coverage 절과 함께 읽어야 한다 (§1.1).")
+
+## §5.1의 네 단계를 **나란히** 낸다. 하나로 뭉치면 r5b의 오독이 되풀이된다:
+## "미래 가치가 양수인 선택 2.9%"만 보면 준비 후보가 제안되지 않은 것인지, 후보
+## 생성에서 탈락한 것인지, 낮게 평가된 것인지 구별할 수 없다.
+func _investment(runner: RefCounted) -> void:
+	_head("근거리 투자 경로 — 네 단계를 분리해서 (§5.1)")
+	var g: Dictionary = {}
+	for choice: Dictionary in runner.choices:
+		var key: String = str(choice["strategy"])
+		if not g.has(key):
+			g[key] = {"offers": 0, "future": 0, "unblocks": 0, "support": 0,
+				"cand": 0, "stored_cand": 0, "valued": 0, "raised": 0,
+				"potential": 0.0, "chosen_future": 0, "choices": 0}
+		var row: Dictionary = g[key]
+		row["choices"] = int(row["choices"]) + 1
+		for entry: Variant in choice.get("offer_candidates", []):
+			var offer: Dictionary = entry
+			var future: Dictionary = offer.get("future", {})
+			row["offers"] = int(row["offers"]) + 1
+			# 1단계
+			if bool(future.get("future", false)):
+				row["future"] = int(row["future"]) + 1
+			if int(future.get("unblocks", 0)) > 0:
+				row["unblocks"] = int(row["unblocks"]) + 1
+			if bool(future.get("needs_support", false)):
+				row["support"] = int(row["support"]) + 1
+			# 2단계 — 준비 후보가 **생성**됐는가
+			var uses: Dictionary = offer.get("uses", {})
+			if int(uses.get("body", 0)) + int(uses.get("augment", 0)) > 0:
+				row["cand"] = int(row["cand"]) + 1
+			if int(uses.get("storage", 0)) > 0:
+				row["stored_cand"] = int(row["stored_cand"]) + 1
+			# 3단계 — 그 후보가 **높게 평가**됐는가
+			if float(offer.get("best_potential", 0.0)) > 0.0:
+				row["valued"] = int(row["valued"]) + 1
+				row["potential"] = float(row["potential"]) \
+					+ float(offer["best_potential"])
+			# potential은 **보드 전체의 성질**이다. 절대값만 보면 이미 있던 잠금
+			# 해제 여지가 그대로 남은 것도 양수로 잡힌다 — 이 파츠가 미래를
+			# 만들었는지는 차이로만 알 수 있다.
+			if float(offer.get("best_potential", 0.0)) \
+					> float(offer.get("potential_before", 0.0)) + 0.0005:
+				row["raised"] = int(row["raised"]) + 1
+		if float((choice["features"] as Dictionary).get("potential", 0.0)) > 0.0:
+			row["chosen_future"] = int(row["chosen_future"]) + 1
+
+	_say("  1단계 — 제안: 미래 연결을 만들 수 있는 파츠가 제안됐는가")
+	_say("  2단계 — 후보: 합법적인 본체·증강·보관 후보가 생성됐는가")
+	_say("  3단계 — 평가: 그 후보가 실제로 미래 가치를 받았는가")
+	_say("")
+	_say("  %-12s %7s %8s %8s %8s %8s %8s %8s" % ["전략", "제안수",
+		"①미래", "①침묵깨움", "②장착후보", "②보관후보", "③가치>0", "③가치↑"])
+	for strategy: String in Config.STRATEGIES:
+		var row2: Dictionary = g.get(strategy, {})
+		if row2.is_empty():
+			continue
+		var n: int = maxi(1, int(row2["offers"]))
+		_say("  %-12s %7d %7.1f%% %8.1f%% %8.1f%% %8.1f%% %7.1f%% %7.1f%%" % [strategy,
+			int(row2["offers"]),
+			100.0 * float(row2["future"]) / float(n),
+			100.0 * float(row2["unblocks"]) / float(n),
+			100.0 * float(row2["cand"]) / float(n),
+			100.0 * float(row2["stored_cand"]) / float(n),
+			100.0 * float(row2["valued"]) / float(n),
+			100.0 * float(row2["raised"]) / float(n)])
+	_say("")
+	_say("  ※ ①은 **어휘만 보고** 잰다 — 후보 생성·평가를 거치지 않는다. 그래서")
+	_say("     ①이 높고 ②가 낮으면 후보 생성의 문제, ②가 높고 ③이 낮으면 평가의")
+	_say("     문제다. 한 열로 합치면 그 구별이 사라진다.")
+	_say("  ※ ①미래에는 '이 파츠 자신이 아직 침묵한다'(나중을 보는 베팅)도 포함된다.")
+	_say("     그 둘을 가르려면 ①침묵깨움 열을 함께 본다.")
+	_say("  ※ ②장착후보가 거의 100%인 것은 결함이 아니라 **답**이다: 후보 생성은")
+	_say("     병목이 아니다. 파츠는 거의 언제나 어딘가에 놓일 수 있다. 그래서 낮은")
+	_say("     potential의 원인은 1단계(제안 자체) 또는 선택 단계에 있다.")
+	_say("  ※ ③가치>0과 ③가치↑는 다르다. potential은 **보드 전체의 성질**이므로,")
+	_say("     이미 있던 잠금 해제 여지가 그대로 남은 것도 양수로 잡힌다. 이 파츠가")
+	_say("     미래를 만들었는지는 증가 쪽 열만 말한다 — 두 열을 섞지 마라.")
+	_say("  ※ ①과 ③은 비율로 나누지 마라. ①은 파츠 단위, ③은 보드 단위다.")
+
+	# 4단계
+	var tally: Dictionary = {}
+	for p: Dictionary in runner.participants:
+		var key2: String = str(p["strategy"])
+		if not tally.has(key2):
+			tally[key2] = {}
+		for entry2: Dictionary in p["investments"].closed:
+			var bucket: String = "%s/%s" % [entry2["kind"], entry2["outcome"]]
+			(tally[key2] as Dictionary)[bucket] = \
+				int((tally[key2] as Dictionary).get(bucket, 0)) + 1
+	_say("")
+	_say("  4단계 — 실현: 선택 이후 실제로 열리고 전투에 기여했는가 (개체 단위)")
+	_say("  %-12s %9s %9s %9s %9s %9s %9s" % ["전략",
+		"보관·기여", "보관·미해결", "보관·폐기", "침묵·기여", "침묵·미해결", "침묵·폐기"])
+	for strategy2: String in Config.STRATEGIES:
+		var t: Dictionary = tally.get(strategy2, {})
+		if t.is_empty():
+			continue
+		_say("  %-12s %9d %9d %9d %9d %9d %9d" % [strategy2,
+			int(t.get("stored/contributed", 0)), int(t.get("stored/unresolved", 0)),
+			int(t.get("stored/discarded", 0)),
+			int(t.get("silent/contributed", 0)), int(t.get("silent/unresolved", 0)),
+			int(t.get("silent/discarded", 0))])
+	_say("")
+	_say("  ※ **미해결은 실패가 아니다.** 런이 끝나 관측이 없는 보관을 회수 실패로")
+	_say("     세면 §5.2가 경고한 오독을 그대로 되풀이한다. 두 열을 합치지 마라.")
+	_say("  ※ 기여는 개체 id로 좇는다 — 같은 파츠를 다시 획득한 것과 구별된다 (§5.2).")
+	_say("  ※ 증강의 기여는 **숙주 슬롯의 발동**으로 센다. 증강 자신의 part_fired가")
+	_say("     없기 때문이다. 숙주 발동을 증강의 공로로 그대로 읽으면 과대평가다.")
+
+## 고정 레시피 추종형 (§7.2). **유연형과 한 표에서 평균 내지 않는다** —
+## 비교군이지 다섯 번째 AI가 아니다.
+func _fixed_recipe(runner: RefCounted) -> void:
+	_head("고정 레시피 추종형 — 비교군 (§7.2·§7.3)")
+	var rows: Array = []
+	var excluded: Array[String] = []
+	for p: Dictionary in runner.participants:
+		if not Config.is_recipe_strategy(str(p["strategy"])):
+			continue
+		if not bool(p.get("recipe_reachable", false)):
+			excluded.append(str(p["pool"]))
+			continue
+		rows.append(p)
+	if rows.is_empty():
+		_say("  도달 가능한 레시피가 배정된 참가자가 없다.")
+		return
+
+	var g: Dictionary = {}
+	for p2: Dictionary in rows:
+		var key: String = "%s|%s" % [p2["pool"], p2["recipe_id"]]
+		if not g.has(key):
+			g[key] = {"n": 0, "progress": 0.0, "complete": 0, "round": 0,
+				"points": 0, "reached": 0}
+		var row: Dictionary = g[key]
+		row["n"] = int(row["n"]) + 1
+		row["progress"] = float(row["progress"]) + float(p2["recipe_progress"])
+		row["points"] = int(row["points"]) + int(p2["points"])
+		row["reached"] = int(row["reached"]) + _reached(p2, runner.config)
+		if int(p2["recipe_complete_round"]) > 0:
+			row["complete"] = int(row["complete"]) + 1
+			row["round"] = int(row["round"]) + int(p2["recipe_complete_round"])
+
+	_say("  %-9s %-24s %5s %8s %7s %8s %7s %7s" % ["풀", "레시피", "인원",
+		"평균진행", "완성", "완성R", "평균R", "평균승점"])
+	for key2: String in g:
+		var row2: Dictionary = g[key2]
+		var n: int = int(row2["n"])
+		_say("  %-9s %-24s %5d %8.2f %7d %8s %7.1f %7.1f" % [
+			key2.get_slice("|", 0), key2.get_slice("|", 1), n,
+			float(row2["progress"]) / float(n), int(row2["complete"]),
+			("%.1f" % (float(row2["round"]) / float(int(row2["complete"]))))
+				if int(row2["complete"]) > 0 else "-",
+			float(row2["reached"]) / float(n), float(row2["points"]) / float(n)])
+
+	_say("")
+	if not excluded.is_empty():
+		var counts: Dictionary = {}
+		for pool_id: String in excluded:
+			counts[pool_id] = int(counts.get(pool_id, 0)) + 1
+		var parts: Array[String] = []
+		for pool_id2: String in counts:
+			parts.append("%s %d명" % [pool_id2, int(counts[pool_id2])])
+		_say("  주 비교 제외: %s" % ", ".join(parts))
+		_say("  ※ 그 풀에서는 레시피 핵심 파츠를 전부 구할 수 없다. **구할 수 없는")
+		_say("     풀에서 실패한 횟수로 '고정 전략은 약하다'고 주장하지 않는다** (§7.3).")
+		_say("     0으로 채우지 않고 표에서 뺀 것이 그 이유다.")
+	_say("")
+	_say("  ※ 진행도는 핵심 엔진 기준이다 — 전체 보드가 한 글자도 다르지 않아야")
+	_say("     성공이라고 정의하면 반복 위험을 과소평가한다 (§7.3). 창고에 든 목표")
+	_say("     파츠는 부분 점수(%.1f)만 받는다." % Recipes.STORED_CREDIT)
+	_say("  ※ 레시피는 r5b 상한 생존자의 최종 보드에서 읽은 **후보**다. 고정 상대군에서")
+	_say("     강도를 확인하기 전까지는 '도달 가능한 목표'라는 뜻 이상이 아니다.")
+	_say("  ※ 한 레시피가 실패했다고 모든 고정 전략이 억제됐다고 결론 내리지 않는다.")
 
 func _combat(runner: RefCounted) -> void:
 	_head("전투 지속과 승리 방식 (§9.4)")
@@ -358,6 +533,7 @@ func _write(runner: RefCounted, text: String) -> void:
 		"participants.csv": _participants_csv(runner),
 		"matches.csv": _matches_csv(runner),
 		"choices.jsonl": _choices_jsonl(runner),
+		"investments.jsonl": _investments_jsonl(runner),
 		"snapshots.jsonl": _snapshots_jsonl(runner),
 	}
 	# manifest에 파일별 행 수를 함께 적는다 — 잘린 파일을 조용히 분석하는 것을 막는다.
@@ -377,12 +553,24 @@ func _write(runner: RefCounted, text: String) -> void:
 
 func _participants_csv(runner: RefCounted) -> String:
 	var rows: Array[String] = ["id,strategy,pool,seed,status,end_round,points,losses,"
-		+ "acquisitions,start_part,end_reason"]
+		+ "acquisitions,start_part,recipe_id,recipe_reachable,recipe_progress,"
+		+ "recipe_complete_round,investments_contributed,investments_unresolved,"
+		+ "end_reason"]
 	for p: Dictionary in runner.participants:
-		rows.append("%d,%s,%s,%d,%s,%d,%d,%d,%d,%s,%s" % [
+		var tally: Dictionary = p["investments"].tally()
+		var contributed: int = int((tally["stored"] as Dictionary).get("contributed", 0)) \
+			+ int((tally["silent"] as Dictionary).get("contributed", 0))
+		var unresolved: int = int((tally["stored"] as Dictionary).get("unresolved", 0)) \
+			+ int((tally["silent"] as Dictionary).get("unresolved", 0))
+		rows.append("%d,%s,%s,%d,%s,%d,%d,%d,%d,%s,%s,%s,%.3f,%d,%d,%d,%s" % [
 			int(p["id"]), p["strategy"], p["pool"], int(p["seed"]), p["status"],
 			int(p["end_round"]), int(p["points"]), int(p["losses"]),
-			int(p["acquisitions"]), p["start_part"], str(p["end_reason"]).replace(",", ";")])
+			int(p["acquisitions"]), p["start_part"],
+			str(p.get("recipe_id", "")),
+			"1" if bool(p.get("recipe_reachable", false)) else "0",
+			float(p.get("recipe_progress", 0.0)),
+			int(p.get("recipe_complete_round", 0)), contributed, unresolved,
+			str(p["end_reason"]).replace(",", ";")])
 	return "\n".join(rows) + "\n"
 
 func _matches_csv(runner: RefCounted) -> String:
@@ -405,6 +593,19 @@ func _snapshots_jsonl(runner: RefCounted) -> String:
 	for snap: Dictionary in runner.snapshots:
 		rows.append(JSON.stringify(snap))
 	return "\n".join(rows) + "\n"
+
+## 개체 단위 투자 기록. 리포트의 4단계 표는 이 파일의 집계다 — 원본이 없으면
+## 그 표를 다시 확인할 수 없다.
+func _investments_jsonl(runner: RefCounted) -> String:
+	var out: Array[String] = []
+	for p: Dictionary in runner.participants:
+		for entry: Dictionary in p["investments"].closed:
+			var row: Dictionary = entry.duplicate()
+			row["participant"] = p["id"]
+			row["strategy"] = p["strategy"]
+			row["pool"] = p["pool"]
+			out.append(JSON.stringify(row))
+	return "\n".join(out) + "\n"
 
 func _choices_jsonl(runner: RefCounted) -> String:
 	var rows: Array[String] = []

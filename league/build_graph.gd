@@ -65,12 +65,17 @@ static func analyze(placed: Array, body_slots: int = 0,
 			break
 
 	var dead: Array = []
+	var dead_needs: Array = []
 	var missing: Dictionary = {}
 	for i2: int in units.size():
 		if active.has(i2):
 			continue
 		dead.append(units[i2])
-		for need: String in _unmet(units[i2], reachable, produced):
+		var needs: Array[String] = _unmet(units[i2], reachable, produced)
+		# 단위별 미충족 전제를 **따로** 낸다. missing은 이름별 합계이므로
+		# "이 파츠 하나를 받으면 실제로 몇 개가 켜지는가"를 셀 수 없다 (r5b §5.1).
+		dead_needs.append(needs)
+		for need: String in needs:
 			missing[need] = int(missing.get(need, 0)) + 1
 
 	return {
@@ -80,6 +85,7 @@ static func analyze(placed: Array, body_slots: int = 0,
 		"produced": produced,
 		"connections": _connections(units, active),
 		"dead": dead,
+		"dead_needs": dead_needs,
 		"missing": missing,
 		"operational": _operational(units, active),
 		# 두 지평선을 함께 낸다. 하나만 쓰면 일회용 대형 피해와 지속 화력을
@@ -96,6 +102,11 @@ static func analyze(placed: Array, body_slots: int = 0,
 		# 단위의 가치 합. potential이 이 값을 쓴다 (개수가 아니다).
 		"unlockable": _unlockable(units, active, reachable, produced, supply),
 	}
+
+## 이 메타데이터가 **이 보드 위에서** 못 채우는 전제. 제안 파츠를 아직 놓지 않고
+## 재는 데 쓴다 — 놓아 보고 재면 후보 생성과 섞여서 §5.1의 1단계와 2단계가 합쳐진다.
+static func unmet_for(meta: Dictionary, analysis: Dictionary) -> Array[String]:
+	return _unmet({"meta": meta}, analysis["reachable"], analysis["produced"])
 
 ## Core를 뺀 본체 수. Core는 고정 조건이라 자리를 차지해도 "채운 것"이 아니다.
 static func _body_count(placed: Array) -> int:

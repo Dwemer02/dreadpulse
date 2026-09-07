@@ -14,6 +14,9 @@ const Generator = preload("res://league/candidate_generator.gd")
 const Graph = preload("res://league/build_graph.gd")
 const Inventory = preload("res://run/inventory.gd")
 const PartMeta = preload("res://league/part_meta.gd")
+const Recipes = preload("res://league/recipes.gd")
+const InvestmentLog = preload("res://league/investment_log.gd")
+const Evaluator = preload("res://league/build_evaluator.gd")
 
 var config: RefCounted
 var content: RefCounted
@@ -55,6 +58,7 @@ func run() -> void:
 		if str(p2["status"]) == "active":
 			p2["status"] = "survived"
 			p2["end_round"] = config.round_cap
+			p2["investments"].finish(config.round_cap)
 
 # --- 참가자 ---
 
@@ -65,7 +69,13 @@ func _create_participants() -> void:
 				var inv: RefCounted = Inventory.new()
 				content.fresh_board(config, inv)
 				var policy: RefCounted = AssemblyPolicy.new()
-				policy.setup(strategy, config)
+				# **목표 레시피는 첫 무작위 시작 파츠를 받기 전에 확정한다** (§7.2).
+				# 여기가 그 시점이다 — 시작 파츠나 제안을 보고 목표를 바꾸는 경로가
+				# 코드에 아예 없어야 한다.
+				var recipe_id: String = ""
+				if Config.is_recipe_strategy(strategy):
+					recipe_id = Recipes.recipe_id_for(pool_id)
+				policy.setup(strategy, config, recipe_id)
 				participants.append({
 					"id": participants.size(),
 					"strategy": strategy, "pool": pool_id, "seed": repeat,
@@ -75,6 +85,12 @@ func _create_participants() -> void:
 					"end_round": 0, "end_reason": "",
 					"recent_opponents": [], "start_part": "",
 					"build": {}, "history": [], "snapshot_id": "",
+					"recipe_id": recipe_id,
+					# 도달 불가는 **배제 사유이지 실패가 아니다** (§7.3).
+					"recipe_reachable": recipe_id != "" and Recipes.reachable_in(
+						recipe_id, Config.POOLS[pool_id], content.catalog),
+					"recipe_progress": 0.0, "recipe_complete_round": 0,
+					"investments": InvestmentLog.new(),
 				})
 
 ## §3.2의 1~4단계: 시작 파츠 1개 + 3택1 두 번 + 본체 3개 조립.
@@ -112,6 +128,13 @@ func _acquire(p: Dictionary, index: int, round_index: int, guarantee: bool,
 		p["inventory"], guarantee)
 	p["offers_seen"] = int(p["offers_seen"]) + 1
 	var before_signature: String = Generator.signature(p["inventory"])
+	# 1단계는 후보 생성 **전에** 잰다. 어휘만 보고 판정해야 "제안조차 없었다"와
+	# "제안은 있었는데 후보가 안 만들어졌다"가 섞이지 않는다 (§5.1).
+	var before: Dictionary = _analyze(p)
+	var stage_one: Dictionary = {}
+	for part_id0: Variant in offer["final"]:
+		stage_one[str(part_id0)] = InvestmentLog.offer_stage(str(part_id0),
+			content.meta_index, before)
 
 	# AI 선택용 난수는 제안 난수와 **분리**한다 (§4.4·§10.2).
 	var rng: RandomNumberGenerator = Config.rng_for(["choice", p["id"], index])
@@ -121,27 +144,48 @@ func _acquire(p: Dictionary, index: int, round_index: int, guarantee: bool,
 	var offer_scores: Array = []
 	# 제안 3개 각각을 실제로 획득해 보고 가장 좋은 사용법을 찾는다.
 	# 보상은 한 번만 획득한다 — 후보마다 복제본에 넣을 뿐 원본은 건드리지 않는다 (§5.1).
+	var reward_uid: int = Inventory.NONE
 	for part_id: Variant in final:
 		var trial: RefCounted = p["inventory"].clone()
-		trial.add(str(part_id))
-		var decision: Dictionary = p["policy"].decide(trial,
-			_policy_ctx(p, min_bodies, require_operational, rng))
-		# 조립할 수 없는 후보는 **점수 비교에 넣지 않는다**. 실패를 낮은 점수로
-		# 표현하면 음수 점수인 정상 후보를 이겨버린다.
+		# 복제본마다 같은 uid가 나온다(_next_uid도 복제된다). 그래서 이 개체 id를
+		# 그대로 들고 있으면 "이 보상을 어떻게 썼는가"를 개체 단위로 좇을 수 있다.
+		reward_uid = trial.add(str(part_id))
+		var ctx: Dictionary = _policy_ctx(p, min_bodies, require_operational, rng)
+		ctx["reward_uid"] = reward_uid
+		var decision: Dictionary = p["policy"].decide(trial, ctx)
 		# 제안 파츠 **각각의** 최선 후보를 남긴다. shortlist는 최종 선택 하나의
 		# 상위 후보이므로 "다른 보상을 골랐으면 어땠는가"를 담지 못한다 (§9.1).
+		# 그리고 §5.1의 네 단계 중 1~3단계를 제안 파츠마다 **나란히** 남긴다 —
+		# 하나로 뭉치면 "제안이 없었다"와 "낮게 평가했다"가 다시 섞인다.
+		var counts: Dictionary = decision.get("candidate_counts", {})
 		offer_scores.append({
 			"part_id": str(part_id),
 			"valid": bool(decision.get("valid", false)),
 			"score": float(decision["score"]) if bool(decision.get("valid", false)) else 0.0,
-			"candidates": decision.get("candidate_counts", {}),
+			"candidates": counts,
+			# 1단계 — 어휘로 본 미래 연결 가능성
+			"future": stage_one[str(part_id)],
+			# 2단계 — 본체/증강/보관 각각의 합법 후보 수
+			"uses": counts.get("reward_uses", {}),
+			# 3단계 — 그 후보들이 받은 최고 미래 가치, 그리고 **선택 전 값**.
+			# potential은 보드 전체의 성질이므로 절대값만 보면 "이 파츠가 미래를
+			# 만들었는가"를 말하지 못한다 — 이미 있던 잠금 해제 여지가 그대로
+			# 남은 것도 양수로 나온다. 늘었는지는 차이로만 알 수 있다.
+			"best_potential": snappedf(float(decision.get("best_potential", 0.0)), 0.001),
+			"potential_before": snappedf(
+				clampf(float(before["unlockable"]) / Evaluator.UNLOCK_FULL, 0.0, 1.0),
+				0.001),
+			"chosen_use": str(decision.get("chosen_use", "")),
 		})
+		# 조립할 수 없는 후보는 **점수 비교에 넣지 않는다**. 실패를 낮은 점수로
+		# 표현하면 음수 점수인 정상 후보를 이겨버린다.
 		if not bool(decision.get("valid", false)):
 			continue
 		if float(decision["score"]) > best_score:
 			best_score = float(decision["score"])
 			best = decision
 			best["taken"] = str(part_id)
+			best["reward_uid"] = reward_uid
 	if best.is_empty():
 		# 제안 3개 중 어느 것으로도 유효한 조립을 만들지 못했다. 조용히 넘어가면
 		# "왜 이 참가자만 파츠가 모자란가"를 나중에 알 수 없다.
@@ -151,6 +195,13 @@ func _acquire(p: Dictionary, index: int, round_index: int, guarantee: bool,
 	p["inventory"] = best["inventory"]
 	p["acquisitions"] = int(p["acquisitions"]) + 1
 	var auto_discarded: Array = _enforce_storage(p)
+	# 4단계 등록. 즉시 도는 파츠를 장착한 것은 투자가 아니다 — open()이 가른다.
+	var taken_future: Dictionary = stage_one[str(best["taken"])]
+	var needs: Array = (taken_future["fills"] as Array).duplicate()
+	p["investments"].open(index, round_index, p["inventory"], best["reward_uid"],
+		str(best.get("chosen_use", "")), _analyze(p), needs)
+	if Config.is_recipe_strategy(str(p["strategy"])):
+		_note_recipe(p, round_index)
 
 	var steps: Array[String] = []
 	var operations: Array = []
@@ -178,6 +229,9 @@ func _acquire(p: Dictionary, index: int, round_index: int, guarantee: bool,
 		"shortlist": best["shortlist"],
 		"candidate_counts": best.get("candidate_counts", {}),
 		"offer_candidates": offer_scores,
+		# 고정 레시피형의 목표 진행. 유연형은 recipe_id가 비어 있고 진행도 0이다.
+		"recipe_id": str(best.get("recipe_id", "")),
+		"recipe": best.get("recipe", {}),
 		"goal": best["goal"], "goal_reason": best["goal_reason"],
 	})
 
@@ -267,6 +321,9 @@ func _pool_supply(pool_id: String) -> Dictionary:
 	return out
 
 func _assemble(p: Dictionary, round_index: int, starting: bool) -> void:
+	# 조립 시점마다 4단계를 갱신한다. 침묵하던 투자가 이제 도는지는 조립 직후의
+	# 보드에서만 알 수 있다.
+	p["investments"].observe_board(round_index, p["inventory"], _analyze(p))
 	p["build"] = p["inventory"].to_build("league_%d_r%d" % [p["id"], round_index],
 		config.frame_id)
 	var storage: Array[String] = []
@@ -280,6 +337,8 @@ func _assemble(p: Dictionary, round_index: int, starting: bool) -> void:
 		"frame": config.frame_id, "core": config.core_id,
 		"build": p["build"], "storage": storage,
 		"acquisitions": p["acquisitions"], "points": p["points"], "losses": p["losses"],
+		"recipe_id": str(p.get("recipe_id", "")),
+		"recipe_progress": snappedf(float(p.get("recipe_progress", 0.0)), 0.001),
 	})
 
 func _analyze(p: Dictionary) -> Dictionary:
@@ -355,6 +414,17 @@ func _fight(left: int, right: int, round_index: int, kind: String) -> void:
 		"error": result.get("error", {}),
 	})
 
+	if bool(result["ok"]):
+		# 4단계의 마지막 조건 — 열린 연결이 **전투에 기여했는가**.
+		# 왼쪽이 player, 오른쪽이 enemy다 (combat_adapter가 그 순서로 넣는다).
+		a["investments"].observe_combat(round_index, a["inventory"], result["log"],
+			"player")
+		# 복제 상대(archive_fill)는 그 라운드의 스냅샷일 뿐 진행 중인 참가자가
+		# 아니다. 그쪽 투자 기록에 이 전투를 넣으면 같은 참가자가 두 번 관측된다.
+		if kind == "duel":
+			b["investments"].observe_combat(round_index, b["inventory"],
+				result["log"], "enemy")
+
 	if not bool(result["ok"]):
 		# 오류 매치는 승점에도 손실에도 반영하지 않는다 (§8.3).
 		errors.append("매치 오류 r%d %d vs %d: %s"
@@ -385,3 +455,13 @@ func _terminate(p: Dictionary, status: String, round_index: int, reason: String)
 	p["status"] = status
 	p["end_round"] = round_index
 	p["end_reason"] = reason
+	# 남은 투자는 **미해결**로 닫는다. 실패가 아니다 (§5.2).
+	p["investments"].finish(round_index)
+
+## 고정 레시피형의 진행도를 갱신한다. 완성 라운드는 한 번만 적는다 —
+## 완성 뒤에 잠깐 허물었다가 다시 채우면 두 번 세어진다.
+func _note_recipe(p: Dictionary, round_index: int) -> void:
+	var progress: Dictionary = Recipes.progress(str(p["recipe_id"]), p["inventory"])
+	p["recipe_progress"] = float(progress["progress"])
+	if bool(progress["complete"]) and int(p["recipe_complete_round"]) == 0:
+		p["recipe_complete_round"] = maxi(1, round_index)
