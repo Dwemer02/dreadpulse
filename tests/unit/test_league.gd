@@ -6,7 +6,7 @@ extends RefCounted
 ## 불가능한 조립이 통과하는가, 초과 피해가 규칙대로 들어가는가, 후보 평가가 원본을
 ## 오염시키는가, 같은 시드가 같은 결과를 내는가.
 
-const EXPECTED_CHECKS := 100
+const EXPECTED_CHECKS := 118
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -40,6 +40,9 @@ func run(t: RefCounted) -> void:
 	_test_potential_needs_real_supply(t)
 	_test_relief_names_the_bottleneck(t)
 	_test_one_shot_is_not_sustained(t)
+	_test_augment_scales_with_host_speed(t)
+	_test_action_condition_does_not_kill_part(t)
+	_test_time_horizons_split(t)
 	_test_candidate_legality(t)
 	_test_candidates_do_not_mutate(t)
 	_test_overtime_schedule(t)
@@ -259,6 +262,74 @@ func _test_one_shot_is_not_sustained(t: RefCounted) -> void:
 	var unlimited: float = _output_of("photon_lance")      # Energy 8 / 5초 / 무제한
 	t.check(limited < unlimited,
 		"발동 제한 3회는 영구 무기보다 낮게 추정된다 (%.2f < %.2f)" % [limited, unlimited])
+
+## 증강 기여는 **숙주 속도에 반비례**해야 한다 (r5b 피드백 §6.1).
+##
+## r5b까지는 모든 트리거 기여를 명목 4초 주기로 뭉갰다. 그래서 같은 증강을 2초 숙주와
+## 7초 숙주에 붙여도 추정이 같았고, "본체를 증강으로 전환"하는 선택이 대량 발생하는데
+## 그것이 유효한 전환인지 판정할 근거가 없었다.
+##
+## 숙주 단독 출력과 **분리해서** 재야 한다 — 합산해 보면 느린 숙주가 자기 본체 출력
+## 때문에 더 높게 나와 방향이 거꾸로 보인다.
+func _test_augment_scales_with_host_speed(t: RefCounted) -> void:
+	# 고철 기관포의 증강은 "숙주 발동 시 물리 피해 1"이다. 숙주만 바꾼다.
+	var fast: float = _augment_contribution("bone_spike_organ", "scrap_autocannon")
+	var mid: float = _augment_contribution("photon_lance", "scrap_autocannon")
+	var slow: float = _augment_contribution("severance_beam", "scrap_autocannon")
+
+	t.check(fast > mid and mid > slow,
+		"빠른 숙주의 증강 기여가 크다 — 3초 %.3f > 5초 %.3f > 10초 %.3f"
+			% [fast, mid, slow])
+	# 피해 1을 숙주 쿨타임마다 낸다 = 1/쿨타임. 정확히 그 값이어야 한다.
+	t.check(is_equal_approx(snappedf(fast, 0.001), 0.333),
+		"3초 숙주면 초당 1/3 (%.3f)" % fast)
+	t.check(is_equal_approx(snappedf(slow, 0.001), 0.100),
+		"10초 숙주면 초당 1/10 (%.3f)" % slow)
+
+## 액션 하나에 붙은 조건이 **파츠 전체를 죽이면 안 된다**.
+##
+## "가속 중이면 재사용" 파츠 3종이 보드에 가속원이 없으면 통째로 침묵 처리됐다.
+## 셋 다 가속 없이도 기본 효과는 정상 작동한다 — 가속은 보너스다.
+## 파츠 전제는 `active.require`와 트리거 자신의 `where`뿐이다.
+func _test_action_condition_does_not_kill_part(t: RefCounted) -> void:
+	for part_id: String in ["layered_regen_membrane", "solar_reflector",
+			"resonant_fiber_cluster"]:
+		var meta: Dictionary = (_content.meta_index[part_id] as Dictionary)["body"]
+		t.check((meta["conditional_ops"] as Array).has("multi_fire"),
+			"%s의 조건부 재사용이 표시된다" % part_id)
+		t.check(not (meta["prerequisites"] as Array).has("is_accelerated"),
+			"%s의 가속 조건이 파츠 전제로 세어지지 않는다" % part_id)
+
+		var inv: RefCounted = Inventory.new()
+		_content.fresh_board(_content_config(), inv)
+		var role: String = str(_content.catalog.parts[part_id]["base_role"])
+		inv.place("weapon_1" if role == "weapon" else "defense_1", inv.add(part_id))
+		var a: Dictionary = _analyze_with(inv, {})
+		t.eq((a["dead"] as Array).size(), 0,
+			"%s는 가속원이 없어도 침묵하지 않는다" % part_id)
+		t.check(float(a["output"]) + float(a["sustain"]) > 0.0,
+			"%s의 기본 효과가 추정에 잡힌다" % part_id)
+
+## 초반 출력과 지속 출력을 구분해야 한다 (§6.1).
+func _test_time_horizons_split(t: RefCounted) -> void:
+	# 일회용: 15초 안에서는 온전하지만 60초로 보면 희석된다.
+	var burst_early: float = _output_at("disposable_shredder", "output_early")
+	var burst_late: float = _output_at("disposable_shredder", "output")
+	t.check(burst_early > burst_late * 2.0,
+		"일회용은 초반 추정이 지속 추정보다 훨씬 크다 (%.2f vs %.2f)"
+			% [burst_early, burst_late])
+
+	# 발동 제한도 같은 방향이다.
+	var limited_early: float = _output_at("forward_loan_beam", "output_early")
+	var limited_late: float = _output_at("forward_loan_beam", "output")
+	t.check(limited_early > limited_late,
+		"발동 제한 파츠도 초반이 크다 (%.2f vs %.2f)" % [limited_early, limited_late])
+
+	# 진짜 지속 무기는 두 지평선에서 같다.
+	var steady_early: float = _output_at("scrap_autocannon", "output_early")
+	var steady_late: float = _output_at("scrap_autocannon", "output")
+	t.check(is_equal_approx(steady_early, steady_late),
+		"무제한 무기는 두 지평선이 같다 (%.2f = %.2f)" % [steady_early, steady_late])
 
 # --- 조립 후보 ---
 
@@ -596,6 +667,30 @@ func _potential(inv: RefCounted, supply: Dictionary) -> float:
 	var a: Dictionary = _analyze_with(inv, supply)
 	return float(Evaluator.features(a, a, 0.4, "")["potential"])
 
+## 증강 기여만 분리한 값. 숙주 단독 출력을 빼서 구한다.
+func _augment_contribution(host: String, augment: String) -> float:
+	return _host_output(host, augment) - _host_output(host, "")
+
+func _host_output(host: String, augment: String) -> float:
+	var inv: RefCounted = Inventory.new()
+	_content.fresh_board(_content_config(), inv)
+	var role: String = str(_content.catalog.parts[host]["base_role"])
+	var slot: String = "weapon_1" if role == "weapon" else "defense_1"
+	var host_uid: int = inv.add(host)
+	if augment == "":
+		inv.place(slot, host_uid)
+	else:
+		inv.place(slot, host_uid, inv.add(augment))
+	return float(_analyze_with(inv, {})["output"])
+
+## 지정한 지평선 키의 출력 추정.
+func _output_at(part_id: String, key: String) -> float:
+	var inv: RefCounted = Inventory.new()
+	_content.fresh_board(_content_config(), inv)
+	var role: String = str(_content.catalog.parts[part_id]["base_role"])
+	inv.place("weapon_1" if role == "weapon" else "defense_1", inv.add(part_id))
+	return float(_analyze_with(inv, {})[key])
+
 ## 파츠 하나만 놓은 보드의 초당 출력 추정.
 func _output_of(part_id: String) -> float:
 	var inv: RefCounted = Inventory.new()
@@ -624,6 +719,7 @@ func _meta(overrides: Dictionary) -> Dictionary:
 		"prerequisites": [], "functions": [], "damage_paths": [],
 		"burst_output": 0, "burst_sustain": 0,
 		"trigger_output": 0, "trigger_sustain": 0, "uncovered_ops": [],
+		"trigger_specs": [], "one_shot": false, "fire_limit": -1,
 	}
 	for key: String in overrides:
 		meta[key] = overrides[key]

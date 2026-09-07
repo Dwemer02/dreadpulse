@@ -22,6 +22,10 @@ func _init() -> void:
 	config.repeats_per_condition = _arg_int("repeats", 5)
 	config.batch_id = "r%d" % config.repeats_per_condition
 
+	# 커밋·dirty를 **실행 시작에** 캡처한다. 끝에 읽으면 배치 도중의 커밋이 잡힌다 —
+	# r5b의 manifest가 실제로 그렇게 됐다 (r5b 피드백 §10.1).
+	config.capture_version()
+
 	var content: RefCounted = LeagueContent.new()
 	content.load_all()
 	if not content.ok():

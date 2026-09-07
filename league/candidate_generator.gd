@@ -141,6 +141,9 @@ static func operation_of(action: Dictionary, inv: RefCounted) -> Dictionary:
 	return {
 		"kind": str(action["kind"]),
 		"part_id": inv.part_id_of(int(action.get("uid", Inventory.NONE))),
+		# **개체 id를 남긴다.** part_id만으로는 "창고에 넣어둔 바로 그 개체를 나중에
+		# 썼는가"를 증명할 수 없다 — 같은 파츠를 다시 획득했을 수도 있다 (§5.2).
+		"part_instance_id": int(action.get("uid", Inventory.NONE)),
 		"slot": str(action.get("slot", "")),
 	}
 

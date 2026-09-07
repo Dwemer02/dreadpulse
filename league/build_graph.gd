@@ -82,8 +82,12 @@ static func analyze(placed: Array, body_slots: int = 0,
 		"dead": dead,
 		"missing": missing,
 		"operational": _operational(units, active),
-		"output": _rate(units, active, "output", produced),
-		"sustain": _rate(units, active, "sustain", produced),
+		# 두 지평선을 함께 낸다. 하나만 쓰면 일회용 대형 피해와 지속 화력을
+		# 구별할 수 없거나(60초만), 지속력을 무시하게 된다(15초만).
+		"output": _rate(units, active, "output", produced, NOMINAL_HORIZON),
+		"sustain": _rate(units, active, "sustain", produced, NOMINAL_HORIZON),
+		"output_early": _rate(units, active, "output", produced, EARLY_HORIZON),
+		"sustain_early": _rate(units, active, "sustain", produced, EARLY_HORIZON),
 		"surplus": _surplus(units, active, produced),
 		"coverage_gaps": _coverage_gaps(units),
 		"body_slots": body_slots,
@@ -284,6 +288,10 @@ static func _operational(units: Array, active: Dictionary) -> bool:
 ## 하지 않는 일이다 (기획서 §5.2).
 const NOMINAL_TRIGGER_PERIOD: float = 4.0
 
+## 초반 지평선. 일회용·Fire Limit 파츠는 여기서는 온전한 값을 낸다.
+## §6.1의 "초반 출력 / 30초까지 출력 / 이후 유지력을 구분"이 이 두 지평선이다.
+const EARLY_HORIZON: float = 15.0
+
 ## 추정 지평선. 이 시간 안에 몇 번 발동하는지로 초당 출력을 환산한다.
 ##
 ## **쿨타임으로만 나누면 안 된다.** 그러면 한 발 쏘고 자폭하는 파츠(피해 12 / 3초)가
@@ -295,8 +303,9 @@ const NOMINAL_TRIGGER_PERIOD: float = 4.0
 const NOMINAL_HORIZON: float = 60.0
 
 static func _rate(units: Array, active: Dictionary, kind: String,
-		produced: Dictionary) -> float:
+		produced: Dictionary, horizon: float) -> float:
 	var ratio: float = _supply_ratio(units, active, produced)
+	var fires: Array = fire_rates(units, active, horizon)
 	var total: float = 0.0
 	for i: int in units.size():
 		if not active.has(i):
@@ -305,18 +314,110 @@ static func _rate(units: Array, active: Dictionary, kind: String,
 		# 자원 생산보다 소비가 크면 공급 비율만큼 그 소비 효과의 기여를 낮춘다 (§5.3).
 		# 이걸 빼면 "자재 3 소비" 무기가 생산 없이도 만점을 받는다.
 		var share: float = ratio if (meta["consumes"] as Dictionary).has("material") else 1.0
+		total += float(meta["burst_" + kind]) * float(fires[i]) * share
+		total += _trigger_rate(units, active, fires, i, kind) * share
+	return total
+
+## 각 단위의 **초당 발동 횟수**. 본체는 쿨타임에서, 트리거형은 구독 이벤트의
+## 발생률에서 나온다. 트리거가 다시 이벤트를 내므로 몇 번 반복해 수렴시킨다.
+static func fire_rates(units: Array, active: Dictionary, horizon: float) -> Array:
+	var rates: Array = []
+	for i: int in units.size():
+		rates.append(0.0)
+	# 1단계: 스스로 도는 본체.
+	for i2: int in units.size():
+		if not active.has(i2):
+			continue
+		var meta: Dictionary = units[i2]["meta"]
 		var cooldown: float = float(meta.get("cooldown", 0.0))
 		if cooldown > 0.0:
-			total += float(meta["burst_" + kind]) * activations(meta, cooldown) \
-				/ NOMINAL_HORIZON * share
-		total += float(meta["trigger_" + kind]) / NOMINAL_TRIGGER_PERIOD * share
+			rates[i2] = activations(meta, cooldown, horizon) / horizon
+	# 2단계: 이벤트 발생률 → 트리거형의 발동률. 파츠 수가 10 남짓이라 3회면 충분하다.
+	for _pass: int in 3:
+		var event_rates: Dictionary = _event_rates(units, active, rates)
+		for j: int in units.size():
+			if not active.has(j):
+				continue
+			var meta2: Dictionary = units[j]["meta"]
+			if float(meta2.get("cooldown", 0.0)) > 0.0:
+				continue   # 본체는 이미 1단계에서 정해졌다
+			rates[j] = _listen_rate(units, rates, event_rates, j, horizon)
+	return rates
+
+## 어떤 이벤트가 초당 몇 번 나는가. 각 단위의 발동률을 그 단위가 내는 이벤트에 얹는다.
+static func _event_rates(units: Array, active: Dictionary, rates: Array) -> Dictionary:
+	var out: Dictionary = {}
+	for i: int in units.size():
+		if not active.has(i):
+			continue
+		for key: String in units[i]["meta"]["emits_keys"]:
+			out[key] = float(out.get(key, 0.0)) + float(rates[i])
+	# 전투 시작은 딱 한 번이다. 지평선 안의 초당 환산으로 둔다.
+	out["combat_start@own"] = 1.0 / NOMINAL_HORIZON
+	return out
+
+## 트리거형 단위의 초당 발동률. 트리거별로 원인 이벤트의 발생률을 보고 합산한다.
+static func _listen_rate(units: Array, rates: Array, event_rates: Dictionary,
+		index: int, horizon: float) -> float:
+	var meta: Dictionary = units[index]["meta"]
+	var total: float = 0.0
+	for spec: Variant in (meta.get("trigger_specs", []) as Array):
+		total += _spec_rate(units, rates, event_rates, index, spec as Dictionary, horizon)
+	return total
+
+## 트리거 하나의 초당 발동률.
+##
+## `host_only`면 **숙주의 발동률만** 본다 — 이것이 §6.1이 요구한 수정의 핵심이다.
+## 같은 증강을 2초 숙주에 붙이면 7초 숙주보다 3.5배 자주 돈다.
+static func _spec_rate(units: Array, rates: Array, event_rates: Dictionary,
+		index: int, spec: Dictionary, horizon: float) -> float:
+	var key: String = "%s@%s" % [str(spec["on"]), str(spec["side"])]
+	var base: float = 0.0
+	if bool(spec["host_only"]):
+		var host: int = _host_of(units, index)
+		base = float(rates[host]) if host >= 0 else 0.0
+	else:
+		base = float(event_rates.get(key, 0.0))
+	base /= float(maxi(1, int(spec["every"])))
+	# 트리거 자체의 횟수 제한(증강 전용 Fire Limit)도 지평선 안에서 깎는다.
+	var cap: int = int(spec["max_fires"])
+	if cap >= 0:
+		base = minf(base, float(cap) / horizon)
+	return base
+
+## 이 단위가 얹혀 있는 숙주(같은 슬롯의 본체)의 인덱스. 없으면 -1.
+static func _host_of(units: Array, index: int) -> int:
+	var slot: String = str(units[index]["slot"])
+	for i: int in units.size():
+		if i != index and str(units[i]["slot"]) == slot \
+				and str(units[i]["kind"]) == "body":
+			return i
+	return -1
+
+## 트리거 기여의 초당 값. 트리거별 발동률 × 그 트리거의 출력.
+static func _trigger_rate(units: Array, active: Dictionary, rates: Array,
+		index: int, kind: String) -> float:
+	var meta: Dictionary = units[index]["meta"]
+	var specs: Array = meta.get("trigger_specs", [])
+	if specs.is_empty():
+		return 0.0
+	var event_rates: Dictionary = _event_rates(units, active, rates)
+	var total: float = 0.0
+	for spec: Variant in specs:
+		var s: Dictionary = spec
+		var amount: int = int(s["output" if kind == "output" else "sustain"])
+		if amount == 0:
+			continue
+		total += _spec_rate(units, rates, event_rates, index, s, NOMINAL_HORIZON) \
+			* float(amount)
 	return total
 
 ## 지평선 안의 실제 발동 횟수. 쿨타임이 정한 상한을 **자기 파괴와 발동 제한이 깎는다**.
-static func activations(meta: Dictionary, cooldown: float) -> float:
-	var by_cooldown: float = NOMINAL_HORIZON / cooldown
+static func activations(meta: Dictionary, cooldown: float,
+		horizon: float = NOMINAL_HORIZON) -> float:
+	var by_cooldown: float = horizon / cooldown
 	if bool(meta.get("one_shot", false)):
-		return 1.0
+		return minf(by_cooldown, 1.0)
 	var limit: int = int(meta.get("fire_limit", -1))
 	if limit > 0:
 		return minf(by_cooldown, float(limit))

@@ -118,6 +118,7 @@ func _acquire(p: Dictionary, index: int, round_index: int, guarantee: bool,
 	var final: Array = offer["final"]
 	var best: Dictionary = {}
 	var best_score: float = -INF
+	var offer_scores: Array = []
 	# 제안 3개 각각을 실제로 획득해 보고 가장 좋은 사용법을 찾는다.
 	# 보상은 한 번만 획득한다 — 후보마다 복제본에 넣을 뿐 원본은 건드리지 않는다 (§5.1).
 	for part_id: Variant in final:
@@ -127,6 +128,14 @@ func _acquire(p: Dictionary, index: int, round_index: int, guarantee: bool,
 			_policy_ctx(p, min_bodies, require_operational, rng))
 		# 조립할 수 없는 후보는 **점수 비교에 넣지 않는다**. 실패를 낮은 점수로
 		# 표현하면 음수 점수인 정상 후보를 이겨버린다.
+		# 제안 파츠 **각각의** 최선 후보를 남긴다. shortlist는 최종 선택 하나의
+		# 상위 후보이므로 "다른 보상을 골랐으면 어땠는가"를 담지 못한다 (§9.1).
+		offer_scores.append({
+			"part_id": str(part_id),
+			"valid": bool(decision.get("valid", false)),
+			"score": float(decision["score"]) if bool(decision.get("valid", false)) else 0.0,
+			"candidates": decision.get("candidate_counts", {}),
+		})
 		if not bool(decision.get("valid", false)):
 			continue
 		if float(decision["score"]) > best_score:
@@ -141,13 +150,14 @@ func _acquire(p: Dictionary, index: int, round_index: int, guarantee: bool,
 		return
 	p["inventory"] = best["inventory"]
 	p["acquisitions"] = int(p["acquisitions"]) + 1
-	_enforce_storage(p)
+	var auto_discarded: Array = _enforce_storage(p)
 
 	var steps: Array[String] = []
 	var operations: Array = []
 	for action: Variant in best["chain"]:
 		steps.append(Generator.describe(action as Dictionary, p["inventory"]))
 		operations.append(Generator.operation_of(action as Dictionary, p["inventory"]))
+	operations.append_array(auto_discarded)
 	choices.append({
 		"participant": p["id"], "strategy": p["strategy"], "pool": p["pool"],
 		"index": index, "round": round_index,
@@ -166,6 +176,8 @@ func _acquire(p: Dictionary, index: int, round_index: int, guarantee: bool,
 		"score": float(best["score"]),
 		"features": best["features"],
 		"shortlist": best["shortlist"],
+		"candidate_counts": best.get("candidate_counts", {}),
+		"offer_candidates": offer_scores,
 		"goal": best["goal"], "goal_reason": best["goal_reason"],
 	})
 
@@ -184,7 +196,11 @@ static func _reward_result(taken: String, operations: Array) -> String:
 
 ## 보관 한도 (§15). 넘으면 AI가 버린다 — 여기서는 "지금 보드에 없고 점수 기여가 없는
 ## 것부터"라는 단순 규칙을 쓴다. 폐기 보상은 없다.
-func _enforce_storage(p: Dictionary) -> void:
+## 반환: 실제로 버린 조작 목록. **조용히 버리면 안 된다** — r5b에서 15라운드
+## 도달자의 누적 획득 17개와 보유 16개가 어긋났고 operations에 discard가 0개였다
+## (§10.3). 기존 규칙에 따른 정상 폐기지만 기록은 남아야 한다.
+func _enforce_storage(p: Dictionary) -> Array:
+	var discarded: Array = []
 	var inv: RefCounted = p["inventory"]
 	while inv.unplaced().size() > config.storage_limit:
 		# 가장 오래된 창고 파츠부터 버린다. Core는 항상 배치돼 있으므로 여기 오지 않지만,
@@ -196,7 +212,13 @@ func _enforce_storage(p: Dictionary) -> void:
 				break
 		if worst == Inventory.NONE:
 			break
+		discarded.append({
+			"kind": "discard", "part_id": inv.part_id_of(worst),
+			"part_instance_id": worst, "slot": "",
+			"reason": "storage_limit_%d" % config.storage_limit,
+		})
 		inv.discard(worst)
+	return discarded
 
 func _policy_ctx(p: Dictionary, min_bodies: int, require_operational: bool,
 		rng: RandomNumberGenerator) -> Dictionary:
@@ -317,8 +339,13 @@ func _fight(left: int, right: int, round_index: int, kind: String) -> void:
 
 	matches.append({
 		"round": round_index, "kind": kind, "left": left, "right": right,
+		# 스냅샷 id를 매치에 직접 남긴다. r5b에서는 러너가 들고만 있고 CSV에 쓰지
+		# 않아서 복제 매치의 상대 입력을 파일로 확인할 수 없었다 (§10.2).
 		"left_snapshot": str(a.get("snapshot_id", "")),
 		"right_snapshot": str(b.get("snapshot_id", "")),
+		# 복제 매치의 상대도 **그 라운드의 스냅샷**이다. 같은 획득 단계 매칭 원칙을
+		# 지켰다는 것을 파일에서 확인할 수 있어야 한다.
+		"right_source_round": round_index,
 		"left_strategy": a["strategy"], "right_strategy": b["strategy"],
 		"left_pool": a["pool"], "right_pool": b["pool"],
 		"winner": result["winner"], "reason": result["reason"],

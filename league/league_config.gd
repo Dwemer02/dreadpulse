@@ -10,9 +10,16 @@ extends RefCounted
 
 const Inventory = preload("res://run/inventory.gd")
 const Evaluator = preload("res://league/build_evaluator.gd")
+const Content = preload("res://sim/content.gd")
 
 ## 시드 도출 규칙의 버전. 이 문자열이 바뀌면 같은 반복 시드라도 다른 배치다.
 const SEED_RULE := "fnv1a-mix-v1"
+
+## 평가기 버전. **평가 특징의 정의를 바꿀 때마다 올린다.**
+## batch_id·ai_version과 분리해야 하는 이유: r5b는 배치 이름이 r5b인데 manifest의
+## batch_id는 r5, ai_version은 league-ai-1이었다 — 평가기가 완전히 달라졌는데도
+## 어느 필드도 그것을 말하지 않았다 (r5b 피드백 §10.1).
+const EVALUATOR_VERSION := "eval-3-host-aware"
 
 # --- 리그 진행 ---
 var loss_limit: int = 4
@@ -68,7 +75,19 @@ var repeats_per_condition: int = 20
 var game_version: String = "parts-90"
 var ai_version: String = "league-ai-1"
 var league_version: String = "league-1"
+## 조건 이름 (규모·K 등). 실행 식별자가 아니다.
 var batch_id: String = "batch"
+## 실행 식별자. 폴더 이름과 같고 실행마다 다르다. Reporter가 채운다.
+var run_id: String = ""
+## 실행 **시작 시점**의 커밋. 끝에 읽으면 배치 도중의 커밋이 잡힌다 —
+## r5b의 manifest가 실제로 그렇게 됐다 (§10.1).
+var started_commit: String = ""
+var started_dirty: bool = false
+
+## 배치 시작에 한 번 부른다. 이후 manifest는 이 값을 쓴다.
+func capture_version() -> void:
+	started_commit = git_commit()
+	started_dirty = git_dirty()
 
 ## 팩션 보상 풀 10종 (§7). 값은 제안 파츠 **하나하나의** 추첨 확률이다 —
 ## 70:30을 매번 2개:1개로 강제하지 않는다.
@@ -109,12 +128,13 @@ func combat_rules() -> Dictionary:
 ## 함께 받지 않으면 무엇을 돌린 것인지 확인할 방법이 없었다.
 func manifest() -> Dictionary:
 	return {
+		"run_id": run_id,
 		"batch_id": batch_id,
-		"git_commit": git_commit(),
-		# 작업 트리가 커밋과 다른가. r5b 배치가 이 구멍을 그대로 보여줬다 —
-		# 찍힌 커밋은 배치를 띄운 시점의 HEAD이고 실제 평가 코드는 작업 트리에만
-		# 있었다. dirty를 모르면 그 manifest로 재현할 수 없다 (피드백 §8.2).
-		"git_dirty": git_dirty(),
+		"evaluator_version": EVALUATOR_VERSION,
+		"content_hash": content_hash(),
+		"git_commit": started_commit,
+		# 작업 트리가 커밋과 다른가. dirty를 모르면 그 manifest로 재현할 수 없다.
+		"git_dirty": started_dirty,
 		"godot_version": Engine.get_version_info()["string"],
 		"game_version": game_version,
 		"ai_version": ai_version,
@@ -129,6 +149,26 @@ func manifest() -> Dictionary:
 		},
 		"pools": POOLS,
 		"repeat_seeds": range(1, repeats_per_condition + 1),
+		# 파생 기본값까지 펼친 설정. 결과 파일만 받은 사람이 실험을 점검할 수 있어야
+		# 한다 (§10.1) — 제안 수·증강·중복·보관 정책이 여기 다 있다.
+		"resolved_config": {
+			"offers_per_choice": options_per_choice,
+			"offers_at_start": start_choice_rounds,
+			"start_random_parts": start_random_parts,
+			"start_allow_augment": start_allow_augment,
+			"require_bodies_at_start": require_three_bodies,
+			"rewards_taken_per_choice": 1,
+			"storage_limit": storage_limit,
+			"duplicate_ids_within_offer": false,
+			"duplicate_ids_across_offers": true,
+			"augment_slots_per_host": 1,
+			"augment_detachable": true,
+			"core_in_decision_space": false,
+			"draw_loss_cost": draw_loss_cost,
+			"random_opening_rounds": random_opening_rounds,
+			"later_random_fraction": later_random_fraction,
+			"tie_break": "동점 그룹 내 균등 선택",
+		},
 		"loss_limit": loss_limit, "round_cap": round_cap,
 		"protected_rounds": protected_rounds,
 		"storage_limit": storage_limit,
@@ -200,6 +240,17 @@ static func _newer_than(dir_path: String, stamp: int) -> bool:
 		if FileAccess.get_modified_time("%s/%s" % [dir_path, file]) > stamp:
 			return true
 	return false
+
+## 파츠 데이터의 지문. 파츠 JSON이 바뀌면 값이 바뀐다 —
+## 같은 커밋에서도 데이터만 고친 실행을 구별할 수 있어야 한다 (§10.1).
+static func content_hash() -> String:
+	var acc: int = 2166136261
+	for path: String in Content.PART_PATHS + ["res://league/data/league_core.json"]:
+		var f: FileAccess = FileAccess.open(path, FileAccess.READ)
+		if f == null:
+			continue
+		acc = (acc * 16777619 + _scalar(f.get_as_text())) & MASK
+	return "%08x" % acc
 
 static func rng_for(parts: Array) -> RandomNumberGenerator:
 	var rng := RandomNumberGenerator.new()

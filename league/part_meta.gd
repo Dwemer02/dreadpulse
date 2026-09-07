@@ -144,6 +144,10 @@ static func _blank(def: Dictionary) -> Dictionary:
 		"burst_sustain": 0,      # 1회 발동당 회복·보호막 상당량
 		"trigger_output": 0,     # 트리거 1회당 피해 상당량
 		"trigger_sustain": 0,
+		# 트리거별 발동 원인. 빈도 계산의 재료다 (§6.1).
+		"trigger_specs": [],
+		# 액션 수준 조건이 붙은 op. 파츠 전제가 아니라 **그 액션만** 조건부라는 표시다.
+		"conditional_ops": [],
 		"uncovered_ops": [],
 	}
 
@@ -152,6 +156,22 @@ static func _scan_trigger(meta: Dictionary, trigger: Dictionary) -> void:
 	var side: String = "own"
 	if where is Dictionary and bool((where as Dictionary).get("enemy_ship", false)):
 		side = "enemy"
+	# 트리거를 **원인별로** 남긴다. r5b까지는 모든 트리거 기여를 명목 4초 주기로
+	# 뭉갰고, 그래서 같은 증강을 2초 숙주와 7초 숙주에 붙여도 추정이 같았다
+	# (r5b 피드백 §6.1). 발동 원인이 무엇인지 알아야 빈도를 계산할 수 있다.
+	var spec: Dictionary = {
+		"on": str(trigger.get("on", "")), "side": side,
+		# 숙주 한정이면 숙주의 실제 발동률만 본다.
+		"host_only": where is Dictionary
+			and (bool((where as Dictionary).get("is_host", false))
+				or bool((where as Dictionary).get("source_is_host", false))),
+		# "N회마다"는 발동률을 N으로 나눈다.
+		"every": int((where as Dictionary).get("every_nth_occurrence", 1)) \
+			if where is Dictionary else 1,
+		# 이 트리거 하나가 내는 출력·지속. 아래 _scan_block이 채운다.
+		"output": 0, "sustain": 0,
+		"max_fires": int(trigger.get("max_fires", -1)),
+	}
 	# **숙주 한정 트리거는 숙주 하나만 듣는다.** is_host / source_is_host가 그 표시다.
 	#
 	# 이걸 무시하면 "숙주 발동 시" 증강이 보드의 **모든** 본체와 연결된 것으로 세어져,
@@ -162,13 +182,29 @@ static func _scan_trigger(meta: Dictionary, trigger: Dictionary) -> void:
 		meta["host_only"] = true
 	_add_event(meta["listens"], [str(trigger.get("on", "")), side])
 	_collect_conditions(meta, where)
+	var before_out: int = int(meta["trigger_output"])
+	var before_sus: int = int(meta["trigger_sustain"])
 	_scan_block(meta, trigger.get("do", []), false)
+	spec["output"] = int(meta["trigger_output"]) - before_out
+	spec["sustain"] = int(meta["trigger_sustain"]) - before_sus
+	(meta["trigger_specs"] as Array).append(spec)
 
 static func _scan_block(meta: Dictionary, block: Array, on_fire: bool) -> void:
 	for item: Variant in block:
 		var action: Dictionary = item
 		var op: String = str(action.get("op", ""))
-		_collect_conditions(meta, action.get("where", null))
+		# **액션 수준 where를 파츠 전제로 세지 않는다.**
+		#
+		# `where`가 액션 하나에 붙어 있으면 그 액션만 조건부다. 파츠 전체의 전제는
+		# `active.require`와 트리거 자신의 `where`뿐이다.
+		#
+		# 이걸 구별하지 않아서 "가속 중이면 재사용" 파츠 3종(중층 봉합막·공진 섬유총·
+		# 태양 반사경)이 보드에 가속원이 없으면 **통째로 침묵 처리됐다.**
+		# 세 파츠 다 가속 없이도 기본 효과는 정상 작동한다 — 가속은 보너스다.
+		if action.has("where"):
+			for key: String in (action["where"] as Dictionary) 					if action["where"] is Dictionary else []:
+				if GATING_CONDITIONS.has(key) 						and not (meta["conditional_ops"] as Array).has(op):
+					(meta["conditional_ops"] as Array).append(op)
 		if not OP_EFFECTS.has(op):
 			# 조용히 0점 처리하지 않는다 (§5.3) — 모르는 op은 coverage 경고로 노출한다.
 			if not (meta["uncovered_ops"] as Array).has(op):

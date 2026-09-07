@@ -348,8 +348,9 @@ func _say(line: String) -> void:
 # --- 파일 출력 (§11.1) ---
 
 func _write(runner: RefCounted, text: String) -> void:
-	out_dir = "%s/%s-%s" % [OUT_ROOT, runner.config.batch_id,
+	runner.config.run_id = "%s-%s" % [runner.config.batch_id,
 		Time.get_datetime_string_from_system(true).replace(":", "").replace("-", "")]
+	out_dir = "%s/%s" % [OUT_ROOT, runner.config.run_id]
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(out_dir))
 
 	var files: Dictionary = {
@@ -386,11 +387,14 @@ func _participants_csv(runner: RefCounted) -> String:
 
 func _matches_csv(runner: RefCounted) -> String:
 	var rows: Array[String] = ["round,kind,left,right,left_strategy,right_strategy,"
-		+ "left_pool,right_pool,winner,victory_kind,elapsed,overtime,seed,ok"]
+		+ "left_pool,right_pool,left_snapshot,right_snapshot,right_source_round,"
+		+ "winner,victory_kind,elapsed,overtime,seed,ok"]
 	for m: Dictionary in runner.matches:
-		rows.append("%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%.2f,%d,%d,%s" % [
+		rows.append("%d,%s,%d,%d,%s,%s,%s,%s,%s,%s,%d,%s,%s,%.2f,%d,%d,%s" % [
 			int(m["round"]), m["kind"], int(m["left"]), int(m["right"]),
 			m["left_strategy"], m["right_strategy"], m["left_pool"], m["right_pool"],
+			str(m.get("left_snapshot", "")), str(m.get("right_snapshot", "")),
+			int(m.get("right_source_round", 0)),
 			m["winner"], m["victory_kind"], float(m["elapsed"]), int(m["overtime"]),
 			int(m["seed"]), "1" if bool(m["ok"]) else "0"])
 	return "\n".join(rows) + "\n"

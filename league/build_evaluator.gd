@@ -66,8 +66,15 @@ static func score(before: Dictionary, after: Dictionary, strategy: String,
 ## 평가 요소 6종. 전부 0~1이며 고정 기준으로 정규화한다.
 static func features(before: Dictionary, after: Dictionary, sustain_bias: float,
 		goal: String) -> Dictionary:
-	var attack: float = _unit(float(after["output"]) / OUTPUT_FULL)
-	var defend: float = _unit(float(after["sustain"]) / SUSTAIN_FULL)
+	# 초반 출력과 지속 출력을 **함께** 본다 (§6.1).
+	# 60초만 보면 일회용 대형 피해가 과소평가되고, 15초만 보면 지속력이 무시된다.
+	# 전략별 가중치는 건드리지 않는다 — 특징을 나누는 것과 가중치 조정은 다르다.
+	var attack: float = _unit(
+		(float(after["output"]) / OUTPUT_FULL
+			+ float(after.get("output_early", after["output"])) / OUTPUT_FULL) * 0.5)
+	var defend: float = _unit(
+		(float(after["sustain"]) / SUSTAIN_FULL
+			+ float(after.get("sustain_early", after["sustain"])) / SUSTAIN_FULL) * 0.5)
 	# 안정성 AI는 같은 "현재 기여" 안에서 방어·실효 회복 비중을 높인다 (§5.3).
 	var current: float = attack * (1.0 - sustain_bias) + defend * sustain_bias
 
@@ -122,6 +129,10 @@ static func features(before: Dictionary, after: Dictionary, sustain_bias: float,
 		# 원시 재료도 함께 남긴다 — 정규화된 0~1만 보면 "왜 이 값인가"를 복원할 수 없다.
 		# r5에서 potential이 무엇을 세는지 로그만으로 알 수 없었던 것이 이 때문이다.
 		"unlockable": snappedf(float(after.get("unlockable", 0.0)), 0.01),
+		# 두 지평선을 로그에 남긴다 — 하나로 뭉갠 값만 보면 "왜 이 점수인가"를
+		# 복원할 수 없다.
+		"output_60s": snappedf(float(after["output"]), 0.01),
+		"output_15s": snappedf(float(after.get("output_early", 0.0)), 0.01),
 		"resolved": resolved,
 		"empty_slots": int(after.get("empty_slots", 0)),
 	}

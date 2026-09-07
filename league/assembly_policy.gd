@@ -77,6 +77,12 @@ func decide(inv: RefCounted, ctx: Dictionary) -> Dictionary:
 		"inventory": picked["inventory"], "chain": picked["chain"],
 		"score": picked["score"], "features": picked["features"],
 		"shortlist": _log_of(shortlist),
+		# 후보 수를 단계별로 남긴다. shortlist(잘린 상위 몇 개)만으로는
+		# "쓸 수 있는 다른 선택지가 몇 개였는지" 셀 수 없다 (§9.1).
+		"candidate_counts": {
+			"visited": seen.size(), "accepted": accepted.size(),
+			"shortlisted": shortlist.size(),
+		},
 		"goal": goal, "goal_reason": _goal_reason,
 	}
 
@@ -166,6 +172,16 @@ func _shortlist(scored: Array) -> Array:
 func _pick(shortlist: Array, rng: RandomNumberGenerator) -> Dictionary:
 	if shortlist.size() == 1:
 		return shortlist[0]
+	# **실제 동점이면 그룹 안에서 균등 선택한다** (§6.3).
+	# 고정 정렬 뒤 60/30/10을 적용하면 먼저 나열된 후보가 유리해진다 — 점수가 같은데
+	# 순서 때문에 60%를 받는 것은 평가가 아니라 정렬의 결과다.
+	var top: float = float(shortlist[0]["score"])
+	var tied: Array = []
+	for entry: Dictionary in shortlist:
+		if is_equal_approx(float(entry["score"]), top):
+			tied.append(entry)
+	if tied.size() == shortlist.size():
+		return tied[rng.randi_range(0, tied.size() - 1)]
 	var total: int = 0
 	for i: int in shortlist.size():
 		total += config.rank_weights[mini(i, config.rank_weights.size() - 1)]
@@ -225,7 +241,10 @@ func _log_of(shortlist: Array) -> Array:
 			steps.append(Generator.describe(action as Dictionary, entry["inventory"]))
 		out.append({
 			"action": "유지" if steps.is_empty() else " → ".join(steps),
-			"score": snappedf(float(entry["score"]), 0.01),
+			# **원 정밀도로 남긴다.** 0.01로 깎으면 "동점"이 실제 동점인지 반올림
+			# 결과인지 구별할 수 없다 — r5b에서 정확히 그랬다 (§6.3·§10.1).
+			"score": float(entry["score"]),
+			"signature": str(entry["signature"]),
 			"features": _rounded(entry["features"]),
 		})
 	return out
