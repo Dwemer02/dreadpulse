@@ -281,25 +281,39 @@ func _investment(runner: RefCounted) -> void:
 		if not tally.has(key2):
 			tally[key2] = {}
 		for entry2: Dictionary in p["investments"].closed:
-			var bucket: String = "%s/%s" % [entry2["kind"], entry2["outcome"]]
+			# 4단계는 두 절이다: "열렸는가"와 "기여했는가". 미해결을 한 칸으로
+			# 뭉개면 그 둘이 섞인다 — 열렸는데 전투에서 안 돈 것과 끝까지 열리지도
+			# 않은 것은 다른 사실이고, 다음 단계에서 볼 곳이 서로 다르다.
+			var outcome: String = str(entry2["outcome"])
+			if outcome == "unresolved":
+				outcome = "opened_idle" if int(entry2["active_round"]) > 0 else "never_opened"
+			var bucket: String = "%s/%s" % [entry2["kind"], outcome]
 			(tally[key2] as Dictionary)[bucket] = \
 				int((tally[key2] as Dictionary).get(bucket, 0)) + 1
 	_say("")
 	_say("  4단계 — 실현: 선택 이후 실제로 열리고 전투에 기여했는가 (개체 단위)")
-	_say("  %-12s %9s %9s %9s %9s %9s %9s" % ["전략",
-		"보관·기여", "보관·미해결", "보관·폐기", "침묵·기여", "침묵·미해결", "침묵·폐기"])
-	for strategy2: String in Config.STRATEGIES:
-		var t: Dictionary = tally.get(strategy2, {})
-		if t.is_empty():
-			continue
-		_say("  %-12s %9d %9d %9d %9d %9d %9d" % [strategy2,
-			int(t.get("stored/contributed", 0)), int(t.get("stored/unresolved", 0)),
-			int(t.get("stored/discarded", 0)),
-			int(t.get("silent/contributed", 0)), int(t.get("silent/unresolved", 0)),
-			int(t.get("silent/discarded", 0))])
+	for kind: String in ["stored", "silent"]:
+		_say("")
+		_say("  %s 투자 — %s" % ["보관" if kind == "stored" else "침묵",
+			"지금 쓰지 않고 나중을 위해 남긴 개체" if kind == "stored"
+				else "놓았지만 그 시점에 침묵하던 개체"])
+		_say("  %-12s %8s %10s %10s %8s" % ["전략", "기여",
+			"열림·무기여", "미개방", "폐기"])
+		for strategy2: String in Config.STRATEGIES:
+			var t: Dictionary = tally.get(strategy2, {})
+			if t.is_empty():
+				continue
+			_say("  %-12s %8d %10d %10d %8d" % [strategy2,
+				int(t.get("%s/contributed" % kind, 0)),
+				int(t.get("%s/opened_idle" % kind, 0)),
+				int(t.get("%s/never_opened" % kind, 0)),
+				int(t.get("%s/discarded" % kind, 0))])
 	_say("")
 	_say("  ※ **미해결은 실패가 아니다.** 런이 끝나 관측이 없는 보관을 회수 실패로")
-	_say("     세면 §5.2가 경고한 오독을 그대로 되풀이한다. 두 열을 합치지 마라.")
+	_say("     세면 §5.2가 경고한 오독을 그대로 되풀이한다. 기여 열과 합치지 마라.")
+	_say("  ※ 미해결을 둘로 나눴다. '열림·무기여'는 실제로 켜졌는데 그 뒤 전투에서")
+	_say("     한 번도 안 돈 것이고, '미개방'은 끝까지 켜지지 않은 것이다. 앞은")
+	_say("     파츠 효과의 문제, 뒤는 획득·조립의 문제이므로 합치면 안 된다.")
 	_say("  ※ 기여는 개체 id로 좇는다 — 같은 파츠를 다시 획득한 것과 구별된다 (§5.2).")
 	_say("  ※ 증강의 기여는 **숙주 슬롯의 발동**으로 센다. 증강 자신의 part_fired가")
 	_say("     없기 때문이다. 숙주 발동을 증강의 공로로 그대로 읽으면 과대평가다.")
@@ -554,22 +568,26 @@ func _write(runner: RefCounted, text: String) -> void:
 func _participants_csv(runner: RefCounted) -> String:
 	var rows: Array[String] = ["id,strategy,pool,seed,status,end_round,points,losses,"
 		+ "acquisitions,start_part,recipe_id,recipe_reachable,recipe_progress,"
-		+ "recipe_complete_round,investments_contributed,investments_unresolved,"
+		+ "recipe_complete_round,inv_contributed,inv_opened_idle,inv_never_opened,"
 		+ "end_reason"]
 	for p: Dictionary in runner.participants:
 		var tally: Dictionary = p["investments"].tally()
 		var contributed: int = int((tally["stored"] as Dictionary).get("contributed", 0)) \
 			+ int((tally["silent"] as Dictionary).get("contributed", 0))
-		var unresolved: int = int((tally["stored"] as Dictionary).get("unresolved", 0)) \
-			+ int((tally["silent"] as Dictionary).get("unresolved", 0))
-		rows.append("%d,%s,%s,%d,%s,%d,%d,%d,%d,%s,%s,%s,%.3f,%d,%d,%d,%s" % [
+		# 미해결을 **열렸는데 안 돈 것**과 **끝까지 안 열린 것**으로 나눠 낸다.
+		var opened_idle: int = int((tally["stored"] as Dictionary).get("opened_idle", 0)) \
+			+ int((tally["silent"] as Dictionary).get("opened_idle", 0))
+		var never_opened: int = int((tally["stored"] as Dictionary).get("never_opened", 0)) \
+			+ int((tally["silent"] as Dictionary).get("never_opened", 0))
+		rows.append("%d,%s,%s,%d,%s,%d,%d,%d,%d,%s,%s,%s,%.3f,%d,%d,%d,%d,%s" % [
 			int(p["id"]), p["strategy"], p["pool"], int(p["seed"]), p["status"],
 			int(p["end_round"]), int(p["points"]), int(p["losses"]),
 			int(p["acquisitions"]), p["start_part"],
 			str(p.get("recipe_id", "")),
 			"1" if bool(p.get("recipe_reachable", false)) else "0",
 			float(p.get("recipe_progress", 0.0)),
-			int(p.get("recipe_complete_round", 0)), contributed, unresolved,
+			int(p.get("recipe_complete_round", 0)), contributed, opened_idle,
+			never_opened,
 			str(p["end_reason"]).replace(",", ";")])
 	return "\n".join(rows) + "\n"
 

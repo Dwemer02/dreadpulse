@@ -196,12 +196,16 @@ static func _is_active(inv: RefCounted, uid: int, use: String,
 			return active.has(i)
 	# 평가 단위가 아예 없다 = 어휘가 없는 파츠(inert). 기다릴 것이 없으므로 투자가 아니다.
 	return true
-
 ## 리포터용 집계. 4단계의 결과를 종류별로 센다.
+##
+## 미해결을 **열렸는데 안 돈 것**과 **끝까지 안 열린 것**으로 나눈다. 앞은 파츠
+## 효과의 문제, 뒤는 획득·조립의 문제이므로 한 칸에 담으면 다음에 볼 곳을 잃는다.
 func tally() -> Dictionary:
 	var out: Dictionary = {"stored": {}, "silent": {}}
 	for entry: Dictionary in closed:
 		var bucket: Dictionary = out[str(entry["kind"])]
 		var outcome: String = str(entry["outcome"])
+		if outcome == "unresolved":
+			outcome = "opened_idle" if int(entry["active_round"]) > 0 else "never_opened"
 		bucket[outcome] = int(bucket.get(outcome, 0)) + 1
 	return out
