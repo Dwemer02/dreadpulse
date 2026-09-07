@@ -1,0 +1,147 @@
+
+── 단계 D — 고정 비교 기준과 레시피 확정 ───────────────────────────────────────────
+커밋 a6750b818b (작업 트리 변경 있음) · Godot 4.7.1-stable (official)
+고정 상대군 archive-1 · 18명 · 출처 tests/out/league/r5-20260907T111238/snapshots.jsonl
+전투 시드 [9001, 9002, 9003] · 좌우 교환 — 상대 1명당 6판
+
+── D1. 고정 상대군 점검 — 기준선이 한쪽으로 기울지 않았는가 ────────────────────────────────
+  상대                 구조                                             승     패     무      승률     선체격차
+  early_p0_r0        direct|heal|gated                              5    97     0    4.9%    -67.7
+  early_p55_r2       direct|defend+heal|gated                      14    88     0   13.7%    -65.6
+  early_p110_r0      direct+overheat|defend+time|immediate         67    35     0   65.7%    +17.2
+  early_p20_r0       direct|none|gated                              9    93     0    8.8%    -56.6
+  early_p25_r0       direct|time|immediate                         41    61     0   40.2%    -14.2
+  early_p30_r0       direct|heal|immediate                         40    62     0   39.2%    -19.1
+  mid_p165_r4        corrosion+direct|heal|gated                   25    77     0   24.5%    -39.0
+  mid_p35_r3         direct+fracture+overheat|none|gated           50    52     0   49.0%    -14.1
+  mid_p40_r3         direct+fracture|defend+time|gated             55    47     0   53.9%     +4.2
+  mid_p45_r3         direct+fracture|heal|gated                    12    90     0   11.8%    -70.0
+  mid_p0_r3          direct|heal|gated                             40    62     0   39.2%    -24.4
+  mid_p0_r4          direct+overheat|heal|gated                    46    56     0   45.1%    -16.0
+  late_p1_r8         direct+overheat|heal|gated                    87    15     0   85.3%    +71.6
+  late_p2_r8         corrosion+direct+overheat|heal|gated          81    20     1   79.4%    +55.8
+  late_p8_r8         corrosion+direct+fracture|defend+heal+time|gated    48    52     2   47.1%     -5.0
+  late_p9_r8         corrosion+direct+fracture|heal|gated          83    18     1   81.4%    +61.0
+  late_p10_r8        direct+fracture+overheat|defend+time|gated    92    10     0   90.2%    +71.5
+  late_p11_r8        direct+fracture+overheat|defend+heal+time|gated   102     0     0  100.0%    +94.6
+
+  ※ 승률 5% 이하 / 95% 이상: early_p0_r0 (5%), late_p11_r8 (100%)
+     그 상대는 모든 검사 대상에게 같은 결과를 주므로 변별력이 없다.
+     **빼지는 않았다** — 상대군은 이미 고정됐고, 실험 결과를 본 뒤
+     기준을 바꾸면 그게 사후 조정이다. 읽을 때 감안한다.
+  ※ 이 표는 상대군 **내부** 결과다. 검사 대상의 강도가 아니다.
+
+── D2. 레시피 후보 검증 — 고정 상대군 성과 (§7.3) ──────────────────────────────────
+  레시피                      보드             승     패     무      승률      선체격차     평균초
+  r100_autocannon_trio     핵심 엔진         91    17     0   84.3%     +56.8    23.3
+  r100_autocannon_trio     완성 보드        107     1     0   99.1%     +87.4    16.2
+  a70_r30_photon_engine    핵심 엔진         87    21     0   80.6%     +53.8    27.4
+  a70_r30_photon_engine    완성 보드        108     0     0  100.0%     +89.3    13.9
+  aeonic_photon_trio       핵심 엔진         57    51     0   52.8%      +8.9    47.0
+  aeonic_photon_trio       full        — 보드를 구성할 수 없다
+  equal_helios_pair        핵심 엔진         37    71     0   34.3%     -19.5    54.3
+  equal_helios_pair        완성 보드        108     0     0  100.0%     +92.6    15.8
+
+  ※ '핵심 엔진'은 core_engine 항목만 채운 보드, '완성 보드'는 r5b 상한
+     생존자의 최종 구성 전체다. 둘의 차이가 작으면 §7.3의 전제 —
+     "2~4개 핵심 구성만으로 같은 엔진이 작동한다" — 가 확인된 것이고,
+     크면 그 레시피의 핵심 정의가 좁게 잡힌 것이다.
+  ※ 승률의 분모는 결판난 전투다. 미해결은 따로 센다.
+  ※ **선체격차**는 (내 잔여 선체 − 상대 잔여 선체)의 평균이다.
+     승률이 100%로 포화해도 남는 해상도다 — 전원을 이기는 빌드끼리도
+     여유가 얼마나 다른지는 이 열만 말한다.
+
+── D2b. 풀별 도달성 — 강한 것과 모을 수 있는 것은 다르다 ────────────────────────────────
+  런 하나의 제안 추첨 51회 (선택 17 × 제안 3) 기준 기대 노출.
+  풀         레시피                      가장 구하기 어려운 파츠                      필요     기대노출
+  r100      r100_autocannon_trio     scrap_autocannon                    3      1.7
+  v100      —                         — 배정된 레시피 없음 (주 비교 제외)
+  a100      aeonic_photon_trio       helios_lance                        1      1.7
+  r70_v30   r100_autocannon_trio     scrap_autocannon                    3      1.2
+  r70_a30   r100_autocannon_trio     scrap_autocannon                    3      1.2
+  v70_r30   r100_autocannon_trio     scrap_autocannon                    3      0.5
+  v70_a30   aeonic_photon_trio       helios_lance                        1      0.5
+  a70_r30   a70_r30_photon_engine    scrap_autocannon                    1      0.5
+  a70_v30   aeonic_photon_trio       helios_lance                        1      1.2
+  equal     a70_r30_photon_engine    helios_lance                        1      0.6
+
+  ※ 기대노출 < 필요 이면 그 풀에서는 레시피를 모으기 어렵다.
+     r5c에서 v70_r30의 평균 진행도가 0.07이었던 것이 이 값으로 설명된다.
+  ※ 이 값은 **상한**이다. 제안에 나타나는 것과 AI가 고르는 것은 다르고,
+     같은 제안 안에서 다른 파츠와 경쟁한다.
+  ※ 도달성이 낮다고 그 풀을 빼지는 않았다. **빼는 것도 기준 변경**이고,
+     낮은 도달성 자체가 §9.3이 보려는 "반복을 고집하는 비용"이다.
+     다만 그 풀의 낮은 성과를 "고정 전략이 약하다"로 읽으면 안 된다.
+
+── D3. Core 재질과 초과 피해 진단 (§11) ───────────────────────────────────────
+  11.1 Core 재질 — **같은 보드에서 재질만 바꾼다**
+  대상은 접전하는 보드다. 포화한 보드에서는 어떤 축도 0으로 보인다.
+  대상 보드                  조건                 승     패     무      승률      선체격차
+  mid_p165_r4            현재(plating)       31    71     0   30.4%     -36.9
+                         중립(배율 1.0)        41    61     0   40.2%     -26.3
+                         biomass           32    68     2   31.4%     -23.7
+  mid_p35_r3             현재(plating)       54    48     0   52.9%      -9.6
+                         중립(배율 1.0)        51    51     0   50.0%     -15.4
+                         biomass           52    50     0   51.0%      -7.3
+  mid_p40_r3             현재(plating)       55    47     0   53.9%      +3.1
+                         중립(배율 1.0)        43    59     0   42.2%     -15.0
+                         biomass           61    41     0   59.8%     +13.6
+  mid_p45_r3             현재(plating)       12    90     0   11.8%     -70.0
+                         중립(배율 1.0)        10    92     0    9.8%     -73.8
+                         biomass           12    90     0   11.8%     -65.0
+  mid_p0_r3              현재(plating)       37    65     0   36.3%     -25.2
+                         중립(배율 1.0)        51    50     1   50.0%      -2.0
+                         biomass           41    57     4   40.2%     -10.8
+  mid_p0_r4              현재(plating)       46    56     0   45.1%     -15.8
+                         중립(배율 1.0)        55    45     2   53.9%      +8.6
+                         biomass           58    44     0   56.9%      +1.2
+  r100_autocannon_trio(핵심) 현재(plating)       90    18     0   83.3%     +56.1
+                         중립(배율 1.0)        87    21     0   80.6%     +48.9
+                         biomass           87    21     0   80.6%     +57.0
+  a70_r30_photon_engine(핵심) 현재(plating)       90    18     0   83.3%     +55.7
+                         중립(배율 1.0)        88    20     0   81.5%     +53.4
+                         biomass           85    23     0   78.7%     +55.5
+  aeonic_photon_trio(핵심) 현재(plating)       60    48     0   55.6%      +9.9
+                         중립(배율 1.0)        57    51     0   52.8%      +6.6
+                         biomass           59    49     0   54.6%     +14.8
+  equal_helios_pair(핵심)  현재(plating)       40    68     0   37.0%     -19.4
+                         중립(배율 1.0)        52    56     0   48.1%      -1.5
+                         biomass           46    62     0   42.6%      -5.7
+
+  중립으로 바꿨을 때 선체격차 변화: 평균 11.7 · 최대 24.4 (선체 100 기준)
+  ※ 이 값이 재질 축의 **크기**다. 부호는 보드마다 다르다 — 어떤 보드는
+     중립에서 좋아지고 어떤 보드는 나빠진다. 방향이 일정하지 않다는 것
+     자체가 "재질이 풀 순위를 정한다"에 대한 반증이다 (§4.3).
+  ※ 상대측 Core는 그대로 두었다. 양쪽을 함께 바꾸면 재질 효과가 상쇄되어
+     0으로 보인다 — 재려는 것은 '이 빌드가 그 재질을 입었을 때'다.
+  ※ 중립 조건은 **진단 전용 규칙**이다 (combat_sim.rules의 neutral_damage_types).
+     게임 규칙이 아니고 배치에서는 항상 꺼져 있다.
+  ※ biomass Core(symbiotic_core)는 재질뿐 아니라 자체 효과(영구 재생 1)를
+     함께 갖는다. **재질만의 효과가 아니다** — §11.1의 "Core 추가 효과는
+     고정한다"를 지금 콘텐츠로는 만족시킬 수 없다. 중립 조건과 현재 조건의
+     차이가 재질 축의 상한이고, biomass 행은 참고값이다.
+  ※ 풀 순위만 보고 팩션 파츠를 버프·너프하지 않는다 (§11.1).
+
+  11.2 초과 피해 — **초반 대표 스냅샷에서 ON / OFF**
+  상대                 조건            승      패      무      미해결      평균초     초과결정
+  early_p0_r0        ON            3     27      0        0     73.5       18
+                     OFF           0     18      0       12     85.9        0
+  early_p55_r2       ON            8     22      0        0     70.6       18
+                     OFF           2     18      0       10     82.9        0
+  early_p110_r0      ON           29      1      0        0     52.4        6
+                     OFF          29      1      0        0     57.0        0
+  early_p20_r0       ON            8     22      0        0     84.8       20
+                     OFF           0     15      0       15    101.0        0
+  early_p25_r0       ON           22      8      0        0     55.9        1
+                     OFF          22      8      0        0     58.3        0
+  early_p30_r0       ON           18     12      0        0     67.1       14
+                     OFF          16     12      0        2     71.0        0
+
+  ※ OFF에서 120초 상한에 닿은 전투는 **미해결**이다. 승·패·무 어디에도
+     넣지 않았다 (§11.2). 넣으면 초과 피해를 끈 조건의 승률이 규칙 때문에
+     낮아 보인다.
+  ※ 미해결 비율이 크면 그 구간의 전투가 초과 피해 **없이는 끝나지 않는다**는
+     뜻이다. 그것은 3파츠 시작의 결함일 수도, 초반 화력 부족일 수도 있다 —
+     이 표는 어느 쪽인지 말하지 않는다 (§11.2 마지막).
+
+실행 시간 135.7초

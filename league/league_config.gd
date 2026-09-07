@@ -59,6 +59,11 @@ var overtime_start_seconds: float = 60.0
 var overtime_base_fraction: float = 0.001
 ## 기준 선체는 **배치 공통값**이지 참가자의 현재/최대 선체가 아니다 (§9.2).
 var overtime_reference_hull: int = 100
+## **진단 전용.** 참이면 공격/방어 타입 배율을 전부 1.0으로 본다 (§11.1의
+## "관련 피해 배율 전부 1.0인 중립 기준"). 배치에서는 항상 false다 —
+## 이 플래그로 돌린 결과를 밸런스 근거로 쓰지 않는다.
+var diagnostic_neutral_types: bool = false
+
 var timeout_result: String = "draw"
 
 # --- 함선 골격 ---
@@ -131,6 +136,7 @@ func combat_rules() -> Dictionary:
 		"overtime_base_fraction": overtime_base_fraction,
 		"overtime_reference_hull": overtime_reference_hull,
 		"timeout_result": timeout_result,
+		"neutral_damage_types": diagnostic_neutral_types,
 	}
 
 ## 리포트 머리에 찍는 재현 정보. 여기 없는 값으로 결과가 달라지면 재현이 깨진 것이다.

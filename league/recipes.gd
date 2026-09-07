@@ -70,8 +70,45 @@ const RECIPES: Dictionary = {
 			],
 		},
 	},
+	"aeonic_photon_trio": {
+		"note": "광자 계열 본체 3종 + 숙주 고정 증강 2종. Aeonic만으로 구성된다.",
+		"evidence": "a70_r30_photon_engine에서 유일한 Reclaimer 파츠"
+			+ "(scrap_autocannon)를 뺀 것이다. **새 관측이 아니라 같은 관측의 "
+			+ "부분집합**이고, 뺀 이유는 도달성이다 — Aeonic만 있는 풀(a100·"
+			+ "v70_a30·a70_v30)에서는 원본을 완성할 수 없다. 벤치마크 결과를 "
+			+ "보고 고른 구성이 아니라, 관측에서 유도한 뒤 검증했다.",
+		"core_engine": [
+			{"part": "helios_lance", "count": 1, "role": "body"},
+			{"part": "photon_lance", "count": 1, "role": "body"},
+			{"part": "returning_photon_shell", "count": 1, "role": "body"},
+			{"part": "fracture_engraver", "count": 1, "role": "augment",
+				"host": "photon_lance"},
+			{"part": "depletion_recovery_plate", "count": 1, "role": "augment",
+				"host": "returning_photon_shell"},
+		],
+		# 관측된 완성 보드가 **없다**. 이 구성으로 상한 생존한 참가자가 없기
+		# 때문이다. 없는 것을 지어내지 않고 비워 둔다 — full_build가 비면
+		# D2는 핵심 엔진만 검증한다.
+		"full_build": {},
+	},
 	"equal_helios_pair": {
-		"note": "헬리오스 창을 본체로 2개 적재.",
+		"note": "헬리오스 창을 본체로 2개 적재. **기각됐다** — 아래 rejected 참조.",
+		# 단계 D에서 고정 상대군에 붙여 기각했다 (§7.3의 "고정 상대군에서 강도를
+		# 확인한 뒤 확정한다"). 핵심 엔진 34.3% · 선체격차 −19.5인데 같은 참가자의
+		# 완성 보드는 100% · +92.6이었다. 즉 그 보드의 강도는 helios_lance 2개에서
+		# 나온 것이 아니다 — **핵심 정의가 틀렸다.**
+		#
+		# 지우지 않고 남긴다. 기각도 관측이고, 지우면 다음에 같은 유도를 반복한다.
+		# 벤치마크 결과를 보고 구성을 넓히지도 않았다 — 그것은 시험에 맞춰
+		# 가설을 고치는 것이다 (§7.3의 검증 편향 방지).
+		"rejected": {
+			"at": "단계 D (2026-09-08)",
+			"core_win_rate": 0.343, "core_margin": -19.5,
+			"full_win_rate": 1.0, "full_margin": 92.6,
+			"reason": "핵심 엔진과 완성 보드의 강도 차이가 너무 크다. 근거가 "
+				+ "참가자 한 명뿐이라 교집합을 만들 수 없었던 것이 원인이다.",
+			"replaced_by": "aeonic_photon_trio",
+		},
 		"evidence": "r5b equal·시드4에서 상한 생존한 참가자 148(안정형) 한 명. "
 			+ "교집합을 만들 상대가 없으므로 **반복 적재된 부분만** 취했다 — "
 			+ "helios_lance 본체 2개. 나머지 본체(dielectric_accumulator·"
@@ -100,20 +137,23 @@ const RECIPES: Dictionary = {
 ##   2) 없으면 핵심 파츠를 전부 구할 수 있는 레시피 중 하나
 ##   3) 어느 것도 구할 수 없으면 빈 문자열 — **주 비교에서 제외한다**
 ##
-## v100은 3번이다. 세 레시피의 핵심 파츠에 Viridia가 하나도 없다 (관측된 상한
+## 단계 D에서 **고정 상대군 검증을 통과한 레시피만** 배정한다 (§7.3).
+## `equal_helios_pair`는 기각됐고 그 자리는 `aeonic_photon_trio`가 받았다.
+##
+## v100은 3번이다. 검증된 세 레시피의 핵심 파츠에 Viridia가 하나도 없다 (관측된 상한
 ## 생존자 중 Viridia 주력이 없었기 때문이다). **구할 수 없는 풀에서 실패한 횟수로
 ## "고정 전략은 약하다"고 주장하지 않는다** (§7.3) — 그래서 0으로 채우지 않고 비운다.
 const POOL_RECIPE: Dictionary = {
 	"r100":    "r100_autocannon_trio",     # 관측
 	"v100":    "",                          # 도달 불가 — 제외
-	"a100":    "equal_helios_pair",
+	"a100":    "aeonic_photon_trio",
 	"r70_v30": "r100_autocannon_trio",
 	"r70_a30": "r100_autocannon_trio",
 	"v70_r30": "r100_autocannon_trio",
-	"v70_a30": "equal_helios_pair",
+	"v70_a30": "aeonic_photon_trio",
 	"a70_r30": "a70_r30_photon_engine",    # 관측
-	"a70_v30": "equal_helios_pair",
-	"equal":   "equal_helios_pair",        # 관측
+	"a70_v30": "aeonic_photon_trio",
+	"equal":   "a70_r30_photon_engine",    # Reclaimer 34 · Aeonic 33이라 도달 가능
 }
 
 ## 이 풀의 목표 레시피 id. 없으면 빈 문자열.

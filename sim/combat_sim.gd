@@ -78,6 +78,10 @@ func setup(player_ship: RefCounted, enemy_ship: RefCounted, combat_seed: int) ->
 ## 다른 틱 단계(예: regen_ticked)들이 이미 하고 있는 "for ship in [player, enemy]"
 ## 패턴과 일관된다.
 func setup_ready() -> void:
+	# 진단용 중립 배율(§11.1). rules에 없으면 두 함선 모두 false 그대로다.
+	if bool(rules.get("neutral_damage_types", false)):
+		player.neutral_damage_types = true
+		enemy.neutral_damage_types = true
 	for ship: RefCounted in [player, enemy]:
 		_begin_chain()
 		emit("combat_start", ship.side, {

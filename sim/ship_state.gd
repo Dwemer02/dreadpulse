@@ -19,6 +19,14 @@ var resonance: int = 0
 ## 공격 타입 상성의 방어측 절반이 이 값에서 나온다.
 var hull_material: String = K.DEFAULT_HULL_MATERIAL
 
+## **진단 전용.** 참이면 공격/방어 타입 배율을 전부 1.0으로 본다.
+##
+## 게임 규칙이 아니다 — 자동 조립 리그가 "재질 축이 결과를 얼마나 움직이는가"를
+## 재려고 combat_sim.rules로 주입하는 선택 규칙이다 (r5b 피드백 §11.1의
+## "관련 피해 배율 전부 1.0인 중립 기준"). 기본값 false에서는 한 줄도 달라지지
+## 않으며, 이 플래그로 돌린 전투 결과를 밸런스 근거로 쓰지 않는다.
+var neutral_damage_types: bool = false
+
 ## 파열. 누적되며 자연 감소하지 않는다. hull 이상이 되는 순간 Collapse.
 var fracture: int = 0
 

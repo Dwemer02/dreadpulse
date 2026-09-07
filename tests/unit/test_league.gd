@@ -6,7 +6,7 @@ extends RefCounted
 ## 불가능한 조립이 통과하는가, 초과 피해가 규칙대로 들어가는가, 후보 평가가 원본을
 ## 오염시키는가, 같은 시드가 같은 결과를 내는가.
 
-const EXPECTED_CHECKS := 155
+const EXPECTED_CHECKS := 200
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -19,6 +19,9 @@ const LeagueContent = preload("res://league/league_content.gd")
 const PartMeta = preload("res://league/part_meta.gd")
 const Recipes = preload("res://league/recipes.gd")
 const InvestmentLog = preload("res://league/investment_log.gd")
+const Archive = preload("res://league/opponent_archive.gd")
+const Benchmark = preload("res://league/benchmark.gd")
+const Profile = preload("res://league/build_profile.gd")
 const Graph = preload("res://league/build_graph.gd")
 const Evaluator = preload("res://league/build_evaluator.gd")
 const Generator = preload("res://league/candidate_generator.gd")
@@ -51,6 +54,10 @@ func run(t: RefCounted) -> void:
 	_test_offer_stage_does_not_saturate(t)
 	_test_investment_unresolved_is_not_failure(t)
 	_test_reward_uses_split_by_disposition(t)
+	_test_archive_is_fixed_and_diverse(t)
+	_test_benchmark_separates_unresolved(t)
+	_test_benchmark_margin_is_side_aware(t)
+	_test_rejected_recipe_is_not_assigned(t)
 	_test_candidate_legality(t)
 	_test_candidates_do_not_mutate(t)
 	_test_overtime_schedule(t)
@@ -518,6 +525,128 @@ func _test_reward_uses_split_by_disposition(t: RefCounted) -> void:
 	t.check(["body", "augment", "storage"].has(str(decision["chosen_use"])),
 		"고른 후보의 처분이 기록된다 (%s)" % str(decision["chosen_use"]))
 
+
+## 고정 상대군은 **파일에 얼려져 있고 다양해야** 한다 (r5b 피드백 §8.4).
+##
+## 첫 판본은 스냅샷 파일 순서대로 채웠는데, 그 순서가 참가자 id 오름차순이라
+## 18명 전부 즉시 전력형에 r100/v100/a100뿐이었다. 그건 "서로 다른 구조"가 아니라
+## "먼저 나온 구조"다.
+func _test_archive_is_fixed_and_diverse(t: RefCounted) -> void:
+	var opponents: Array = Archive.load_all()
+	t.check(opponents.size() >= 12, "상대군이 파일에 있다 (%d명)" % opponents.size())
+
+	var strategies: Dictionary = {}
+	var pools: Dictionary = {}
+	var buckets: Dictionary = {}
+	var stages: Dictionary = {}
+	var finals: int = 0
+	for o: Variant in opponents:
+		var row: Dictionary = o
+		var src: Dictionary = row["source"]
+		strategies[str(src["strategy"])] = true
+		pools[str(src["pool"])] = true
+		buckets[str(row["bucket"])] = true
+		stages[str(row["stage"])] = true
+		if bool(src["was_final_round"]):
+			finals += 1
+	t.check(strategies.size() >= 3,
+		"한 전략에서만 뽑히지 않았다 (%d종)" % strategies.size())
+	t.check(pools.size() >= 5, "한 풀에서만 뽑히지 않았다 (%d종)" % pools.size())
+	t.check(buckets.size() >= 10, "구조가 다양하다 (%d종)" % buckets.size())
+	t.eq(stages.size(), 3, "초·중·후반이 모두 있다")
+	# **상한 생존 빌드만으로 구성하지 않음** (§8.4).
+	t.check(finals < opponents.size(),
+		"최종 라운드 스냅샷만으로 채우지 않았다 (%d/%d)" % [finals, opponents.size()])
+
+	# 모든 상대는 공격 수단이 있어야 한다 — 없으면 모든 검사 대상이 시간 초과로만
+	# 이기므로 강도를 재지 못한다.
+	for o2: Variant in opponents:
+		t.check(bool(((o2 as Dictionary)["profile"] as Dictionary)["operational"]),
+			"%s는 공격 수단이 있다" % str((o2 as Dictionary)["id"]))
+
+## 시간 상한에 닿은 전투는 **미해결**이지 무승부가 아니다 (§11.2).
+##
+## 이걸 무승부나 패배로 세면 초과 피해를 끈 진단 조건의 승률이 규칙 때문에 낮아
+## 보이고, "초과 피해가 없으면 약하다"는 거짓 결론이 나온다.
+func _test_benchmark_separates_unresolved(t: RefCounted) -> void:
+	var opponents: Array = Archive.load_all()
+	if opponents.size() < 2:
+		t.check(false, "상대군이 없어 검증할 수 없다")
+		return
+	# 공격이 아주 느린 보드를 만든다. 초과 피해가 없으면 120초 안에 못 끝낸다.
+	var slow: Dictionary = _lone_board("regen_sac")
+	var subset: Array = [opponents[0]]
+	var off: Dictionary = Benchmark.run(_content.catalog, _content_config(),
+		slow, subset, Benchmark.no_overtime_rules(), "off")
+	t.eq(int(off["matches"]),
+		int(off["wins"]) + int(off["losses"]) + int(off["draws"])
+			+ int(off["unresolved"]) + int(off["errors"]),
+		"모든 전투가 정확히 한 칸에 들어간다")
+	t.check(int(off["unresolved"]) > 0,
+		"초과 피해 없이 안 끝나는 전투가 미해결로 잡힌다 (%d판)" % int(off["unresolved"]))
+	t.eq(int(off["draws"]), 0, "미해결을 무승부 칸에 넣지 않는다")
+	# 승률의 분모는 결판난 전투다.
+	t.eq(int(off["decided"]),
+		int(off["wins"]) + int(off["losses"]) + int(off["draws"]),
+		"승률 분모에 미해결이 들어가지 않는다")
+
+## 선체 격차는 **좌우 교환을 안다** (§8.4의 "필요 시 좌우 교환").
+##
+## 우리가 오른쪽에 섰을 때 hulls.left를 우리 것으로 읽으면 잔여 선체가 뒤바뀐다.
+##
+## 첫 판본은 "강한 쪽 격차 > 0, 약한 쪽 격차 < 0"만 봤는데 **그 어서션은 버그를
+## 통과시켰다.** 좌우를 무시해도 절반의 판은 우연히 맞고 나머지 절반은 0이 되어
+## 부호는 그대로였기 때문이다. 부호가 아니라 **불변식**을 봐야 한다:
+## 같은 대진을 양쪽에서 본 것이므로 A가 본 "내 선체"는 B가 본 "상대 선체"와 같다.
+func _test_benchmark_margin_is_side_aware(t: RefCounted) -> void:
+	# regen_sac은 공격 수단이 없다 — 결과가 결정적이라 시드 차이가 값을 흔들지 않는다.
+	var strong: Dictionary = _lone_board("photon_lance")
+	var weak: Dictionary = _lone_board("regen_sac")
+	var config: RefCounted = _content_config()
+	var a: Dictionary = Benchmark.run(_content.catalog, config, strong,
+		[{"id": "weak", "stage": "early", "bucket": "test", "build": weak}],
+		config.combat_rules(), "strong")
+	var b: Dictionary = Benchmark.run(_content.catalog, config, weak,
+		[{"id": "strong", "stage": "early", "bucket": "test", "build": strong}],
+		config.combat_rules(), "weak")
+
+	t.check(float(a["avg_margin"]) > 0.0,
+		"강한 쪽의 격차는 양수다 (%+.1f)" % float(a["avg_margin"]))
+	t.check(float(b["avg_margin"]) < 0.0,
+		"약한 쪽의 격차는 음수다 (%+.1f)" % float(b["avg_margin"]))
+	# 불변식 — 같은 대진을 뒤집어 본 것이다.
+	t.check(absf(float(a["avg_our_hull"]) - float(b["avg_their_hull"])) < 10.0,
+		"A가 본 내 선체(%.1f) = B가 본 상대 선체(%.1f)"
+			% [float(a["avg_our_hull"]), float(b["avg_their_hull"])])
+	t.check(absf(float(a["avg_their_hull"]) - float(b["avg_our_hull"])) < 10.0,
+		"A가 본 상대 선체(%.1f) = B가 본 내 선체(%.1f)"
+			% [float(a["avg_their_hull"]), float(b["avg_our_hull"])])
+	t.check(float(b["avg_our_hull"]) < 10.0,
+		"공격 수단이 없는 쪽의 잔여 선체는 0에 가깝다 (%.1f)" % float(b["avg_our_hull"]))
+	t.check(float(a["win_rate"]) > float(b["win_rate"]), "승률도 같은 방향이다")
+
+## 기각된 레시피는 어느 풀에도 배정되지 않는다 (§7.3).
+##
+## 지우지 않고 기각 표시만 남기므로, 표에서 빼는 것을 잊으면 조용히 다시 쓰인다.
+func _test_rejected_recipe_is_not_assigned(t: RefCounted) -> void:
+	var rejected: Array[String] = []
+	for recipe_id: String in Recipes.RECIPES:
+		if (Recipes.RECIPES[recipe_id] as Dictionary).has("rejected"):
+			rejected.append(recipe_id)
+	t.check(not rejected.is_empty(),
+		"기각 기록이 남아 있다 (%s)" % str(rejected))
+	for pool_id: String in Config.pool_ids():
+		var assigned: String = Recipes.recipe_id_for(pool_id)
+		t.check(not rejected.has(assigned),
+			"%s에 기각된 레시피가 배정되지 않았다 (%s)" % [pool_id, assigned])
+
+## 파츠 하나만 놓은 최소 보드. 벤치마크 판정을 재는 데 쓴다.
+func _lone_board(part_id: String) -> Dictionary:
+	var inv: RefCounted = Inventory.new()
+	_content.fresh_board(_content_config(), inv)
+	var role: String = str(_content.catalog.parts[part_id]["base_role"])
+	inv.place("weapon_1" if role == "weapon" else "defense_1", inv.add(part_id))
+	return inv.to_build("test_%s" % part_id, _content_config().frame_id)
 
 # --- 조립 후보 ---
 

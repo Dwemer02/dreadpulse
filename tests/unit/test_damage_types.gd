@@ -1,7 +1,7 @@
 extends RefCounted
 
 ## 이 모듈이 실행해야 할 어서션 수. 러너를 돌린 뒤 실제 개수로 갱신한다.
-const EXPECTED_CHECKS := 62
+const EXPECTED_CHECKS := 68
 
 const K = preload("res://sim/sim_const.gd")
 const Damage = preload("res://sim/damage.gd")
@@ -23,6 +23,7 @@ func run(t: RefCounted) -> void:
 	_test_two_layers(t)
 	_test_shield_absorbs_fully(t)
 	_test_determinism(t)
+	_test_neutral_flag_is_off_by_default(t)
 	t.done()
 
 ## 상성표의 형태 자체를 검증한다. 표가 곧 계약이므로 오타 하나가 팩션 밸런스를 뒤집는다.
@@ -145,3 +146,29 @@ func _test_determinism(t: RefCounted) -> void:
 			results.append(int(Damage.apply(s, 83, atk)["hull_damage"]))
 		t.eq(results[0], results[1], "%s: 같은 입력은 같은 출력 (1==2)" % atk)
 		t.eq(results[1], results[2], "%s: 같은 입력은 같은 출력 (2==3)" % atk)
+
+
+## 진단용 중립 배율 플래그 (r5b 피드백 §11.1).
+##
+## **기본값에서 한 틱도 달라지지 않아야 한다.** 이 플래그는 리그가 재질 축의 크기를
+## 재려고 combat_sim.rules로 주입하는 진단 규칙이지 게임 규칙이 아니다.
+## 켜졌을 때만 모든 배율이 1.0이 된다.
+func _test_neutral_flag_is_off_by_default(t: RefCounted) -> void:
+	var normal: RefCounted = _ship("plating")
+	t.check(not normal.neutral_damage_types, "기본값은 꺼져 있다")
+	# thermal은 plating에 3/4다. 꺼져 있으면 그대로 깎여야 한다.
+	var hit: Dictionary = Damage.apply(normal, 100, "thermal")
+	t.eq(int(hit["hull_damage"]), 75, "꺼진 상태에서는 상성표 그대로 (thermal→plating 0.75)")
+	t.eq(int(hit["material_mult"]), 3, "배율 분자도 그대로다")
+
+	var neutral: RefCounted = _ship("plating")
+	neutral.neutral_damage_types = true
+	var flat: Dictionary = Damage.apply(neutral, 100, "thermal")
+	t.eq(int(flat["hull_damage"]), 100, "켜면 1.0이다")
+	t.eq(int(flat["material_mult"]), K.TYPE_MULT_DENOM, "분자가 분모와 같다")
+
+	# 불리한 쪽도 함께 1.0이 되어야 한다 — 한쪽만 중립이면 그건 중립이 아니라 너프다.
+	var exposed: RefCounted = _ship("plating")
+	exposed.neutral_damage_types = true
+	t.eq(int(Damage.apply(exposed, 100, "caustic")["hull_damage"]), 100,
+		"불리한 쪽(caustic→plating 1.5)도 1.0이 된다")

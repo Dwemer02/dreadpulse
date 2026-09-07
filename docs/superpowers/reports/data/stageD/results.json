@@ -1,0 +1,4993 @@
+{
+ "archive": {
+  "built_commit": "a6750b818b04e26ca3f24670831e0349ba89a1a1",
+  "built_from": "tests/out/league/r5-20260907T111238/snapshots.jsonl",
+  "opponent_ids": [
+   "early_p0_r0",
+   "early_p55_r2",
+   "early_p110_r0",
+   "early_p20_r0",
+   "early_p25_r0",
+   "early_p30_r0",
+   "mid_p165_r4",
+   "mid_p35_r3",
+   "mid_p40_r3",
+   "mid_p45_r3",
+   "mid_p0_r3",
+   "mid_p0_r4",
+   "late_p1_r8",
+   "late_p2_r8",
+   "late_p8_r8",
+   "late_p9_r8",
+   "late_p10_r8",
+   "late_p11_r8"
+  ],
+  "opponents": 18,
+  "selection_rule": {
+   "bucket": "공격 경로 + 방어 기능 + 시동 구조 (league/build_profile.gd)",
+   "excluded": "공격 불능 빌드, 보드 서명 중복",
+   "note": "출력 크기를 기준에 넣지 않는다 — 강한 것을 고르는 것이 아니라 작동 방식이 다른 것을 고르는 것이다 (§8.4).",
+   "order": "새로운 면(구조 버킷 4점 · 전략 2점 · 풀 1점)을 가장 많이 더하는 후보를 매번 고른다. 동점이면 참가자 id가 작은 쪽.",
+   "per_bucket": 1.0,
+   "per_stage": 6.0,
+   "stages": {
+    "early": "round<=2",
+    "late": "round>=7",
+    "mid": "round 3~6"
+   }
+  },
+  "version": "archive-1"
+ },
+ "benchmark_seeds": [
+  9001,
+  9002,
+  9003
+ ],
+ "evaluator_version": "eval-3-host-aware",
+ "git_commit": "a6750b818b04e26ca3f24670831e0349ba89a1a1",
+ "git_dirty": true,
+ "godot_version": "4.7.1-stable (official)",
+ "league_rules": {
+  "neutral_damage_types": false,
+  "overtime_base_fraction": 0.001,
+  "overtime_reference_hull": 100,
+  "overtime_start_seconds": 60.0,
+  "timeout_result": "draw"
+ },
+ "recipes": {
+  "pool_recipe": {
+   "a100": "aeonic_photon_trio",
+   "a70_r30": "a70_r30_photon_engine",
+   "a70_v30": "aeonic_photon_trio",
+   "equal": "a70_r30_photon_engine",
+   "r100": "r100_autocannon_trio",
+   "r70_a30": "r100_autocannon_trio",
+   "r70_v30": "r100_autocannon_trio",
+   "v100": "",
+   "v70_a30": "aeonic_photon_trio",
+   "v70_r30": "r100_autocannon_trio"
+  },
+  "recipes": {
+   "a70_r30_photon_engine": {
+    "core_engine": [
+     {
+      "count": 1,
+      "part": "helios_lance",
+      "role": "body"
+     },
+     {
+      "count": 1,
+      "part": "photon_lance",
+      "role": "body"
+     },
+     {
+      "count": 1,
+      "part": "returning_photon_shell",
+      "role": "body"
+     },
+     {
+      "count": 1,
+      "part": "scrap_autocannon",
+      "role": "body"
+     },
+     {
+      "count": 1,
+      "host": "photon_lance",
+      "part": "fracture_engraver",
+      "role": "augment"
+     },
+     {
+      "count": 1,
+      "host": "returning_photon_shell",
+      "part": "depletion_recovery_plate",
+      "role": "augment"
+     }
+    ],
+    "evidence": "r5b a70_r30·시드3에서 상한 생존한 참가자 87(엔진형)·187(교차형)의 최종 보드 교집합. 본체 4종(helios_lance·photon_lance·returning_photon_shell·scrap_autocannon)이 같고, 증강 2개는 숙주까지 같았다 — photon_lance+fracture_engraver, returning_photon_shell+depletion_recovery_plate.",
+    "full_build": {
+     "board": [
+      [
+       "helios_lance",
+       "ephemeral_stellar_tube"
+      ],
+      [
+       "loan_shield_membrane",
+       "eclipse_shield_plate"
+      ],
+      [
+       "photon_lance",
+       "fracture_engraver"
+      ],
+      [
+       "returning_photon_shell",
+       "depletion_recovery_plate"
+      ],
+      [
+       "scrap_autocannon",
+       "ephemeral_stellar_tube"
+      ]
+     ],
+     "participant": 87
+    },
+    "note": "광자 계열 본체 4종 + 숙주 관계가 고정된 증강 2종."
+   },
+   "aeonic_photon_trio": {
+    "core_engine": [
+     {
+      "count": 1,
+      "part": "helios_lance",
+      "role": "body"
+     },
+     {
+      "count": 1,
+      "part": "photon_lance",
+      "role": "body"
+     },
+     {
+      "count": 1,
+      "part": "returning_photon_shell",
+      "role": "body"
+     },
+     {
+      "count": 1,
+      "host": "photon_lance",
+      "part": "fracture_engraver",
+      "role": "augment"
+     },
+     {
+      "count": 1,
+      "host": "returning_photon_shell",
+      "part": "depletion_recovery_plate",
+      "role": "augment"
+     }
+    ],
+    "evidence": "a70_r30_photon_engine에서 유일한 Reclaimer 파츠(scrap_autocannon)를 뺀 것이다. **새 관측이 아니라 같은 관측의 부분집합**이고, 뺀 이유는 도달성이다 — Aeonic만 있는 풀(a100·v70_a30·a70_v30)에서는 원본을 완성할 수 없다. 벤치마크 결과를 보고 고른 구성이 아니라, 관측에서 유도한 뒤 검증했다.",
+    "full_build": {},
+    "note": "광자 계열 본체 3종 + 숙주 고정 증강 2종. Aeonic만으로 구성된다."
+   },
+   "equal_helios_pair": {
+    "core_engine": [
+     {
+      "count": 2,
+      "part": "helios_lance",
+      "role": "body"
+     }
+    ],
+    "evidence": "r5b equal·시드4에서 상한 생존한 참가자 148(안정형) 한 명. 교집합을 만들 상대가 없으므로 **반복 적재된 부분만** 취했다 — helios_lance 본체 2개. 나머지 본체(dielectric_accumulator·phase_barrier·regen_sac)는 근거가 한 명뿐이라 핵심에 넣지 않았다.",
+    "full_build": {
+     "board": [
+      [
+       "dielectric_accumulator",
+       "acid_proof_membrane"
+      ],
+      [
+       "helios_lance",
+       "layered_regen_membrane"
+      ],
+      [
+       "helios_lance",
+       "loan_shield_membrane"
+      ],
+      [
+       "phase_barrier",
+       "acid_digest_organ"
+      ],
+      [
+       "regen_sac",
+       "ephemeral_stellar_tube"
+      ]
+     ],
+     "participant": 148
+    },
+    "note": "헬리오스 창을 본체로 2개 적재. **기각됐다** — 아래 rejected 참조.",
+    "rejected": {
+     "at": "단계 D (2026-09-08)",
+     "core_margin": -19.5,
+     "core_win_rate": 0.343,
+     "full_margin": 92.6,
+     "full_win_rate": 1.0,
+     "reason": "핵심 엔진과 완성 보드의 강도 차이가 너무 크다. 근거가 참가자 한 명뿐이라 교집합을 만들 수 없었던 것이 원인이다.",
+     "replaced_by": "aeonic_photon_trio"
+    }
+   },
+   "r100_autocannon_trio": {
+    "core_engine": [
+     {
+      "count": 3,
+      "part": "scrap_autocannon",
+      "role": "body"
+     }
+    ],
+    "evidence": "r5b r100·시드4에서 상한 생존한 참가자 3(즉시형)·103(안정형)의 최종 본체 교집합. 두 참가자 모두 scrap_autocannon 본체 3개였고 나머지 본체는 서로 달랐다 (3은 acid_jet_cutter·neutralizing_washer, 103은 field_welder 2개).",
+    "full_build": {
+     "board": [
+      [
+       "acid_jet_cutter",
+       "field_welder"
+      ],
+      [
+       "neutralizing_washer",
+       "rotary_incinerator"
+      ],
+      [
+       "scrap_autocannon",
+       "field_welder"
+      ],
+      [
+       "scrap_autocannon",
+       "field_welder"
+      ],
+      [
+       "scrap_autocannon",
+       "recast_barrel"
+      ]
+     ],
+     "participant": 3
+    },
+    "note": "고철 기관포를 본체로 3개 적재."
+   }
+  },
+  "stored_credit": 0.4
+ },
+ "results": {
+  "d1": {
+   "rows": [
+    {
+     "bucket": "direct|heal|gated",
+     "id": "early_p0_r0",
+     "result": {
+      "avg_elapsed": 60.8441176470588,
+      "avg_margin": -67.6666666666667,
+      "avg_our_hull": 1.20588235294118,
+      "avg_their_hull": 68.8725490196078,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p0_r0",
+      "losses": 97,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 36,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 73.52,
+        "avg_margin": -57.1333333333333,
+        "avg_our_hull": 3.5,
+        "avg_their_hull": 60.6333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 27,
+        "matches": 30,
+        "overtime_decided": 18,
+        "unresolved": 0,
+        "win_rate": 0.1,
+        "wins": 3
+       },
+       "late": {
+        "avg_elapsed": 34.9722222222222,
+        "avg_margin": -98.0,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 98.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 76.1527777777778,
+        "avg_margin": -46.1111111111111,
+        "avg_our_hull": 0.5,
+        "avg_their_hull": 46.6111111111111,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 34,
+        "matches": 36,
+        "overtime_decided": 18,
+        "unresolved": 0,
+        "win_rate": 0.0555555555555556,
+        "wins": 2
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.0490196078431373,
+      "wins": 5
+     }
+    },
+    {
+     "bucket": "direct|defend+heal|gated",
+     "id": "early_p55_r2",
+     "result": {
+      "avg_elapsed": 59.9078431372549,
+      "avg_margin": -65.5882352941177,
+      "avg_our_hull": 6.57843137254902,
+      "avg_their_hull": 72.1666666666667,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p55_r2",
+      "losses": 88,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 45,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 70.6,
+        "avg_margin": -47.1666666666667,
+        "avg_our_hull": 11.8333333333333,
+        "avg_their_hull": 59.0,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 22,
+        "matches": 30,
+        "overtime_decided": 18,
+        "unresolved": 0,
+        "win_rate": 0.266666666666667,
+        "wins": 8
+       },
+       "late": {
+        "avg_elapsed": 36.3611111111111,
+        "avg_margin": -96.4444444444444,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 96.4444444444444,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 3,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 74.5444444444444,
+        "avg_margin": -50.0833333333333,
+        "avg_our_hull": 8.77777777777778,
+        "avg_their_hull": 58.8611111111111,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 30,
+        "matches": 36,
+        "overtime_decided": 24,
+        "unresolved": 0,
+        "win_rate": 0.166666666666667,
+        "wins": 6
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.137254901960784,
+      "wins": 14
+     }
+    },
+    {
+     "bucket": "direct+overheat|defend+time|immediate",
+     "id": "early_p110_r0",
+     "result": {
+      "avg_elapsed": 46.7450980392157,
+      "avg_margin": 17.2156862745098,
+      "avg_our_hull": 45.7058823529412,
+      "avg_their_hull": 28.4901960784314,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p110_r0",
+      "losses": 35,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 16,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 52.3666666666667,
+        "avg_margin": 76.2666666666667,
+        "avg_our_hull": 77.4,
+        "avg_their_hull": 1.13333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 1,
+        "matches": 30,
+        "overtime_decided": 6,
+        "unresolved": 0,
+        "win_rate": 0.966666666666667,
+        "wins": 29
+       },
+       "late": {
+        "avg_elapsed": 32.1388888888889,
+        "avg_margin": -63.0833333333333,
+        "avg_our_hull": 12.9722222222222,
+        "avg_their_hull": 76.0555555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 30,
+        "matches": 36,
+        "overtime_decided": 2,
+        "unresolved": 0,
+        "win_rate": 0.166666666666667,
+        "wins": 6
+       },
+       "mid": {
+        "avg_elapsed": 56.6666666666667,
+        "avg_margin": 48.3055555555556,
+        "avg_our_hull": 52.0277777777778,
+        "avg_their_hull": 3.72222222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 4,
+        "matches": 36,
+        "overtime_decided": 8,
+        "unresolved": 0,
+        "win_rate": 0.888888888888889,
+        "wins": 32
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.656862745098039,
+      "wins": 67
+     }
+    },
+    {
+     "bucket": "direct|none|gated",
+     "id": "early_p20_r0",
+     "result": {
+      "avg_elapsed": 67.0401960784314,
+      "avg_margin": -56.6176470588235,
+      "avg_our_hull": 1.59803921568627,
+      "avg_their_hull": 58.2156862745098,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p20_r0",
+      "losses": 93,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 45,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 84.7666666666667,
+        "avg_margin": -34.7666666666667,
+        "avg_our_hull": 4.83333333333333,
+        "avg_their_hull": 39.6,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 22,
+        "matches": 30,
+        "overtime_decided": 20,
+        "unresolved": 0,
+        "win_rate": 0.266666666666667,
+        "wins": 8
+       },
+       "late": {
+        "avg_elapsed": 42.4444444444444,
+        "avg_margin": -90.3611111111111,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 90.3611111111111,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 6,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 76.8638888888889,
+        "avg_margin": -41.0833333333333,
+        "avg_our_hull": 0.5,
+        "avg_their_hull": 41.5833333333333,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 35,
+        "matches": 36,
+        "overtime_decided": 19,
+        "unresolved": 0,
+        "win_rate": 0.0277777777777778,
+        "wins": 1
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.0882352941176471,
+      "wins": 9
+     }
+    },
+    {
+     "bucket": "direct|time|immediate",
+     "id": "early_p25_r0",
+     "result": {
+      "avg_elapsed": 50.5,
+      "avg_margin": -14.2352941176471,
+      "avg_our_hull": 26.1176470588235,
+      "avg_their_hull": 40.3529411764706,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p25_r0",
+      "losses": 61,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 14,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 55.9133333333333,
+        "avg_margin": 38.2666666666667,
+        "avg_our_hull": 54.3333333333333,
+        "avg_their_hull": 16.0666666666667,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 8,
+        "matches": 30,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.733333333333333,
+        "wins": 22
+       },
+       "late": {
+        "avg_elapsed": 33.3888888888889,
+        "avg_margin": -89.6388888888889,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 89.6388888888889,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 2,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 63.1,
+        "avg_margin": 17.4166666666667,
+        "avg_our_hull": 28.7222222222222,
+        "avg_their_hull": 11.3055555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 17,
+        "matches": 36,
+        "overtime_decided": 11,
+        "unresolved": 0,
+        "win_rate": 0.527777777777778,
+        "wins": 19
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.401960784313726,
+      "wins": 41
+     }
+    },
+    {
+     "bucket": "direct|heal|immediate",
+     "id": "early_p30_r0",
+     "result": {
+      "avg_elapsed": 59.4313725490196,
+      "avg_margin": -19.1274509803922,
+      "avg_our_hull": 29.6764705882353,
+      "avg_their_hull": 48.8039215686275,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p30_r0",
+      "losses": 62,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 31,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 67.1066666666667,
+        "avg_margin": 18.2333333333333,
+        "avg_our_hull": 52.5,
+        "avg_their_hull": 34.2666666666667,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 12,
+        "matches": 30,
+        "overtime_decided": 14,
+        "unresolved": 0,
+        "win_rate": 0.6,
+        "wins": 18
+       },
+       "late": {
+        "avg_elapsed": 37.9444444444444,
+        "avg_margin": -76.4166666666667,
+        "avg_our_hull": 7.5,
+        "avg_their_hull": 83.9166666666667,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 31,
+        "matches": 36,
+        "overtime_decided": 4,
+        "unresolved": 0,
+        "win_rate": 0.138888888888889,
+        "wins": 5
+       },
+       "mid": {
+        "avg_elapsed": 74.5222222222222,
+        "avg_margin": 7.02777777777778,
+        "avg_our_hull": 32.8333333333333,
+        "avg_their_hull": 25.8055555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 19,
+        "matches": 36,
+        "overtime_decided": 13,
+        "unresolved": 0,
+        "win_rate": 0.472222222222222,
+        "wins": 17
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.392156862745098,
+      "wins": 40
+     }
+    },
+    {
+     "bucket": "corrosion+direct|heal|gated",
+     "id": "mid_p165_r4",
+     "result": {
+      "avg_elapsed": 66.1764705882353,
+      "avg_margin": -38.9509803921569,
+      "avg_our_hull": 8.68627450980392,
+      "avg_their_hull": 47.6372549019608,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p165_r4",
+      "losses": 77,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 52,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 83.7611111111111,
+        "avg_margin": -9.52777777777778,
+        "avg_our_hull": 13.8611111111111,
+        "avg_their_hull": 23.3888888888889,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 22,
+        "matches": 36,
+        "overtime_decided": 25,
+        "unresolved": 0,
+        "win_rate": 0.388888888888889,
+        "wins": 14
+       },
+       "late": {
+        "avg_elapsed": 39.5,
+        "avg_margin": -87.7777777777778,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 87.7777777777778,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 7,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 77.0866666666667,
+        "avg_margin": -15.6666666666667,
+        "avg_our_hull": 12.9,
+        "avg_their_hull": 28.5666666666667,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 19,
+        "matches": 30,
+        "overtime_decided": 20,
+        "unresolved": 0,
+        "win_rate": 0.366666666666667,
+        "wins": 11
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.245098039215686,
+      "wins": 25
+     }
+    },
+    {
+     "bucket": "direct+fracture+overheat|none|gated",
+     "id": "mid_p35_r3",
+     "result": {
+      "avg_elapsed": 45.0906862745098,
+      "avg_margin": -14.1372549019608,
+      "avg_our_hull": 28.0196078431373,
+      "avg_their_hull": 42.156862745098,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p35_r3",
+      "losses": 52,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 7,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 49.1166666666667,
+        "avg_margin": 30.1666666666667,
+        "avg_our_hull": 46.8611111111111,
+        "avg_their_hull": 16.6944444444444,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 10,
+        "matches": 36,
+        "overtime_decided": 2,
+        "unresolved": 0,
+        "win_rate": 0.722222222222222,
+        "wins": 26
+       },
+       "late": {
+        "avg_elapsed": 33.5569444444444,
+        "avg_margin": -88.9722222222222,
+        "avg_our_hull": 0.0277777777777778,
+        "avg_their_hull": 89.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 35,
+        "matches": 36,
+        "overtime_decided": 2,
+        "unresolved": 0,
+        "win_rate": 0.0277777777777778,
+        "wins": 1
+       },
+       "mid": {
+        "avg_elapsed": 54.1,
+        "avg_margin": 22.5,
+        "avg_our_hull": 39.0,
+        "avg_their_hull": 16.5,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 7,
+        "matches": 30,
+        "overtime_decided": 3,
+        "unresolved": 0,
+        "win_rate": 0.766666666666667,
+        "wins": 23
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.490196078431373,
+      "wins": 50
+     }
+    },
+    {
+     "bucket": "direct+fracture|defend+time|gated",
+     "id": "mid_p40_r3",
+     "result": {
+      "avg_elapsed": 49.6823529411765,
+      "avg_margin": 4.18627450980392,
+      "avg_our_hull": 40.1666666666667,
+      "avg_their_hull": 35.9803921568627,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p40_r3",
+      "losses": 47,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 11,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 59.4222222222222,
+        "avg_margin": 37.5833333333333,
+        "avg_our_hull": 53.5555555555556,
+        "avg_their_hull": 15.9722222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 12,
+        "matches": 36,
+        "overtime_decided": 5,
+        "unresolved": 0,
+        "win_rate": 0.666666666666667,
+        "wins": 24
+       },
+       "late": {
+        "avg_elapsed": 36.0944444444444,
+        "avg_margin": -70.2222222222222,
+        "avg_our_hull": 12.0277777777778,
+        "avg_their_hull": 82.25,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 30,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.166666666666667,
+        "wins": 6
+       },
+       "mid": {
+        "avg_elapsed": 54.3,
+        "avg_margin": 53.4,
+        "avg_our_hull": 57.8666666666667,
+        "avg_their_hull": 4.46666666666667,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 5,
+        "matches": 30,
+        "overtime_decided": 5,
+        "unresolved": 0,
+        "win_rate": 0.833333333333333,
+        "wins": 25
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.53921568627451,
+      "wins": 55
+     }
+    },
+    {
+     "bucket": "direct+fracture|heal|gated",
+     "id": "mid_p45_r3",
+     "result": {
+      "avg_elapsed": 59.7058823529412,
+      "avg_margin": -70.0294117647059,
+      "avg_our_hull": 0.823529411764706,
+      "avg_their_hull": 70.8529411764706,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p45_r3",
+      "losses": 90,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 24,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 74.6333333333333,
+        "avg_margin": -49.75,
+        "avg_our_hull": 2.33333333333333,
+        "avg_their_hull": 52.0833333333333,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 24,
+        "matches": 36,
+        "overtime_decided": 6,
+        "unresolved": 0,
+        "win_rate": 0.333333333333333,
+        "wins": 12
+       },
+       "late": {
+        "avg_elapsed": 35.6666666666667,
+        "avg_margin": -99.0,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 99.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 70.64,
+        "avg_margin": -59.6,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 59.6,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 30,
+        "matches": 30,
+        "overtime_decided": 18,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.117647058823529,
+      "wins": 12
+     }
+    },
+    {
+     "bucket": "direct|heal|gated",
+     "id": "mid_p0_r3",
+     "result": {
+      "avg_elapsed": 66.6421568627451,
+      "avg_margin": -24.3529411764706,
+      "avg_our_hull": 14.3823529411765,
+      "avg_their_hull": 38.7352941176471,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p0_r3",
+      "losses": 62,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 59,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 83.3333333333333,
+        "avg_margin": 16.1666666666667,
+        "avg_our_hull": 26.4722222222222,
+        "avg_their_hull": 10.3055555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 12,
+        "matches": 36,
+        "overtime_decided": 32,
+        "unresolved": 0,
+        "win_rate": 0.666666666666667,
+        "wins": 24
+       },
+       "late": {
+        "avg_elapsed": 41.8583333333333,
+        "avg_margin": -83.1944444444444,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 83.1944444444444,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 8,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 76.3533333333333,
+        "avg_margin": -2.36666666666667,
+        "avg_our_hull": 17.1333333333333,
+        "avg_their_hull": 19.5,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 14,
+        "matches": 30,
+        "overtime_decided": 19,
+        "unresolved": 0,
+        "win_rate": 0.533333333333333,
+        "wins": 16
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.392156862745098,
+      "wins": 40
+     }
+    },
+    {
+     "bucket": "direct+overheat|heal|gated",
+     "id": "mid_p0_r4",
+     "result": {
+      "avg_elapsed": 65.2549019607843,
+      "avg_margin": -15.9803921568627,
+      "avg_our_hull": 18.9509803921569,
+      "avg_their_hull": 34.9313725490196,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p0_r4",
+      "losses": 56,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 57,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 80.45,
+        "avg_margin": 22.5,
+        "avg_our_hull": 33.8055555555556,
+        "avg_their_hull": 11.3055555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 10,
+        "matches": 36,
+        "overtime_decided": 28,
+        "unresolved": 0,
+        "win_rate": 0.722222222222222,
+        "wins": 26
+       },
+       "late": {
+        "avg_elapsed": 38.9388888888889,
+        "avg_margin": -79.7222222222222,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 79.7222222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 6,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 78.6,
+        "avg_margin": 14.3333333333333,
+        "avg_our_hull": 23.8666666666667,
+        "avg_their_hull": 9.53333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 10,
+        "matches": 30,
+        "overtime_decided": 23,
+        "unresolved": 0,
+        "win_rate": 0.666666666666667,
+        "wins": 20
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.450980392156863,
+      "wins": 46
+     }
+    },
+    {
+     "bucket": "direct+overheat|heal|gated",
+     "id": "late_p1_r8",
+     "result": {
+      "avg_elapsed": 26.0392156862745,
+      "avg_margin": 71.6470588235294,
+      "avg_our_hull": 79.0,
+      "avg_their_hull": 7.35294117647059,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "late_p1_r8",
+      "losses": 15,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 5,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 21.0,
+        "avg_margin": 99.0555555555556,
+        "avg_our_hull": 99.0555555555556,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 30.8333333333333,
+        "avg_margin": 13.6,
+        "avg_our_hull": 38.6,
+        "avg_their_hull": 25.0,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 15,
+        "matches": 30,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.5,
+        "wins": 15
+       },
+       "mid": {
+        "avg_elapsed": 27.0833333333333,
+        "avg_margin": 92.6111111111111,
+        "avg_our_hull": 92.6111111111111,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 4,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.852941176470588,
+      "wins": 87
+     }
+    },
+    {
+     "bucket": "corrosion+direct+overheat|heal|gated",
+     "id": "late_p2_r8",
+     "result": {
+      "avg_elapsed": 38.6862745098039,
+      "avg_margin": 55.7549019607843,
+      "avg_our_hull": 66.921568627451,
+      "avg_their_hull": 11.1666666666667,
+      "decided": 102,
+      "draws": 1,
+      "errors": 0,
+      "label": "late_p2_r8",
+      "losses": 20,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 16,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 33.0277777777778,
+        "avg_margin": 93.9722222222222,
+        "avg_our_hull": 93.9722222222222,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 4,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 43.8,
+        "avg_margin": -22.0333333333333,
+        "avg_our_hull": 15.9333333333333,
+        "avg_their_hull": 37.9666666666667,
+        "decided": 30,
+        "draws": 1,
+        "errors": 0,
+        "losses": 20,
+        "matches": 30,
+        "overtime_decided": 4,
+        "unresolved": 0,
+        "win_rate": 0.3,
+        "wins": 9
+       },
+       "mid": {
+        "avg_elapsed": 40.0833333333333,
+        "avg_margin": 82.3611111111111,
+        "avg_our_hull": 82.3611111111111,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 8,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.794117647058823,
+      "wins": 81
+     }
+    },
+    {
+     "bucket": "corrosion+direct+fracture|defend+heal+time|gated",
+     "id": "late_p8_r8",
+     "result": {
+      "avg_elapsed": 66.1808823529412,
+      "avg_margin": -4.98039215686275,
+      "avg_our_hull": 34.3627450980392,
+      "avg_their_hull": 39.343137254902,
+      "decided": 102,
+      "draws": 2,
+      "errors": 0,
+      "label": "late_p8_r8",
+      "losses": 52,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 34,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 81.25,
+        "avg_margin": 25.6944444444444,
+        "avg_our_hull": 43.8333333333333,
+        "avg_their_hull": 18.1388888888889,
+        "decided": 36,
+        "draws": 2,
+        "errors": 0,
+        "losses": 14,
+        "matches": 36,
+        "overtime_decided": 12,
+        "unresolved": 0,
+        "win_rate": 0.555555555555556,
+        "wins": 20
+       },
+       "late": {
+        "avg_elapsed": 32.4,
+        "avg_margin": -95.4,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 95.4,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 30,
+        "matches": 30,
+        "overtime_decided": 2,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 79.2625,
+        "avg_margin": 39.6944444444444,
+        "avg_our_hull": 53.5277777777778,
+        "avg_their_hull": 13.8333333333333,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 8,
+        "matches": 36,
+        "overtime_decided": 20,
+        "unresolved": 0,
+        "win_rate": 0.777777777777778,
+        "wins": 28
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.470588235294118,
+      "wins": 48
+     }
+    },
+    {
+     "bucket": "corrosion+direct+fracture|heal|gated",
+     "id": "late_p9_r8",
+     "result": {
+      "avg_elapsed": 42.7926470588235,
+      "avg_margin": 60.9509803921569,
+      "avg_our_hull": 75.921568627451,
+      "avg_their_hull": 14.9705882352941,
+      "decided": 102,
+      "draws": 1,
+      "errors": 0,
+      "label": "late_p9_r8",
+      "losses": 18,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 2,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 42.8888888888889,
+        "avg_margin": 97.8333333333333,
+        "avg_our_hull": 97.8333333333333,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 40.2,
+        "avg_margin": -26.3333333333333,
+        "avg_our_hull": 24.5666666666667,
+        "avg_their_hull": 50.9,
+        "decided": 30,
+        "draws": 1,
+        "errors": 0,
+        "losses": 18,
+        "matches": 30,
+        "overtime_decided": 2,
+        "unresolved": 0,
+        "win_rate": 0.366666666666667,
+        "wins": 11
+       },
+       "mid": {
+        "avg_elapsed": 44.8569444444444,
+        "avg_margin": 96.8055555555556,
+        "avg_our_hull": 96.8055555555556,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.813725490196078,
+      "wins": 83
+     }
+    },
+    {
+     "bucket": "direct+fracture+overheat|defend+time|gated",
+     "id": "late_p10_r8",
+     "result": {
+      "avg_elapsed": 22.2843137254902,
+      "avg_margin": 71.5392156862745,
+      "avg_our_hull": 76.4901960784314,
+      "avg_their_hull": 4.95098039215686,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "late_p10_r8",
+      "losses": 10,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 0,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 21.0,
+        "avg_margin": 90.8888888888889,
+        "avg_our_hull": 90.8888888888889,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 25.1,
+        "avg_margin": 28.3,
+        "avg_our_hull": 45.1333333333333,
+        "avg_their_hull": 16.8333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 10,
+        "matches": 30,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 0.666666666666667,
+        "wins": 20
+       },
+       "mid": {
+        "avg_elapsed": 21.2222222222222,
+        "avg_margin": 88.2222222222222,
+        "avg_our_hull": 88.2222222222222,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.901960784313726,
+      "wins": 92
+     }
+    },
+    {
+     "bucket": "direct+fracture+overheat|defend+heal+time|gated",
+     "id": "late_p11_r8",
+     "result": {
+      "avg_elapsed": 20.7352941176471,
+      "avg_margin": 94.6372549019608,
+      "avg_our_hull": 94.6372549019608,
+      "avg_their_hull": 0.0,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "late_p11_r8",
+      "losses": 0,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 0,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 20.1111111111111,
+        "avg_margin": 99.5833333333333,
+        "avg_our_hull": 99.5833333333333,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 21.7666666666667,
+        "avg_margin": 82.4,
+        "avg_our_hull": 82.4,
+        "avg_their_hull": 0.0,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 30,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 30
+       },
+       "mid": {
+        "avg_elapsed": 20.5,
+        "avg_margin": 99.8888888888889,
+        "avg_our_hull": 99.8888888888889,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 1.0,
+      "wins": 102
+     }
+    }
+   ]
+  },
+  "d2": {
+   "rows": [
+    {
+     "kind": "core",
+     "profile": {
+      "active_units": 3,
+      "attack": [
+       "direct"
+      ],
+      "dead_units": 0,
+      "defense": [],
+      "operational": true,
+      "output_60s": 6.0,
+      "startup": "immediate",
+      "sustain_60s": 0.0
+     },
+     "recipe": "r100_autocannon_trio",
+     "result": {
+      "avg_elapsed": 23.2962962962963,
+      "avg_margin": 56.8425925925926,
+      "avg_our_hull": 64.25,
+      "avg_their_hull": 7.40740740740741,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "r100_autocannon_trio/core",
+      "losses": 17,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 3,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 18.9166666666667,
+        "avg_margin": 85.3055555555556,
+        "avg_our_hull": 85.3055555555556,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 31.8888888888889,
+        "avg_margin": 8.47222222222222,
+        "avg_our_hull": 30.6944444444444,
+        "avg_their_hull": 22.2222222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 17,
+        "matches": 36,
+        "overtime_decided": 3,
+        "unresolved": 0,
+        "win_rate": 0.527777777777778,
+        "wins": 19
+       },
+       "mid": {
+        "avg_elapsed": 19.0833333333333,
+        "avg_margin": 76.75,
+        "avg_our_hull": 76.75,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.842592592592593,
+      "wins": 91
+     }
+    },
+    {
+     "kind": "full",
+     "profile": {
+      "active_units": 10,
+      "attack": [
+       "direct",
+       "overheat"
+      ],
+      "dead_units": 0,
+      "defense": [
+       "heal"
+      ],
+      "operational": true,
+      "output_60s": 7.9,
+      "startup": "gated",
+      "sustain_60s": 1.53
+     },
+     "recipe": "r100_autocannon_trio",
+     "result": {
+      "avg_elapsed": 16.2314814814815,
+      "avg_margin": 87.4444444444444,
+      "avg_our_hull": 87.6111111111111,
+      "avg_their_hull": 0.166666666666667,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "r100_autocannon_trio/full",
+      "losses": 1,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 0,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 15.0,
+        "avg_margin": 98.6388888888889,
+        "avg_our_hull": 98.6388888888889,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 18.6944444444444,
+        "avg_margin": 66.8333333333333,
+        "avg_our_hull": 67.3333333333333,
+        "avg_their_hull": 0.5,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 1,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 0.972222222222222,
+        "wins": 35
+       },
+       "mid": {
+        "avg_elapsed": 15.0,
+        "avg_margin": 96.8611111111111,
+        "avg_our_hull": 96.8611111111111,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.990740740740741,
+      "wins": 107
+     }
+    },
+    {
+     "kind": "core",
+     "profile": {
+      "active_units": 6,
+      "attack": [
+       "direct",
+       "fracture",
+       "overheat"
+      ],
+      "dead_units": 0,
+      "defense": [
+       "heal",
+       "time"
+      ],
+      "operational": true,
+      "output_60s": 5.92,
+      "startup": "gated",
+      "sustain_60s": 0.07
+     },
+     "recipe": "a70_r30_photon_engine",
+     "result": {
+      "avg_elapsed": 27.3986111111111,
+      "avg_margin": 53.75,
+      "avg_our_hull": 62.9444444444444,
+      "avg_their_hull": 9.19444444444444,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "a70_r30_photon_engine/core",
+      "losses": 21,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 6,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 21.5277777777778,
+        "avg_margin": 86.3611111111111,
+        "avg_our_hull": 86.3611111111111,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 38.0847222222222,
+        "avg_margin": -3.30555555555556,
+        "avg_our_hull": 24.2777777777778,
+        "avg_their_hull": 27.5833333333333,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 21,
+        "matches": 36,
+        "overtime_decided": 6,
+        "unresolved": 0,
+        "win_rate": 0.416666666666667,
+        "wins": 15
+       },
+       "mid": {
+        "avg_elapsed": 22.5833333333333,
+        "avg_margin": 78.1944444444444,
+        "avg_our_hull": 78.1944444444444,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.805555555555556,
+      "wins": 87
+     }
+    },
+    {
+     "kind": "full",
+     "profile": {
+      "active_units": 10,
+      "attack": [
+       "direct",
+       "fracture",
+       "overheat"
+      ],
+      "dead_units": 0,
+      "defense": [
+       "defend",
+       "heal",
+       "time"
+      ],
+      "operational": true,
+      "output_60s": 8.78,
+      "startup": "gated",
+      "sustain_60s": 0.41
+     },
+     "recipe": "a70_r30_photon_engine",
+     "result": {
+      "avg_elapsed": 13.8703703703704,
+      "avg_margin": 89.3333333333333,
+      "avg_our_hull": 89.3333333333333,
+      "avg_their_hull": 0.0,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "a70_r30_photon_engine/full",
+      "losses": 0,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 0,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 13.1111111111111,
+        "avg_margin": 96.1944444444444,
+        "avg_our_hull": 96.1944444444444,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 14.9166666666667,
+        "avg_margin": 74.5555555555556,
+        "avg_our_hull": 74.5555555555556,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "mid": {
+        "avg_elapsed": 13.5833333333333,
+        "avg_margin": 97.25,
+        "avg_our_hull": 97.25,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 1.0,
+      "wins": 108
+     }
+    },
+    {
+     "kind": "core",
+     "profile": {
+      "active_units": 5,
+      "attack": [
+       "direct",
+       "fracture",
+       "overheat"
+      ],
+      "dead_units": 0,
+      "defense": [
+       "heal",
+       "time"
+      ],
+      "operational": true,
+      "output_60s": 3.92,
+      "startup": "gated",
+      "sustain_60s": 0.07
+     },
+     "recipe": "aeonic_photon_trio",
+     "result": {
+      "avg_elapsed": 47.0282407407407,
+      "avg_margin": 8.88888888888889,
+      "avg_our_hull": 38.7314814814815,
+      "avg_their_hull": 29.8425925925926,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "aeonic_photon_trio/core",
+      "losses": 51,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 20,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 43.6666666666667,
+        "avg_margin": 64.9722222222222,
+        "avg_our_hull": 70.1944444444444,
+        "avg_their_hull": 5.22222222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 4,
+        "matches": 36,
+        "overtime_decided": 5,
+        "unresolved": 0,
+        "win_rate": 0.888888888888889,
+        "wins": 32
+       },
+       "late": {
+        "avg_elapsed": 39.6680555555556,
+        "avg_margin": -66.7777777777778,
+        "avg_our_hull": 4.69444444444444,
+        "avg_their_hull": 71.4722222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 32,
+        "matches": 36,
+        "overtime_decided": 5,
+        "unresolved": 0,
+        "win_rate": 0.111111111111111,
+        "wins": 4
+       },
+       "mid": {
+        "avg_elapsed": 57.75,
+        "avg_margin": 28.4722222222222,
+        "avg_our_hull": 41.3055555555556,
+        "avg_their_hull": 12.8333333333333,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 15,
+        "matches": 36,
+        "overtime_decided": 10,
+        "unresolved": 0,
+        "win_rate": 0.583333333333333,
+        "wins": 21
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.527777777777778,
+      "wins": 57
+     }
+    },
+    {
+     "kind": "core",
+     "profile": {
+      "active_units": 2,
+      "attack": [
+       "direct",
+       "overheat"
+      ],
+      "dead_units": 0,
+      "defense": [
+       "time"
+      ],
+      "operational": true,
+      "output_60s": 3.71,
+      "startup": "immediate",
+      "sustain_60s": 0.0
+     },
+     "recipe": "equal_helios_pair",
+     "result": {
+      "avg_elapsed": 54.3,
+      "avg_margin": -19.4722222222222,
+      "avg_our_hull": 22.3425925925926,
+      "avg_their_hull": 41.8148148148148,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "equal_helios_pair/core",
+      "losses": 71,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 37,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 61.8055555555556,
+        "avg_margin": 29.6944444444444,
+        "avg_our_hull": 47.7777777777778,
+        "avg_their_hull": 18.0833333333333,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 12,
+        "matches": 36,
+        "overtime_decided": 17,
+        "unresolved": 0,
+        "win_rate": 0.666666666666667,
+        "wins": 24
+       },
+       "late": {
+        "avg_elapsed": 34.0,
+        "avg_margin": -84.4722222222222,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 84.4722222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 2,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 67.0944444444444,
+        "avg_margin": -3.63888888888889,
+        "avg_our_hull": 19.25,
+        "avg_their_hull": 22.8888888888889,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 23,
+        "matches": 36,
+        "overtime_decided": 18,
+        "unresolved": 0,
+        "win_rate": 0.361111111111111,
+        "wins": 13
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.342592592592593,
+      "wins": 37
+     }
+    },
+    {
+     "kind": "full",
+     "profile": {
+      "active_units": 10,
+      "attack": [
+       "direct",
+       "overheat"
+      ],
+      "dead_units": 0,
+      "defense": [
+       "defend",
+       "heal",
+       "time"
+      ],
+      "operational": true,
+      "output_60s": 6.71,
+      "startup": "gated",
+      "sustain_60s": 3.47
+     },
+     "recipe": "equal_helios_pair",
+     "result": {
+      "avg_elapsed": 15.8240740740741,
+      "avg_margin": 92.6203703703704,
+      "avg_our_hull": 92.6203703703704,
+      "avg_their_hull": 0.0,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "equal_helios_pair/full",
+      "losses": 0,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 0,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 15.3611111111111,
+        "avg_margin": 96.5277777777778,
+        "avg_our_hull": 96.5277777777778,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 16.3611111111111,
+        "avg_margin": 82.4722222222222,
+        "avg_our_hull": 82.4722222222222,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "mid": {
+        "avg_elapsed": 15.75,
+        "avg_margin": 98.8611111111111,
+        "avg_our_hull": 98.8611111111111,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 1.0,
+      "wins": 108
+     }
+    }
+   ]
+  },
+  "d2b": {
+   "draws": 51,
+   "rows": [
+    {
+     "excluded": false,
+     "expected": 1.7,
+     "need": 3,
+     "part": "scrap_autocannon",
+     "pool": "r100",
+     "recipe": "r100_autocannon_trio"
+    },
+    {
+     "excluded": true,
+     "pool": "v100",
+     "recipe": ""
+    },
+    {
+     "excluded": false,
+     "expected": 1.7,
+     "need": 1,
+     "part": "helios_lance",
+     "pool": "a100",
+     "recipe": "aeonic_photon_trio"
+    },
+    {
+     "excluded": false,
+     "expected": 1.19,
+     "need": 3,
+     "part": "scrap_autocannon",
+     "pool": "r70_v30",
+     "recipe": "r100_autocannon_trio"
+    },
+    {
+     "excluded": false,
+     "expected": 1.19,
+     "need": 3,
+     "part": "scrap_autocannon",
+     "pool": "r70_a30",
+     "recipe": "r100_autocannon_trio"
+    },
+    {
+     "excluded": false,
+     "expected": 0.51,
+     "need": 3,
+     "part": "scrap_autocannon",
+     "pool": "v70_r30",
+     "recipe": "r100_autocannon_trio"
+    },
+    {
+     "excluded": false,
+     "expected": 0.51,
+     "need": 1,
+     "part": "helios_lance",
+     "pool": "v70_a30",
+     "recipe": "aeonic_photon_trio"
+    },
+    {
+     "excluded": false,
+     "expected": 0.51,
+     "need": 1,
+     "part": "scrap_autocannon",
+     "pool": "a70_r30",
+     "recipe": "a70_r30_photon_engine"
+    },
+    {
+     "excluded": false,
+     "expected": 1.19,
+     "need": 1,
+     "part": "helios_lance",
+     "pool": "a70_v30",
+     "recipe": "aeonic_photon_trio"
+    },
+    {
+     "excluded": false,
+     "expected": 0.56,
+     "need": 1,
+     "part": "helios_lance",
+     "pool": "equal",
+     "recipe": "a70_r30_photon_engine"
+    }
+   ]
+  },
+  "d3": {
+   "core": [
+    {
+     "result": {
+      "avg_elapsed": 65.8509803921569,
+      "avg_margin": -36.9019607843137,
+      "avg_our_hull": 9.82352941176471,
+      "avg_their_hull": 46.7254901960784,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p165_r4/현재(plating)",
+      "losses": 71,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 53,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 83.8166666666667,
+        "avg_margin": -5.83333333333333,
+        "avg_our_hull": 15.1111111111111,
+        "avg_their_hull": 20.9444444444444,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 19,
+        "matches": 36,
+        "overtime_decided": 27,
+        "unresolved": 0,
+        "win_rate": 0.472222222222222,
+        "wins": 17
+       },
+       "late": {
+        "avg_elapsed": 38.4166666666667,
+        "avg_margin": -88.9166666666667,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 88.9166666666667,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 7,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 77.2133333333333,
+        "avg_margin": -11.7666666666667,
+        "avg_our_hull": 15.2666666666667,
+        "avg_their_hull": 27.0333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 16,
+        "matches": 30,
+        "overtime_decided": 19,
+        "unresolved": 0,
+        "win_rate": 0.466666666666667,
+        "wins": 14
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.303921568627451,
+      "wins": 31
+     },
+     "subject": "mid_p165_r4",
+     "variant": "현재(plating)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 65.078431372549,
+      "avg_margin": -26.2843137254902,
+      "avg_our_hull": 14.9705882352941,
+      "avg_their_hull": 41.2549019607843,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p165_r4/중립(배율 1.0)",
+      "losses": 61,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 62,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 83.1666666666667,
+        "avg_margin": 19.8611111111111,
+        "avg_our_hull": 27.4166666666667,
+        "avg_their_hull": 7.55555555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 7,
+        "matches": 36,
+        "overtime_decided": 31,
+        "unresolved": 0,
+        "win_rate": 0.805555555555556,
+        "wins": 29
+       },
+       "late": {
+        "avg_elapsed": 38.0263888888889,
+        "avg_margin": -83.2222222222222,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 83.2222222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 9,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 75.835,
+        "avg_margin": -13.3333333333333,
+        "avg_our_hull": 18.0,
+        "avg_their_hull": 31.3333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 18,
+        "matches": 30,
+        "overtime_decided": 22,
+        "unresolved": 0,
+        "win_rate": 0.4,
+        "wins": 12
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.401960784313726,
+      "wins": 41
+     },
+     "subject": "mid_p165_r4",
+     "variant": "중립(배율 1.0)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 70.1558823529412,
+      "avg_margin": -23.6960784313725,
+      "avg_our_hull": 16.4705882352941,
+      "avg_their_hull": 40.1666666666667,
+      "decided": 102,
+      "draws": 2,
+      "errors": 0,
+      "label": "mid_p165_r4/biomass",
+      "losses": 68,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 61,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 87.0,
+        "avg_margin": 22.5555555555556,
+        "avg_our_hull": 32.5277777777778,
+        "avg_their_hull": 9.97222222222222,
+        "decided": 36,
+        "draws": 1,
+        "errors": 0,
+        "losses": 12,
+        "matches": 36,
+        "overtime_decided": 31,
+        "unresolved": 0,
+        "win_rate": 0.638888888888889,
+        "wins": 23
+       },
+       "late": {
+        "avg_elapsed": 43.475,
+        "avg_margin": -84.2777777777778,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 84.2777777777778,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 7,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 81.96,
+        "avg_margin": -6.5,
+        "avg_our_hull": 16.9666666666667,
+        "avg_their_hull": 23.4666666666667,
+        "decided": 30,
+        "draws": 1,
+        "errors": 0,
+        "losses": 20,
+        "matches": 30,
+        "overtime_decided": 23,
+        "unresolved": 0,
+        "win_rate": 0.3,
+        "wins": 9
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.313725490196078,
+      "wins": 32
+     },
+     "subject": "mid_p165_r4",
+     "variant": "biomass"
+    },
+    {
+     "result": {
+      "avg_elapsed": 44.5102941176471,
+      "avg_margin": -9.58823529411765,
+      "avg_our_hull": 30.2254901960784,
+      "avg_their_hull": 39.8137254901961,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p35_r3/현재(plating)",
+      "losses": 48,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 4,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 47.7777777777778,
+        "avg_margin": 39.9722222222222,
+        "avg_our_hull": 51.8333333333333,
+        "avg_their_hull": 11.8611111111111,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 7,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.805555555555556,
+        "wins": 29
+       },
+       "late": {
+        "avg_elapsed": 33.5,
+        "avg_margin": -87.5277777777778,
+        "avg_our_hull": 0.694444444444444,
+        "avg_their_hull": 88.2222222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 35,
+        "matches": 36,
+        "overtime_decided": 2,
+        "unresolved": 0,
+        "win_rate": 0.0277777777777778,
+        "wins": 1
+       },
+       "mid": {
+        "avg_elapsed": 53.8016666666667,
+        "avg_margin": 24.4666666666667,
+        "avg_our_hull": 39.7333333333333,
+        "avg_their_hull": 15.2666666666667,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 6,
+        "matches": 30,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.8,
+        "wins": 24
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.529411764705882,
+      "wins": 54
+     },
+     "subject": "mid_p35_r3",
+     "variant": "현재(plating)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 44.1602941176471,
+      "avg_margin": -15.4313725490196,
+      "avg_our_hull": 25.6764705882353,
+      "avg_their_hull": 41.1078431372549,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p35_r3/중립(배율 1.0)",
+      "losses": 51,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 6,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 44.7277777777778,
+        "avg_margin": 38.4166666666667,
+        "avg_our_hull": 49.5277777777778,
+        "avg_their_hull": 11.1111111111111,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 6,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 0.833333333333333,
+        "wins": 30
+       },
+       "late": {
+        "avg_elapsed": 30.1944444444444,
+        "avg_margin": -93.1666666666667,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 93.1666666666667,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 2,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 60.2383333333333,
+        "avg_margin": 13.2333333333333,
+        "avg_our_hull": 27.8666666666667,
+        "avg_their_hull": 14.6333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 9,
+        "matches": 30,
+        "overtime_decided": 4,
+        "unresolved": 0,
+        "win_rate": 0.7,
+        "wins": 21
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.5,
+      "wins": 51
+     },
+     "subject": "mid_p35_r3",
+     "variant": "중립(배율 1.0)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 46.5622549019608,
+      "avg_margin": -7.31372549019608,
+      "avg_our_hull": 33.7745098039216,
+      "avg_their_hull": 41.0882352941176,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p35_r3/biomass",
+      "losses": 50,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 11,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 47.0833333333333,
+        "avg_margin": 52.8888888888889,
+        "avg_our_hull": 63.0277777777778,
+        "avg_their_hull": 10.1388888888889,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 5,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 0.861111111111111,
+        "wins": 31
+       },
+       "late": {
+        "avg_elapsed": 33.8347222222222,
+        "avg_margin": -67.6111111111111,
+        "avg_our_hull": 13.3888888888889,
+        "avg_their_hull": 81.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 30,
+        "matches": 36,
+        "overtime_decided": 3,
+        "unresolved": 0,
+        "win_rate": 0.166666666666667,
+        "wins": 6
+       },
+       "mid": {
+        "avg_elapsed": 61.21,
+        "avg_margin": -7.2,
+        "avg_our_hull": 23.1333333333333,
+        "avg_their_hull": 30.3333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 15,
+        "matches": 30,
+        "overtime_decided": 8,
+        "unresolved": 0,
+        "win_rate": 0.5,
+        "wins": 15
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.509803921568627,
+      "wins": 52
+     },
+     "subject": "mid_p35_r3",
+     "variant": "biomass"
+    },
+    {
+     "result": {
+      "avg_elapsed": 48.8656862745098,
+      "avg_margin": 3.14705882352941,
+      "avg_our_hull": 40.0882352941176,
+      "avg_their_hull": 36.9411764705882,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p40_r3/현재(plating)",
+      "losses": 47,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 11,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 53.5722222222222,
+        "avg_margin": 41.6388888888889,
+        "avg_our_hull": 58.6944444444444,
+        "avg_their_hull": 17.0555555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 10,
+        "matches": 36,
+        "overtime_decided": 3,
+        "unresolved": 0,
+        "win_rate": 0.722222222222222,
+        "wins": 26
+       },
+       "late": {
+        "avg_elapsed": 36.6458333333333,
+        "avg_margin": -70.6944444444444,
+        "avg_our_hull": 11.8888888888889,
+        "avg_their_hull": 82.5833333333333,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 30,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.166666666666667,
+        "wins": 6
+       },
+       "mid": {
+        "avg_elapsed": 57.8816666666667,
+        "avg_margin": 45.5666666666667,
+        "avg_our_hull": 51.6,
+        "avg_their_hull": 6.03333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 7,
+        "matches": 30,
+        "overtime_decided": 7,
+        "unresolved": 0,
+        "win_rate": 0.766666666666667,
+        "wins": 23
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.53921568627451,
+      "wins": 55
+     },
+     "subject": "mid_p40_r3",
+     "variant": "현재(plating)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 50.3176470588235,
+      "avg_margin": -14.9607843137255,
+      "avg_our_hull": 30.5588235294118,
+      "avg_their_hull": 45.5196078431373,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p40_r3/중립(배율 1.0)",
+      "losses": 59,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 18,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 52.2333333333333,
+        "avg_margin": 39.7222222222222,
+        "avg_our_hull": 57.3611111111111,
+        "avg_their_hull": 17.6388888888889,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 10,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.722222222222222,
+        "wins": 26
+       },
+       "late": {
+        "avg_elapsed": 36.4833333333333,
+        "avg_margin": -86.6111111111111,
+        "avg_our_hull": 2.94444444444444,
+        "avg_their_hull": 89.5555555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 34,
+        "matches": 36,
+        "overtime_decided": 3,
+        "unresolved": 0,
+        "win_rate": 0.0555555555555556,
+        "wins": 2
+       },
+       "mid": {
+        "avg_elapsed": 64.62,
+        "avg_margin": 5.4,
+        "avg_our_hull": 31.5333333333333,
+        "avg_their_hull": 26.1333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 15,
+        "matches": 30,
+        "overtime_decided": 14,
+        "unresolved": 0,
+        "win_rate": 0.5,
+        "wins": 15
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.42156862745098,
+      "wins": 43
+     },
+     "subject": "mid_p40_r3",
+     "variant": "중립(배율 1.0)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 53.8700980392157,
+      "avg_margin": 13.6470588235294,
+      "avg_our_hull": 45.3823529411765,
+      "avg_their_hull": 31.7352941176471,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p40_r3/biomass",
+      "losses": 41,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 13,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 54.9041666666667,
+        "avg_margin": 63.8611111111111,
+        "avg_our_hull": 71.6944444444444,
+        "avg_their_hull": 7.83333333333333,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 4,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.888888888888889,
+        "wins": 32
+       },
+       "late": {
+        "avg_elapsed": 43.0916666666667,
+        "avg_margin": -49.6111111111111,
+        "avg_our_hull": 19.7777777777778,
+        "avg_their_hull": 69.3888888888889,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 26,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.277777777777778,
+        "wins": 10
+       },
+       "mid": {
+        "avg_elapsed": 65.5633333333333,
+        "avg_margin": 29.3,
+        "avg_our_hull": 44.5333333333333,
+        "avg_their_hull": 15.2333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 11,
+        "matches": 30,
+        "overtime_decided": 11,
+        "unresolved": 0,
+        "win_rate": 0.633333333333333,
+        "wins": 19
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.598039215686274,
+      "wins": 61
+     },
+     "subject": "mid_p40_r3",
+     "variant": "biomass"
+    },
+    {
+     "result": {
+      "avg_elapsed": 59.7058823529412,
+      "avg_margin": -70.0294117647059,
+      "avg_our_hull": 0.823529411764706,
+      "avg_their_hull": 70.8529411764706,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p45_r3/현재(plating)",
+      "losses": 90,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 24,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 74.6333333333333,
+        "avg_margin": -49.75,
+        "avg_our_hull": 2.33333333333333,
+        "avg_their_hull": 52.0833333333333,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 24,
+        "matches": 36,
+        "overtime_decided": 6,
+        "unresolved": 0,
+        "win_rate": 0.333333333333333,
+        "wins": 12
+       },
+       "late": {
+        "avg_elapsed": 35.6666666666667,
+        "avg_margin": -99.0,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 99.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 70.64,
+        "avg_margin": -59.6,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 59.6,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 30,
+        "matches": 30,
+        "overtime_decided": 18,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.117647058823529,
+      "wins": 12
+     },
+     "subject": "mid_p45_r3",
+     "variant": "현재(plating)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 55.6735294117647,
+      "avg_margin": -73.8039215686274,
+      "avg_our_hull": 1.0,
+      "avg_their_hull": 74.8039215686274,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p45_r3/중립(배율 1.0)",
+      "losses": 92,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 26,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 72.0416666666667,
+        "avg_margin": -48.5277777777778,
+        "avg_our_hull": 2.83333333333333,
+        "avg_their_hull": 51.3611111111111,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 26,
+        "matches": 36,
+        "overtime_decided": 8,
+        "unresolved": 0,
+        "win_rate": 0.277777777777778,
+        "wins": 10
+       },
+       "late": {
+        "avg_elapsed": 30.6666666666667,
+        "avg_margin": -100.0,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 100.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 66.04,
+        "avg_margin": -72.7,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 72.7,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 30,
+        "matches": 30,
+        "overtime_decided": 18,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.0980392156862745,
+      "wins": 10
+     },
+     "subject": "mid_p45_r3",
+     "variant": "중립(배율 1.0)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 61.721568627451,
+      "avg_margin": -64.9705882352941,
+      "avg_our_hull": 4.15686274509804,
+      "avg_their_hull": 69.1274509803922,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p45_r3/biomass",
+      "losses": 90,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 40,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 79.3777777777778,
+        "avg_margin": -31.9444444444444,
+        "avg_our_hull": 11.7777777777778,
+        "avg_their_hull": 43.7222222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 24,
+        "matches": 36,
+        "overtime_decided": 16,
+        "unresolved": 0,
+        "win_rate": 0.333333333333333,
+        "wins": 12
+       },
+       "late": {
+        "avg_elapsed": 41.6666666666667,
+        "avg_margin": -93.4722222222222,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 93.4722222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 6,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 64.6,
+        "avg_margin": -70.4,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 70.4,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 30,
+        "matches": 30,
+        "overtime_decided": 18,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.117647058823529,
+      "wins": 12
+     },
+     "subject": "mid_p45_r3",
+     "variant": "biomass"
+    },
+    {
+     "result": {
+      "avg_elapsed": 66.6421568627451,
+      "avg_margin": -25.2352941176471,
+      "avg_our_hull": 13.843137254902,
+      "avg_their_hull": 39.078431372549,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p0_r3/현재(plating)",
+      "losses": 65,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 61,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 83.9722222222222,
+        "avg_margin": 15.0833333333333,
+        "avg_our_hull": 27.1666666666667,
+        "avg_their_hull": 12.0833333333333,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 13,
+        "matches": 36,
+        "overtime_decided": 34,
+        "unresolved": 0,
+        "win_rate": 0.638888888888889,
+        "wins": 23
+       },
+       "late": {
+        "avg_elapsed": 41.4694444444444,
+        "avg_margin": -82.8055555555556,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 82.8055555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 8,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 76.0533333333333,
+        "avg_margin": -4.53333333333333,
+        "avg_our_hull": 14.4666666666667,
+        "avg_their_hull": 19.0,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 16,
+        "matches": 30,
+        "overtime_decided": 19,
+        "unresolved": 0,
+        "win_rate": 0.466666666666667,
+        "wins": 14
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.362745098039216,
+      "wins": 37
+     },
+     "subject": "mid_p0_r3",
+     "variant": "현재(plating)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 65.8029411764706,
+      "avg_margin": -2.00980392156863,
+      "avg_our_hull": 25.5098039215686,
+      "avg_their_hull": 27.5196078431373,
+      "decided": 102,
+      "draws": 1,
+      "errors": 0,
+      "label": "mid_p0_r3/중립(배율 1.0)",
+      "losses": 50,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 61,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 78.6388888888889,
+        "avg_margin": 42.5833333333333,
+        "avg_our_hull": 47.3611111111111,
+        "avg_their_hull": 4.77777777777778,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 4,
+        "matches": 36,
+        "overtime_decided": 32,
+        "unresolved": 0,
+        "win_rate": 0.888888888888889,
+        "wins": 32
+       },
+       "late": {
+        "avg_elapsed": 45.9402777777778,
+        "avg_margin": -64.5555555555556,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 64.5555555555556,
+        "decided": 36,
+        "draws": 1,
+        "errors": 0,
+        "losses": 35,
+        "matches": 36,
+        "overtime_decided": 10,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 74.235,
+        "avg_margin": 19.5333333333333,
+        "avg_our_hull": 29.9,
+        "avg_their_hull": 10.3666666666667,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 11,
+        "matches": 30,
+        "overtime_decided": 19,
+        "unresolved": 0,
+        "win_rate": 0.633333333333333,
+        "wins": 19
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.5,
+      "wins": 51
+     },
+     "subject": "mid_p0_r3",
+     "variant": "중립(배율 1.0)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 72.746568627451,
+      "avg_margin": -10.8235294117647,
+      "avg_our_hull": 21.2745098039216,
+      "avg_their_hull": 32.0980392156863,
+      "decided": 102,
+      "draws": 4,
+      "errors": 0,
+      "label": "mid_p0_r3/biomass",
+      "losses": 57,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 62,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 84.4444444444444,
+        "avg_margin": 34.8055555555556,
+        "avg_our_hull": 41.8333333333333,
+        "avg_their_hull": 7.02777777777778,
+        "decided": 36,
+        "draws": 2,
+        "errors": 0,
+        "losses": 8,
+        "matches": 36,
+        "overtime_decided": 26,
+        "unresolved": 0,
+        "win_rate": 0.722222222222222,
+        "wins": 26
+       },
+       "late": {
+        "avg_elapsed": 50.9986111111111,
+        "avg_margin": -72.0,
+        "avg_our_hull": 0.583333333333333,
+        "avg_their_hull": 72.5833333333333,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 35,
+        "matches": 36,
+        "overtime_decided": 15,
+        "unresolved": 0,
+        "win_rate": 0.0277777777777778,
+        "wins": 1
+       },
+       "mid": {
+        "avg_elapsed": 84.8066666666667,
+        "avg_margin": 7.83333333333333,
+        "avg_our_hull": 21.4333333333333,
+        "avg_their_hull": 13.6,
+        "decided": 30,
+        "draws": 2,
+        "errors": 0,
+        "losses": 14,
+        "matches": 30,
+        "overtime_decided": 21,
+        "unresolved": 0,
+        "win_rate": 0.466666666666667,
+        "wins": 14
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.401960784313726,
+      "wins": 41
+     },
+     "subject": "mid_p0_r3",
+     "variant": "biomass"
+    },
+    {
+     "result": {
+      "avg_elapsed": 66.3950980392157,
+      "avg_margin": -15.8137254901961,
+      "avg_our_hull": 19.2450980392157,
+      "avg_their_hull": 35.0588235294118,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p0_r4/현재(plating)",
+      "losses": 56,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 60,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 82.5277777777778,
+        "avg_margin": 28.1111111111111,
+        "avg_our_hull": 36.0833333333333,
+        "avg_their_hull": 7.97222222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 6,
+        "matches": 36,
+        "overtime_decided": 34,
+        "unresolved": 0,
+        "win_rate": 0.833333333333333,
+        "wins": 30
+       },
+       "late": {
+        "avg_elapsed": 43.3583333333333,
+        "avg_margin": -77.25,
+        "avg_our_hull": 0.0,
+        "avg_their_hull": 77.25,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 36,
+        "matches": 36,
+        "overtime_decided": 8,
+        "unresolved": 0,
+        "win_rate": 0.0,
+        "wins": 0
+       },
+       "mid": {
+        "avg_elapsed": 74.68,
+        "avg_margin": 5.2,
+        "avg_our_hull": 22.1333333333333,
+        "avg_their_hull": 16.9333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 14,
+        "matches": 30,
+        "overtime_decided": 18,
+        "unresolved": 0,
+        "win_rate": 0.533333333333333,
+        "wins": 16
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.450980392156863,
+      "wins": 46
+     },
+     "subject": "mid_p0_r4",
+     "variant": "현재(plating)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 60.5387254901961,
+      "avg_margin": 8.56862745098039,
+      "avg_our_hull": 35.1078431372549,
+      "avg_their_hull": 26.5392156862745,
+      "decided": 102,
+      "draws": 2,
+      "errors": 0,
+      "label": "mid_p0_r4/중립(배율 1.0)",
+      "losses": 45,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 57,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 70.0555555555556,
+        "avg_margin": 56.6944444444444,
+        "avg_our_hull": 61.6944444444444,
+        "avg_their_hull": 5.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 5,
+        "matches": 36,
+        "overtime_decided": 29,
+        "unresolved": 0,
+        "win_rate": 0.861111111111111,
+        "wins": 31
+       },
+       "late": {
+        "avg_elapsed": 41.6930555555556,
+        "avg_margin": -65.4722222222222,
+        "avg_our_hull": 1.33333333333333,
+        "avg_their_hull": 66.8055555555556,
+        "decided": 36,
+        "draws": 2,
+        "errors": 0,
+        "losses": 33,
+        "matches": 36,
+        "overtime_decided": 5,
+        "unresolved": 0,
+        "win_rate": 0.0277777777777778,
+        "wins": 1
+       },
+       "mid": {
+        "avg_elapsed": 71.7333333333333,
+        "avg_margin": 39.6666666666667,
+        "avg_our_hull": 43.7333333333333,
+        "avg_their_hull": 4.06666666666667,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 7,
+        "matches": 30,
+        "overtime_decided": 23,
+        "unresolved": 0,
+        "win_rate": 0.766666666666667,
+        "wins": 23
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.53921568627451,
+      "wins": 55
+     },
+     "subject": "mid_p0_r4",
+     "variant": "중립(배율 1.0)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 71.6274509803922,
+      "avg_margin": 1.20588235294118,
+      "avg_our_hull": 31.1078431372549,
+      "avg_their_hull": 29.9019607843137,
+      "decided": 102,
+      "draws": 0,
+      "errors": 0,
+      "label": "mid_p0_r4/biomass",
+      "losses": 44,
+      "matches": 102,
+      "opponents": 17,
+      "overtime_decided": 69,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 84.2222222222222,
+        "avg_margin": 46.2777777777778,
+        "avg_our_hull": 50.8055555555556,
+        "avg_their_hull": 4.52777777777778,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 4,
+        "matches": 36,
+        "overtime_decided": 29,
+        "unresolved": 0,
+        "win_rate": 0.888888888888889,
+        "wins": 32
+       },
+       "late": {
+        "avg_elapsed": 46.6111111111111,
+        "avg_margin": -72.1666666666667,
+        "avg_our_hull": 2.47222222222222,
+        "avg_their_hull": 74.6388888888889,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 33,
+        "matches": 36,
+        "overtime_decided": 10,
+        "unresolved": 0,
+        "win_rate": 0.0833333333333333,
+        "wins": 3
+       },
+       "mid": {
+        "avg_elapsed": 86.5333333333333,
+        "avg_margin": 35.1666666666667,
+        "avg_our_hull": 41.8333333333333,
+        "avg_their_hull": 6.66666666666667,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 7,
+        "matches": 30,
+        "overtime_decided": 30,
+        "unresolved": 0,
+        "win_rate": 0.766666666666667,
+        "wins": 23
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.568627450980392,
+      "wins": 58
+     },
+     "subject": "mid_p0_r4",
+     "variant": "biomass"
+    },
+    {
+     "result": {
+      "avg_elapsed": 22.9722222222222,
+      "avg_margin": 56.0740740740741,
+      "avg_our_hull": 63.8148148148148,
+      "avg_their_hull": 7.74074074074074,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "r100_autocannon_trio(핵심)/현재(plating)",
+      "losses": 18,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 1,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 19.3333333333333,
+        "avg_margin": 84.5833333333333,
+        "avg_our_hull": 84.5833333333333,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 30.0833333333333,
+        "avg_margin": 5.72222222222222,
+        "avg_our_hull": 28.9444444444444,
+        "avg_their_hull": 23.2222222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 18,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.5,
+        "wins": 18
+       },
+       "mid": {
+        "avg_elapsed": 19.5,
+        "avg_margin": 77.9166666666667,
+        "avg_our_hull": 77.9166666666667,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.833333333333333,
+      "wins": 90
+     },
+     "subject": "r100_autocannon_trio(핵심)",
+     "variant": "현재(plating)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 23.0185185185185,
+      "avg_margin": 48.9074074074074,
+      "avg_our_hull": 59.2407407407407,
+      "avg_their_hull": 10.3333333333333,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "r100_autocannon_trio(핵심)/중립(배율 1.0)",
+      "losses": 21,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 1,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 19.3333333333333,
+        "avg_margin": 82.8611111111111,
+        "avg_our_hull": 82.8611111111111,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 28.3888888888889,
+        "avg_margin": -8.66666666666667,
+        "avg_our_hull": 22.3333333333333,
+        "avg_their_hull": 31.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 21,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.416666666666667,
+        "wins": 15
+       },
+       "mid": {
+        "avg_elapsed": 21.3333333333333,
+        "avg_margin": 72.5277777777778,
+        "avg_our_hull": 72.5277777777778,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.805555555555556,
+      "wins": 87
+     },
+     "subject": "r100_autocannon_trio(핵심)",
+     "variant": "중립(배율 1.0)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 22.3796296296296,
+      "avg_margin": 57.0462962962963,
+      "avg_our_hull": 67.6111111111111,
+      "avg_their_hull": 10.5648148148148,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "r100_autocannon_trio(핵심)/biomass",
+      "losses": 21,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 0,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 19.0,
+        "avg_margin": 91.0833333333333,
+        "avg_our_hull": 91.0833333333333,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 26.1388888888889,
+        "avg_margin": 0.916666666666667,
+        "avg_our_hull": 32.6111111111111,
+        "avg_their_hull": 31.6944444444444,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 21,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 0.416666666666667,
+        "wins": 15
+       },
+       "mid": {
+        "avg_elapsed": 22.0,
+        "avg_margin": 79.1388888888889,
+        "avg_our_hull": 79.1388888888889,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.805555555555556,
+      "wins": 87
+     },
+     "subject": "r100_autocannon_trio(핵심)",
+     "variant": "biomass"
+    },
+    {
+     "result": {
+      "avg_elapsed": 25.7407407407407,
+      "avg_margin": 55.712962962963,
+      "avg_our_hull": 64.9259259259259,
+      "avg_their_hull": 9.21296296296296,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "a70_r30_photon_engine(핵심)/현재(plating)",
+      "losses": 18,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 2,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 21.5833333333333,
+        "avg_margin": 86.25,
+        "avg_our_hull": 86.25,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 32.9722222222222,
+        "avg_margin": 1.19444444444444,
+        "avg_our_hull": 28.8333333333333,
+        "avg_their_hull": 27.6388888888889,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 18,
+        "matches": 36,
+        "overtime_decided": 2,
+        "unresolved": 0,
+        "win_rate": 0.5,
+        "wins": 18
+       },
+       "mid": {
+        "avg_elapsed": 22.6666666666667,
+        "avg_margin": 79.6944444444444,
+        "avg_our_hull": 79.6944444444444,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.833333333333333,
+      "wins": 90
+     },
+     "subject": "a70_r30_photon_engine(핵심)",
+     "variant": "현재(plating)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 23.7407407407407,
+      "avg_margin": 53.4259259259259,
+      "avg_our_hull": 63.1666666666667,
+      "avg_their_hull": 9.74074074074074,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "a70_r30_photon_engine(핵심)/중립(배율 1.0)",
+      "losses": 20,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 1,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 19.5277777777778,
+        "avg_margin": 86.0833333333333,
+        "avg_our_hull": 86.0833333333333,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 30.2777777777778,
+        "avg_margin": -2.97222222222222,
+        "avg_our_hull": 26.25,
+        "avg_their_hull": 29.2222222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 20,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.444444444444444,
+        "wins": 16
+       },
+       "mid": {
+        "avg_elapsed": 21.4166666666667,
+        "avg_margin": 77.1666666666667,
+        "avg_our_hull": 77.1666666666667,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.814814814814815,
+      "wins": 88
+     },
+     "subject": "a70_r30_photon_engine(핵심)",
+     "variant": "중립(배율 1.0)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 26.6666666666667,
+      "avg_margin": 55.5185185185185,
+      "avg_our_hull": 66.8055555555556,
+      "avg_their_hull": 11.287037037037,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "a70_r30_photon_engine(핵심)/biomass",
+      "losses": 23,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 4,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 21.5277777777778,
+        "avg_margin": 89.4722222222222,
+        "avg_our_hull": 89.4722222222222,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       },
+       "late": {
+        "avg_elapsed": 33.2222222222222,
+        "avg_margin": -2.94444444444444,
+        "avg_our_hull": 30.9166666666667,
+        "avg_their_hull": 33.8611111111111,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 23,
+        "matches": 36,
+        "overtime_decided": 3,
+        "unresolved": 0,
+        "win_rate": 0.361111111111111,
+        "wins": 13
+       },
+       "mid": {
+        "avg_elapsed": 25.25,
+        "avg_margin": 80.0277777777778,
+        "avg_our_hull": 80.0277777777778,
+        "avg_their_hull": 0.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 0,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 1.0,
+        "wins": 36
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.787037037037037,
+      "wins": 85
+     },
+     "subject": "a70_r30_photon_engine(핵심)",
+     "variant": "biomass"
+    },
+    {
+     "result": {
+      "avg_elapsed": 45.224537037037,
+      "avg_margin": 9.93518518518519,
+      "avg_our_hull": 40.1759259259259,
+      "avg_their_hull": 30.2407407407407,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "aeonic_photon_trio(핵심)/현재(plating)",
+      "losses": 48,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 19,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 44.75,
+        "avg_margin": 66.5555555555556,
+        "avg_our_hull": 71.3611111111111,
+        "avg_their_hull": 4.80555555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 4,
+        "matches": 36,
+        "overtime_decided": 6,
+        "unresolved": 0,
+        "win_rate": 0.888888888888889,
+        "wins": 32
+       },
+       "late": {
+        "avg_elapsed": 33.0,
+        "avg_margin": -63.4444444444444,
+        "avg_our_hull": 8.33333333333333,
+        "avg_their_hull": 71.7777777777778,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 31,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.138888888888889,
+        "wins": 5
+       },
+       "mid": {
+        "avg_elapsed": 57.9236111111111,
+        "avg_margin": 26.6944444444444,
+        "avg_our_hull": 40.8333333333333,
+        "avg_their_hull": 14.1388888888889,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 13,
+        "matches": 36,
+        "overtime_decided": 12,
+        "unresolved": 0,
+        "win_rate": 0.638888888888889,
+        "wins": 23
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.555555555555556,
+      "wins": 60
+     },
+     "subject": "aeonic_photon_trio(핵심)",
+     "variant": "현재(plating)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 43.1578703703704,
+      "avg_margin": 6.61111111111111,
+      "avg_our_hull": 38.1296296296296,
+      "avg_their_hull": 31.5185185185185,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "aeonic_photon_trio(핵심)/중립(배율 1.0)",
+      "losses": 51,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 14,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 43.3611111111111,
+        "avg_margin": 66.8055555555556,
+        "avg_our_hull": 70.7222222222222,
+        "avg_their_hull": 3.91666666666667,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 4,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.888888888888889,
+        "wins": 32
+       },
+       "late": {
+        "avg_elapsed": 33.0291666666667,
+        "avg_margin": -68.6111111111111,
+        "avg_our_hull": 3.19444444444444,
+        "avg_their_hull": 71.8055555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 31,
+        "matches": 36,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.138888888888889,
+        "wins": 5
+       },
+       "mid": {
+        "avg_elapsed": 53.0833333333333,
+        "avg_margin": 21.6388888888889,
+        "avg_our_hull": 40.4722222222222,
+        "avg_their_hull": 18.8333333333333,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 16,
+        "matches": 36,
+        "overtime_decided": 12,
+        "unresolved": 0,
+        "win_rate": 0.555555555555556,
+        "wins": 20
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.527777777777778,
+      "wins": 57
+     },
+     "subject": "aeonic_photon_trio(핵심)",
+     "variant": "중립(배율 1.0)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 48.8712962962963,
+      "avg_margin": 14.8148148148148,
+      "avg_our_hull": 46.2592592592593,
+      "avg_their_hull": 31.4444444444444,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "aeonic_photon_trio(핵심)/biomass",
+      "losses": 49,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 29,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 53.6958333333333,
+        "avg_margin": 78.9444444444444,
+        "avg_our_hull": 80.7222222222222,
+        "avg_their_hull": 1.77777777777778,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 2,
+        "matches": 36,
+        "overtime_decided": 10,
+        "unresolved": 0,
+        "win_rate": 0.944444444444444,
+        "wins": 34
+       },
+       "late": {
+        "avg_elapsed": 37.8069444444444,
+        "avg_margin": -47.6111111111111,
+        "avg_our_hull": 17.5277777777778,
+        "avg_their_hull": 65.1388888888889,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 29,
+        "matches": 36,
+        "overtime_decided": 6,
+        "unresolved": 0,
+        "win_rate": 0.194444444444444,
+        "wins": 7
+       },
+       "mid": {
+        "avg_elapsed": 55.1111111111111,
+        "avg_margin": 13.1111111111111,
+        "avg_our_hull": 40.5277777777778,
+        "avg_their_hull": 27.4166666666667,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 18,
+        "matches": 36,
+        "overtime_decided": 13,
+        "unresolved": 0,
+        "win_rate": 0.5,
+        "wins": 18
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.546296296296296,
+      "wins": 59
+     },
+     "subject": "aeonic_photon_trio(핵심)",
+     "variant": "biomass"
+    },
+    {
+     "result": {
+      "avg_elapsed": 53.4666666666667,
+      "avg_margin": -19.4259259259259,
+      "avg_our_hull": 24.0092592592593,
+      "avg_their_hull": 43.4351851851852,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "equal_helios_pair(핵심)/현재(plating)",
+      "losses": 68,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 33,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 62.6111111111111,
+        "avg_margin": 27.2222222222222,
+        "avg_our_hull": 46.1666666666667,
+        "avg_their_hull": 18.9444444444444,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 12,
+        "matches": 36,
+        "overtime_decided": 16,
+        "unresolved": 0,
+        "win_rate": 0.666666666666667,
+        "wins": 24
+       },
+       "late": {
+        "avg_elapsed": 33.8333333333333,
+        "avg_margin": -80.5833333333333,
+        "avg_our_hull": 3.55555555555556,
+        "avg_their_hull": 84.1388888888889,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 34,
+        "matches": 36,
+        "overtime_decided": 5,
+        "unresolved": 0,
+        "win_rate": 0.0555555555555556,
+        "wins": 2
+       },
+       "mid": {
+        "avg_elapsed": 63.9555555555556,
+        "avg_margin": -4.91666666666667,
+        "avg_our_hull": 22.3055555555556,
+        "avg_their_hull": 27.2222222222222,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 22,
+        "matches": 36,
+        "overtime_decided": 12,
+        "unresolved": 0,
+        "win_rate": 0.388888888888889,
+        "wins": 14
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.37037037037037,
+      "wins": 40
+     },
+     "subject": "equal_helios_pair(핵심)",
+     "variant": "현재(plating)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 45.8962962962963,
+      "avg_margin": -1.49074074074074,
+      "avg_our_hull": 33.6388888888889,
+      "avg_their_hull": 35.1296296296296,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "equal_helios_pair(핵심)/중립(배율 1.0)",
+      "losses": 56,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 24,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 43.3555555555556,
+        "avg_margin": 40.4166666666667,
+        "avg_our_hull": 54.9722222222222,
+        "avg_their_hull": 14.5555555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 10,
+        "matches": 36,
+        "overtime_decided": 2,
+        "unresolved": 0,
+        "win_rate": 0.722222222222222,
+        "wins": 26
+       },
+       "late": {
+        "avg_elapsed": 34.8888888888889,
+        "avg_margin": -67.0277777777778,
+        "avg_our_hull": 8.41666666666667,
+        "avg_their_hull": 75.4444444444444,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 31,
+        "matches": 36,
+        "overtime_decided": 5,
+        "unresolved": 0,
+        "win_rate": 0.138888888888889,
+        "wins": 5
+       },
+       "mid": {
+        "avg_elapsed": 59.4444444444444,
+        "avg_margin": 22.1388888888889,
+        "avg_our_hull": 37.5277777777778,
+        "avg_their_hull": 15.3888888888889,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 15,
+        "matches": 36,
+        "overtime_decided": 17,
+        "unresolved": 0,
+        "win_rate": 0.583333333333333,
+        "wins": 21
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.481481481481481,
+      "wins": 52
+     },
+     "subject": "equal_helios_pair(핵심)",
+     "variant": "중립(배율 1.0)"
+    },
+    {
+     "result": {
+      "avg_elapsed": 55.7685185185185,
+      "avg_margin": -5.68518518518519,
+      "avg_our_hull": 35.5648148148148,
+      "avg_their_hull": 41.25,
+      "decided": 108,
+      "draws": 0,
+      "errors": 0,
+      "label": "equal_helios_pair(핵심)/biomass",
+      "losses": 62,
+      "matches": 108,
+      "opponents": 18,
+      "overtime_decided": 46,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 63.6111111111111,
+        "avg_margin": 42.0,
+        "avg_our_hull": 59.0,
+        "avg_their_hull": 17.0,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 12,
+        "matches": 36,
+        "overtime_decided": 21,
+        "unresolved": 0,
+        "win_rate": 0.666666666666667,
+        "wins": 24
+       },
+       "late": {
+        "avg_elapsed": 35.7777777777778,
+        "avg_margin": -63.6944444444444,
+        "avg_our_hull": 15.25,
+        "avg_their_hull": 78.9444444444444,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 30,
+        "matches": 36,
+        "overtime_decided": 5,
+        "unresolved": 0,
+        "win_rate": 0.166666666666667,
+        "wins": 6
+       },
+       "mid": {
+        "avg_elapsed": 67.9166666666667,
+        "avg_margin": 4.63888888888889,
+        "avg_our_hull": 32.4444444444444,
+        "avg_their_hull": 27.8055555555556,
+        "decided": 36,
+        "draws": 0,
+        "errors": 0,
+        "losses": 20,
+        "matches": 36,
+        "overtime_decided": 20,
+        "unresolved": 0,
+        "win_rate": 0.444444444444444,
+        "wins": 16
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.425925925925926,
+      "wins": 46
+     },
+     "subject": "equal_helios_pair(핵심)",
+     "variant": "biomass"
+    }
+   ],
+   "overtime": [
+    {
+     "opponent": "early_p0_r0",
+     "result": {
+      "avg_elapsed": 73.52,
+      "avg_margin": -57.1333333333333,
+      "avg_our_hull": 3.5,
+      "avg_their_hull": 60.6333333333333,
+      "decided": 30,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p0_r0/ON",
+      "losses": 27,
+      "matches": 30,
+      "opponents": 5,
+      "overtime_decided": 18,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 73.52,
+        "avg_margin": -57.1333333333333,
+        "avg_our_hull": 3.5,
+        "avg_their_hull": 60.6333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 27,
+        "matches": 30,
+        "overtime_decided": 18,
+        "unresolved": 0,
+        "win_rate": 0.1,
+        "wins": 3
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.1,
+      "wins": 3
+     },
+     "variant": "ON"
+    },
+    {
+     "opponent": "early_p0_r0",
+     "result": {
+      "avg_elapsed": 85.92,
+      "avg_margin": -70.7,
+      "avg_our_hull": 17.7,
+      "avg_their_hull": 88.4,
+      "decided": 18,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p0_r0/OFF",
+      "losses": 18,
+      "matches": 30,
+      "opponents": 5,
+      "overtime_decided": 0,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 85.92,
+        "avg_margin": -70.7,
+        "avg_our_hull": 17.7,
+        "avg_their_hull": 88.4,
+        "decided": 18,
+        "draws": 0,
+        "errors": 0,
+        "losses": 18,
+        "matches": 30,
+        "overtime_decided": 0,
+        "unresolved": 12,
+        "win_rate": 0.0,
+        "wins": 0
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 12,
+      "win_rate": 0.0,
+      "wins": 0
+     },
+     "variant": "OFF"
+    },
+    {
+     "opponent": "early_p55_r2",
+     "result": {
+      "avg_elapsed": 70.6,
+      "avg_margin": -47.1666666666667,
+      "avg_our_hull": 11.8333333333333,
+      "avg_their_hull": 59.0,
+      "decided": 30,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p55_r2/ON",
+      "losses": 22,
+      "matches": 30,
+      "opponents": 5,
+      "overtime_decided": 18,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 70.6,
+        "avg_margin": -47.1666666666667,
+        "avg_our_hull": 11.8333333333333,
+        "avg_their_hull": 59.0,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 22,
+        "matches": 30,
+        "overtime_decided": 18,
+        "unresolved": 0,
+        "win_rate": 0.266666666666667,
+        "wins": 8
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.266666666666667,
+      "wins": 8
+     },
+     "variant": "ON"
+    },
+    {
+     "opponent": "early_p55_r2",
+     "result": {
+      "avg_elapsed": 82.8666666666667,
+      "avg_margin": -35.2666666666667,
+      "avg_our_hull": 35.0333333333333,
+      "avg_their_hull": 70.3,
+      "decided": 20,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p55_r2/OFF",
+      "losses": 18,
+      "matches": 30,
+      "opponents": 5,
+      "overtime_decided": 0,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 82.8666666666667,
+        "avg_margin": -35.2666666666667,
+        "avg_our_hull": 35.0333333333333,
+        "avg_their_hull": 70.3,
+        "decided": 20,
+        "draws": 0,
+        "errors": 0,
+        "losses": 18,
+        "matches": 30,
+        "overtime_decided": 0,
+        "unresolved": 10,
+        "win_rate": 0.1,
+        "wins": 2
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 10,
+      "win_rate": 0.1,
+      "wins": 2
+     },
+     "variant": "OFF"
+    },
+    {
+     "opponent": "early_p110_r0",
+     "result": {
+      "avg_elapsed": 52.3666666666667,
+      "avg_margin": 76.2666666666667,
+      "avg_our_hull": 77.4,
+      "avg_their_hull": 1.13333333333333,
+      "decided": 30,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p110_r0/ON",
+      "losses": 1,
+      "matches": 30,
+      "opponents": 5,
+      "overtime_decided": 6,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 52.3666666666667,
+        "avg_margin": 76.2666666666667,
+        "avg_our_hull": 77.4,
+        "avg_their_hull": 1.13333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 1,
+        "matches": 30,
+        "overtime_decided": 6,
+        "unresolved": 0,
+        "win_rate": 0.966666666666667,
+        "wins": 29
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.966666666666667,
+      "wins": 29
+     },
+     "variant": "ON"
+    },
+    {
+     "opponent": "early_p110_r0",
+     "result": {
+      "avg_elapsed": 57.0,
+      "avg_margin": 79.3666666666667,
+      "avg_our_hull": 80.9,
+      "avg_their_hull": 1.53333333333333,
+      "decided": 30,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p110_r0/OFF",
+      "losses": 1,
+      "matches": 30,
+      "opponents": 5,
+      "overtime_decided": 0,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 57.0,
+        "avg_margin": 79.3666666666667,
+        "avg_our_hull": 80.9,
+        "avg_their_hull": 1.53333333333333,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 1,
+        "matches": 30,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 0.966666666666667,
+        "wins": 29
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.966666666666667,
+      "wins": 29
+     },
+     "variant": "OFF"
+    },
+    {
+     "opponent": "early_p20_r0",
+     "result": {
+      "avg_elapsed": 84.7666666666667,
+      "avg_margin": -34.7666666666667,
+      "avg_our_hull": 4.83333333333333,
+      "avg_their_hull": 39.6,
+      "decided": 30,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p20_r0/ON",
+      "losses": 22,
+      "matches": 30,
+      "opponents": 5,
+      "overtime_decided": 20,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 84.7666666666667,
+        "avg_margin": -34.7666666666667,
+        "avg_our_hull": 4.83333333333333,
+        "avg_their_hull": 39.6,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 22,
+        "matches": 30,
+        "overtime_decided": 20,
+        "unresolved": 0,
+        "win_rate": 0.266666666666667,
+        "wins": 8
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.266666666666667,
+      "wins": 8
+     },
+     "variant": "ON"
+    },
+    {
+     "opponent": "early_p20_r0",
+     "result": {
+      "avg_elapsed": 101.0,
+      "avg_margin": -34.4666666666667,
+      "avg_our_hull": 45.9,
+      "avg_their_hull": 80.3666666666667,
+      "decided": 15,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p20_r0/OFF",
+      "losses": 15,
+      "matches": 30,
+      "opponents": 5,
+      "overtime_decided": 0,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 101.0,
+        "avg_margin": -34.4666666666667,
+        "avg_our_hull": 45.9,
+        "avg_their_hull": 80.3666666666667,
+        "decided": 15,
+        "draws": 0,
+        "errors": 0,
+        "losses": 15,
+        "matches": 30,
+        "overtime_decided": 0,
+        "unresolved": 15,
+        "win_rate": 0.0,
+        "wins": 0
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 15,
+      "win_rate": 0.0,
+      "wins": 0
+     },
+     "variant": "OFF"
+    },
+    {
+     "opponent": "early_p25_r0",
+     "result": {
+      "avg_elapsed": 55.9133333333333,
+      "avg_margin": 38.2666666666667,
+      "avg_our_hull": 54.3333333333333,
+      "avg_their_hull": 16.0666666666667,
+      "decided": 30,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p25_r0/ON",
+      "losses": 8,
+      "matches": 30,
+      "opponents": 5,
+      "overtime_decided": 1,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 55.9133333333333,
+        "avg_margin": 38.2666666666667,
+        "avg_our_hull": 54.3333333333333,
+        "avg_their_hull": 16.0666666666667,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 8,
+        "matches": 30,
+        "overtime_decided": 1,
+        "unresolved": 0,
+        "win_rate": 0.733333333333333,
+        "wins": 22
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.733333333333333,
+      "wins": 22
+     },
+     "variant": "ON"
+    },
+    {
+     "opponent": "early_p25_r0",
+     "result": {
+      "avg_elapsed": 58.3133333333333,
+      "avg_margin": 39.5666666666667,
+      "avg_our_hull": 56.3333333333333,
+      "avg_their_hull": 16.7666666666667,
+      "decided": 30,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p25_r0/OFF",
+      "losses": 8,
+      "matches": 30,
+      "opponents": 5,
+      "overtime_decided": 0,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 58.3133333333333,
+        "avg_margin": 39.5666666666667,
+        "avg_our_hull": 56.3333333333333,
+        "avg_their_hull": 16.7666666666667,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 8,
+        "matches": 30,
+        "overtime_decided": 0,
+        "unresolved": 0,
+        "win_rate": 0.733333333333333,
+        "wins": 22
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.733333333333333,
+      "wins": 22
+     },
+     "variant": "OFF"
+    },
+    {
+     "opponent": "early_p30_r0",
+     "result": {
+      "avg_elapsed": 67.1066666666667,
+      "avg_margin": 18.2333333333333,
+      "avg_our_hull": 52.5,
+      "avg_their_hull": 34.2666666666667,
+      "decided": 30,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p30_r0/ON",
+      "losses": 12,
+      "matches": 30,
+      "opponents": 5,
+      "overtime_decided": 14,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 67.1066666666667,
+        "avg_margin": 18.2333333333333,
+        "avg_our_hull": 52.5,
+        "avg_their_hull": 34.2666666666667,
+        "decided": 30,
+        "draws": 0,
+        "errors": 0,
+        "losses": 12,
+        "matches": 30,
+        "overtime_decided": 14,
+        "unresolved": 0,
+        "win_rate": 0.6,
+        "wins": 18
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 0,
+      "win_rate": 0.6,
+      "wins": 18
+     },
+     "variant": "ON"
+    },
+    {
+     "opponent": "early_p30_r0",
+     "result": {
+      "avg_elapsed": 71.0133333333333,
+      "avg_margin": 19.2333333333333,
+      "avg_our_hull": 60.0,
+      "avg_their_hull": 40.7666666666667,
+      "decided": 28,
+      "draws": 0,
+      "errors": 0,
+      "label": "early_p30_r0/OFF",
+      "losses": 12,
+      "matches": 30,
+      "opponents": 5,
+      "overtime_decided": 0,
+      "per_stage": {
+       "early": {
+        "avg_elapsed": 71.0133333333333,
+        "avg_margin": 19.2333333333333,
+        "avg_our_hull": 60.0,
+        "avg_their_hull": 40.7666666666667,
+        "decided": 28,
+        "draws": 0,
+        "errors": 0,
+        "losses": 12,
+        "matches": 30,
+        "overtime_decided": 0,
+        "unresolved": 2,
+        "win_rate": 0.571428571428571,
+        "wins": 16
+       }
+      },
+      "seeds": [
+       9001,
+       9002,
+       9003
+      ],
+      "unresolved": 2,
+      "win_rate": 0.571428571428571,
+      "wins": 16
+     },
+     "variant": "OFF"
+    }
+   ]
+  }
+ },
+ "run_id": "stageD-20260907T225302"
+}

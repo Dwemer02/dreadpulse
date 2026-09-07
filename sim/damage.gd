@@ -36,8 +36,13 @@ static func apply(ship: RefCounted, amount: int, attack_type: String) -> Diction
 			"shield_mult": K.TYPE_MULT_DENOM, "material_mult": K.TYPE_MULT_DENOM,
 		}
 
-	var shield_mult: int = mult_num(attack_type, "energy_shield")
-	var material_mult: int = mult_num(attack_type, ship.hull_material)
+	# 진단용 중립 기준(r5b 피드백 §11.1)에서는 두 배율이 모두 1.0이다.
+	# 기본값에서는 이 분기가 꺼져 있어 기존 계산과 한 틱도 다르지 않다.
+	var neutral: bool = bool(ship.neutral_damage_types)
+	var shield_mult: int = K.TYPE_MULT_DENOM if neutral \
+		else mult_num(attack_type, "energy_shield")
+	var material_mult: int = K.TYPE_MULT_DENOM if neutral \
+		else mult_num(attack_type, ship.hull_material)
 
 	# 1) 실드
 	var shield_effective: int = amount * shield_mult / K.TYPE_MULT_DENOM
