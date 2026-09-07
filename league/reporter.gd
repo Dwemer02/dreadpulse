@@ -219,15 +219,20 @@ func _offer_quality(runner: RefCounted) -> void:
 		var key: String = str(choice["strategy"])
 		if not g.has(key):
 			g[key] = {"offers": 0, "immediate": 0, "future": 0, "none": 0,
-				"alternatives": 0, "k": 0}
+				"alternatives": 0, "k": 0, "keepable": 0}
 		var row: Dictionary = g[key]
 		row["offers"] = int(row["offers"]) + 1
 		row["k"] = int(row["k"]) + (choice["final"] as Array).size()
+		# 유지 후보가 없는 제안은 즉시 유효의 **분모에서도 뺀다**.
+		# 시작 조립은 아무것도 안 하는 선택지가 없어서 물을 수 없는 질문이다.
+		var keepable: bool = false
 		var any_immediate: bool = false
 		var any_future: bool = false
 		var lanes: Dictionary = {}
 		for entry: Variant in choice.get("offer_candidates", []):
 			var offer: Dictionary = entry
+			if bool(offer.get("keep_available", false)):
+				keepable = true
 			if bool(offer.get("improves", false)):
 				any_immediate = true
 			if bool((offer.get("future", {}) as Dictionary).get("future", false)):
@@ -238,6 +243,8 @@ func _offer_quality(runner: RefCounted) -> void:
 			for lane: String in ["body", "augment", "storage"]:
 				if int(uses.get(lane, 0)) > 0:
 					lanes["%s/%s" % [str(offer["part_id"]), lane]] = true
+		if keepable:
+			row["keepable"] = int(row["keepable"]) + 1
 		if any_immediate:
 			row["immediate"] = int(row["immediate"]) + 1
 		if any_future:
@@ -255,7 +262,7 @@ func _offer_quality(runner: RefCounted) -> void:
 		var n: int = maxi(1, int(row2["offers"]))
 		_say("  %-13s %7d %6.1f %8.1f%% %10.1f%% %8.1f %8.1f%%" % [strategy,
 			int(row2["offers"]), float(row2["k"]) / float(n),
-			100.0 * float(row2["immediate"]) / float(n),
+			100.0 * float(row2["immediate"]) / float(maxi(1, int(row2["keepable"]))),
 			100.0 * float(row2["future"]) / float(n),
 			float(row2["alternatives"]) / float(n),
 			100.0 * float(row2["none"]) / float(n)])
@@ -263,6 +270,9 @@ func _offer_quality(runner: RefCounted) -> void:
 	_say("  ※ '즉시 유효'는 **유지보다 나은 후보가 있었는가**다. 최고 점수의 절대값이")
 	_say("     아니다 — 초반 점수는 흔히 음수이고, 그 절대값으로는 '이 제안이 이")
 	_say("     참가자에게 쓸모가 있었는가'를 말할 수 없다.")
+	_say("     분모는 **유지가 합법 후보에 있었던 제안**뿐이다. 시작 조립은")
+	_say("     '획득한 파츠를 전부 본체로'를 요구해 아무것도 안 하는 선택지가")
+	_say("     없으므로, 거기서는 물을 수 없는 질문이다.")
 	_say("  ※ '대안 수'는 **보상별 서로 다른 사용법**의 개수다. 같은 파츠를 여러 자리에")
 	_say("     놓을 수 있다는 것은 여러 갈래가 아니라 한 갈래다.")
 	_say("  ※ 이 표는 AI 점수로 유효성을 정의한다 — **평가기 편향을 다시 재는 것**일 수")

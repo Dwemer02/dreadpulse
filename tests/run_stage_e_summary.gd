@@ -85,16 +85,21 @@ func _offer_quality(data: Array) -> void:
 		"대안 수", "후보 부재"])
 	for run: Dictionary in data:
 		var choices: Array = run["choices"]
+		var keepable_offers: int = 0
 		var immediate: int = 0
 		var future: int = 0
 		var none: int = 0
 		var lanes: int = 0
 		for c: Dictionary in choices:
+			# 유지 후보가 없는 제안은 즉시 유효의 분모에서도 뺀다.
+			var keepable: bool = false
 			var any_i: bool = false
 			var any_f: bool = false
 			var seen: Dictionary = {}
 			for entry: Variant in c.get("offer_candidates", []):
 				var offer: Dictionary = entry
+				if bool(offer.get("keep_available", false)):
+					keepable = true
 				if bool(offer.get("improves", false)):
 					any_i = true
 				if bool((offer.get("future", {}) as Dictionary).get("future", false)):
@@ -103,6 +108,8 @@ func _offer_quality(data: Array) -> void:
 				for lane: String in ["body", "augment", "storage"]:
 					if int(uses.get(lane, 0)) > 0:
 						seen["%s/%s" % [str(offer["part_id"]), lane]] = true
+			if keepable:
+				keepable_offers += 1
 			if any_i:
 				immediate += 1
 			if any_f:
@@ -113,7 +120,7 @@ func _offer_quality(data: Array) -> void:
 		var n: int = maxi(1, choices.size())
 		_say("  %-10s %6d %8.1f%% %10.1f%% %8.2f %8.1f%%"
 			% [str(run["label"]).get_slice("-", 0), int(run["k"]),
-				100.0 * float(immediate) / float(n),
+				100.0 * float(immediate) / float(maxi(1, keepable_offers)),
 				100.0 * float(future) / float(n),
 				float(lanes) / float(n),
 				100.0 * float(none) / float(n)])
@@ -221,11 +228,6 @@ func _fixed_vs_flexible(data: Array) -> void:
 	_say("  %-10s %5s %11s %11s %10s %10s" % ["배치", "K", "고정형 평균",
 		"유연형 평균", "고정 하위", "유연 하위"])
 	for run: Dictionary in data:
-		var pools: Dictionary = {}
-		for p: Dictionary in (run["participants"] as Array):
-			if str(p.get("recipe_id", "")) == "" and str(p["strategy"]) == "fixed_recipe":
-				continue
-			pools[str(p["pool"])] = true
 		# 고정형에게 레시피가 없는 풀은 양쪽 모두에서 뺀다 — 비교가 성립하지 않는다.
 		var usable: Dictionary = {}
 		for p2: Dictionary in (run["participants"] as Array):

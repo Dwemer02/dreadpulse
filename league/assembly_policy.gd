@@ -80,7 +80,8 @@ func decide(inv: RefCounted, ctx: Dictionary) -> Dictionary:
 			"candidate_counts": {"visited": seen.size(), "accepted": 0,
 				"shortlisted": 0,
 				"reward_uses": {"body": 0, "augment": 0, "storage": 0, "gone": 0}},
-			"best_potential": 0.0, "chosen_use": "", "keep_score": -INF,
+			"best_potential": 0.0, "chosen_use": "",
+			"keep_score": 0.0, "keep_available": false,
 			"recipe": Recipes.progress(recipe_id, inv), "recipe_id": recipe_id,
 			"goal_reason": "유효한 조립 후보 없음"}
 
@@ -111,6 +112,10 @@ func decide(inv: RefCounted, ctx: Dictionary) -> Dictionary:
 		# 있어야 한다. 그것보다 나은 후보가 하나도 없으면 그 제안은 이 참가자에게
 		# 쓸모가 없었던 것이고, 최고 점수의 절대값만으로는 그것을 알 수 없다.
 		"keep_score": _keep_score(accepted),
+		# 유지가 **합법 후보에 없을 수 있다.** 시작 조립은 min_bodies가 "획득한
+		# 파츠를 전부 본체로" 요구하므로 아무것도 안 하는 선택지가 아예 없다.
+		# 그때 즉시 유효를 참으로 세면 그 지표가 시작 선택에서 항상 참이 된다.
+		"keep_available": _keep_score(accepted) > -1e30,
 		"chosen_use": str(picked["reward_use"]),
 		"recipe": picked["recipe"],
 		"recipe_id": recipe_id,
@@ -145,11 +150,14 @@ static func _count_reward_uses(accepted: Array) -> Dictionary:
 
 ## 아무 조작도 하지 않은 상태의 점수. 보상은 이미 창고에 들어와 있으므로
 ## "유지"는 곧 **그 보상을 창고에 둔 채 보드를 그대로 두는 것**이다.
+## 유지가 없으면 **-INF가 아니라 큰 음수**를 돌려준다. -INF는 JSON에서
+## `-1e99999`로 직렬화되고 다시 읽을 때 "Exponent too high" 경고를 낸다 —
+## 실측으로 걸렸다. 판정은 keep_available로 하고 이 값은 진단용이다.
 static func _keep_score(accepted: Array) -> float:
 	for entry: Dictionary in accepted:
 		if (entry["chain"] as Array).is_empty():
 			return float(entry["score"])
-	return -INF
+	return -1e30
 
 ## 합법 후보 전체에서 그 특징의 최대값.
 static func _best_of(accepted: Array, key: String) -> float:

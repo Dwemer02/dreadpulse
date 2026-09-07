@@ -173,9 +173,13 @@ func _acquire(p: Dictionary, index: int, round_index: int, guarantee: bool,
 			# 남은 것도 양수로 나온다. 늘었는지는 차이로만 알 수 있다.
 			"best_potential": snappedf(float(decision.get("best_potential", 0.0)), 0.001),
 			# §9.1 — 이 보상이 "아무것도 안 하기"보다 나았는가.
-			"keep_score": float(decision.get("keep_score", -INF)),
+			"keep_score": snappedf(float(decision.get("keep_score", 0.0)), 0.0001),
+			"keep_available": bool(decision.get("keep_available", false)),
+			# 유지 후보가 없으면 "유지보다 나은가"는 물을 수 없는 질문이다.
+			# 참으로 세면 시작 선택에서 이 지표가 항상 참이 된다.
 			"improves": bool(decision.get("valid", false))
-				and float(decision["score"]) > float(decision.get("keep_score", -INF)) + 0.001,
+				and bool(decision.get("keep_available", false))
+				and float(decision["score"]) > float(decision.get("keep_score", 0.0)) + 0.001,
 			"potential_before": snappedf(
 				clampf(float(before["unlockable"]) / Evaluator.UNLOCK_FULL, 0.0, 1.0),
 				0.001),
