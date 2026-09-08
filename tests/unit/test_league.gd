@@ -6,7 +6,7 @@ extends RefCounted
 ## 불가능한 조립이 통과하는가, 초과 피해가 규칙대로 들어가는가, 후보 평가가 원본을
 ## 오염시키는가, 같은 시드가 같은 결과를 내는가.
 
-const EXPECTED_CHECKS := 200
+const EXPECTED_CHECKS := 221
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -21,6 +21,7 @@ const Recipes = preload("res://league/recipes.gd")
 const InvestmentLog = preload("res://league/investment_log.gd")
 const Archive = preload("res://league/opponent_archive.gd")
 const Benchmark = preload("res://league/benchmark.gd")
+const EngineTrace = preload("res://league/engine_trace.gd")
 const Profile = preload("res://league/build_profile.gd")
 const Graph = preload("res://league/build_graph.gd")
 const Evaluator = preload("res://league/build_evaluator.gd")
@@ -57,6 +58,10 @@ func run(t: RefCounted) -> void:
 	_test_archive_is_fixed_and_diverse(t)
 	_test_benchmark_separates_unresolved(t)
 	_test_benchmark_margin_is_side_aware(t)
+	_test_overtime_pairs_by_match(t)
+	_test_inert_core_is_not_silent(t)
+	_test_trigger_only_contribution_is_visible(t)
+	_test_merge_keeps_best_observation(t)
 	_test_rejected_recipe_is_not_assigned(t)
 	_test_candidate_legality(t)
 	_test_candidates_do_not_mutate(t)
@@ -647,6 +652,112 @@ func _lone_board(part_id: String) -> Dictionary:
 	var role: String = str(_content.catalog.parts[part_id]["base_role"])
 	inv.place("weapon_1" if role == "weapon" else "defense_1", inv.add(part_id))
 	return inv.to_build("test_%s" % part_id, _content_config().frame_id)
+
+# --- 기여 판정과 짝별 비교 (A~G 검토 §6.2·§6.3) ---
+
+## ON/OFF는 **짝**으로 봐야 한다. 승률만 빼면 분모가 서로 달라 "규칙과 무관하다"를
+## 증명하지 못한다 — OFF에서 시간 안에 끝나지 않은 판은 OFF 승률의 분모에서 빠진다.
+func _test_overtime_pairs_by_match(t: RefCounted) -> void:
+	var on: Array = [
+		{"opponent": "a", "seed": 1, "side": "L", "outcome": "win"},
+		{"opponent": "a", "seed": 1, "side": "R", "outcome": "win"},
+		{"opponent": "b", "seed": 1, "side": "L", "outcome": "win"},
+		{"opponent": "c", "seed": 1, "side": "L", "outcome": "loss"},
+	]
+	var off: Array = [
+		{"opponent": "a", "seed": 1, "side": "L", "outcome": "win"},
+		{"opponent": "a", "seed": 1, "side": "R", "outcome": "loss"},
+		{"opponent": "b", "seed": 1, "side": "L", "outcome": "unresolved"},
+		{"opponent": "c", "seed": 2, "side": "L", "outcome": "loss"},
+	]
+	var paired: Dictionary = Benchmark.pair(on, off)
+	t.eq(int(paired["pairs"]), 3, "짝이 맞는 판만 센다 — 시드가 다른 c는 짝이 없다")
+	t.eq(int(paired["same"]), 1, "둘 다 결판나고 승패가 같은 짝")
+	t.eq(int(paired["flipped"]), 1, "둘 다 결판났지만 승패가 바뀐 짝")
+	t.eq(int(paired["a_only"]), 1,
+		"ON에서만 결판난 짝 — **미해결을 패배로 바꾸지 않는다**")
+
+	# 키에 좌우가 빠지면 같은 상대·시드의 두 판이 한 칸에 겹쳐 짝이 어긋난다.
+	t.check(Benchmark.match_key(on[0]) != Benchmark.match_key(on[1]),
+		"좌우가 다른 두 판은 다른 키다")
+
+## 효과가 없는 리그 테스트 Core를 "침묵"으로 세면 안 된다 (검토 §6.2). 단계 G의
+## 첫 판본이 후보 24개 전부를 침묵 1칸 이상으로 적은 원인이 이것이다.
+##
+## 그리고 **주기 발동이 없는 파츠가 안 돌았다는 것은 무기여가 아니다** — 조건을
+## 못 만난 것이다. 두 사실을 같은 칸에 넣으면 "이 빌드에 죽은 자리가 있다"로 읽힌다.
+func _test_inert_core_is_not_silent(t: RefCounted) -> void:
+	var config: RefCounted = _content_config()
+	var inv: RefCounted = _pair_board("scrap_autocannon", "waste_heat_recovery")
+	var build: Dictionary = inv.to_build("trace", config.frame_id)
+	var result: Dictionary = CombatAdapter.fight(_content.catalog, config,
+		build, build, 4242)
+	t.check(bool(result["ok"]), "추적용 전투가 돈다: %s" % str(result.get("error", "")))
+
+	var trace: Dictionary = EngineTrace.of_combat(result["log"], "player", build,
+		_content.catalog)
+	var kinds: Dictionary = {}
+	for slot: String in (trace["contribution"] as Dictionary):
+		kinds[slot] = str(((trace["contribution"] as Dictionary)[slot]
+			as Dictionary)["kind"])
+	t.eq(str(kinds.get("core", "")), "inert",
+		"효과가 없는 Core는 기여 판정에서 제외한다")
+	t.eq(str(kinds.get("weapon_1", "")), "fired", "주기 발동이 있는 무기는 발동으로 잡힌다")
+	t.eq(str(kinds.get("flex_1", "")), "waiting",
+		"주기 발동이 없는 파츠는 조건 미충족이지 무기여가 아니다")
+	t.check((trace["silent"] as Array).is_empty(),
+		"셋 중 어느 것도 '기여 없음'이 아니다: %s" % str(trace["silent"]))
+
+	# 카탈로그를 주지 않으면 Core도 침묵으로 떨어진다 — 그것이 옛 동작이다.
+	var blind: Dictionary = EngineTrace.of_combat(result["log"], "player", build)
+	t.check((blind["silent"] as Array).has("core"),
+		"카탈로그 없이는 구별할 수 없다 — 그래서 단계 G가 카탈로그를 넘긴다")
+
+## Active 발동이 없어도 트리거로 기여한 슬롯이 있다. 실측에서
+## `acid_tentacle→waste_heat_recovery` 연결이 기록된 후보의 그 회수기가 같은 표의
+## 침묵 칸에 들어 있었다.
+func _test_trigger_only_contribution_is_visible(t: RefCounted) -> void:
+	var build: Dictionary = {"id": "synthetic", "frame": "pool_frame", "slots": {
+		"weapon_1": {"part": "scrap_autocannon"},
+		"flex_1": {"part": "waste_heat_recovery"},
+	}}
+	# 발동은 무기에서만 나고, 회수기는 자원 획득 사건만 낸다.
+	var log: Array = [
+		{"type": "part_fired", "ship": "player", "slot": "weapon_1",
+			"part_id": "scrap_autocannon", "chain_depth": 0, "chain_id": 1},
+		{"type": "material_gained", "ship": "player", "slot": "flex_1",
+			"amount": 1, "chain_depth": 1, "chain_id": 1},
+	]
+	var trace: Dictionary = EngineTrace.of_combat(log, "player", build,
+		_content.catalog)
+	var cells: Dictionary = trace["contribution"]
+	t.eq(str((cells["flex_1"] as Dictionary)["kind"]), "reacted",
+		"발동이 없어도 사건을 냈으면 반응으로 잡는다")
+	t.eq(int((cells["flex_1"] as Dictionary)["outputs"]), 1,
+		"자원 획득은 실제 출력으로 센다")
+	t.check((trace["silent"] as Array).is_empty(), "침묵 칸은 없다")
+	t.eq(int((trace["links"] as Dictionary).get("weapon_1→flex_1", 0)), 1,
+		"연결은 뿌리 발동 뒤에 다른 슬롯이 한 일로 센다")
+
+## 한 판에서 안 돌았다고 죽은 파츠가 아니다 — 상대에 따라 조건이 안 맞았을 수 있다.
+func _test_merge_keeps_best_observation(t: RefCounted) -> void:
+	var quiet: Dictionary = {"fires": {}, "links": {}, "damage": {},
+		"contribution": {"flex_1": {"part": "x", "kind": "silent",
+			"fires": 0, "reactions": 0, "outputs": 0}}, "silent": ["flex_1"]}
+	var busy: Dictionary = {"fires": {}, "links": {}, "damage": {},
+		"contribution": {"flex_1": {"part": "x", "kind": "fired",
+			"fires": 7, "reactions": 2, "outputs": 3}}, "silent": []}
+	# **순서가 결과를 바꾸면 안 된다.** 마지막 관측을 그대로 덮어쓰는 구현은
+	# [침묵, 발동] 순서에서만 맞고 [발동, 침묵]에서 틀린다 — 돌연변이 점검에서
+	# 첫 판본의 이 테스트가 한 순서만 봐서 그 결함을 놓쳤다.
+	for order: Array in [[quiet, busy], [busy, quiet]]:
+		var merged: Dictionary = EngineTrace.merge(order)
+		var cell: Dictionary = (merged["contribution"] as Dictionary)["flex_1"]
+		t.eq(str(cell["kind"]), "fired",
+			"어느 한 판에서라도 돌았으면 돈 것으로 센다 (순서 무관)")
+		t.eq(int(cell["combats_active"]), 1, "몇 판에서 돌았는지는 따로 남는다")
+		t.check((merged["silent"] as Array).is_empty(),
+			"침묵은 **모든 전투에서** 아무것도 안 했을 때만 남는다")
 
 # --- 조립 후보 ---
 

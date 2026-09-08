@@ -161,11 +161,16 @@ func _select(pool: Array, want: int) -> Array:
 func _profile_candidate(snap: Dictionary, opponents: Array) -> Dictionary:
 	# 강도·약점·초과 피해 의존 — 고정 상대군에서.
 	var with_overtime: Dictionary = Benchmark.run(_content.catalog, _config,
-		snap["build"], opponents, _config.combat_rules(), str(snap["snapshot_id"]))
+		snap["build"], opponents, _config.combat_rules(), str(snap["snapshot_id"]),
+		Benchmark.SEEDS, true)
 	# 초과 피해가 없으면 어떻게 되는가. **미해결은 승패에 섞지 않는다** (§11.2).
 	var without: Dictionary = Benchmark.run(_content.catalog, _config,
 		snap["build"], opponents, Benchmark.no_overtime_rules(),
-		str(snap["snapshot_id"]))
+		str(snap["snapshot_id"]), Benchmark.SEEDS, true)
+	# 승률을 그냥 빼면 안 된다 — OFF의 분모는 "OFF에서 결판난 판"이라 ON과 다르다
+	# (A~G 검토 §6.3). 같은 상대·시드·좌우의 **짝**으로 본다.
+	var paired: Dictionary = Benchmark.pair(with_overtime["per_match"],
+		without["per_match"])
 
 	# 약점 — 이 후보가 지는 상대의 구조.
 	var weak_against: Array[String] = []
@@ -186,9 +191,13 @@ func _profile_candidate(snap: Dictionary, opponents: Array) -> Dictionary:
 		var result: Dictionary = CombatAdapter.fight(_content.catalog, _config,
 			snap["build"], opponent["build"], seed_value)
 		if bool(result["ok"]):
-			traces.append(EngineTrace.of_combat(result["log"], "player", snap["build"]))
+			# 카탈로그를 함께 준다. 없으면 효과가 없는 리그 Core도 "침묵"으로
+			# 세어져 후보 전부가 침묵 1칸 이상이 된다 (검토 §6.2).
+			traces.append(EngineTrace.of_combat(result["log"], "player", snap["build"],
+				_content.catalog))
 	var merged: Dictionary = EngineTrace.merge(traces) if not traces.is_empty() \
-		else {"fires": {}, "links": {}, "damage": {}, "idle": [], "combats": 0}
+		else {"fires": {}, "links": {}, "damage": {}, "contribution": {},
+			"silent": [], "combats": 0}
 
 	return {
 		# **배치 이름을 두 마디까지 쓴다.** 한 마디(k5)만 쓰면 시드 수가 다른 두
@@ -211,6 +220,13 @@ func _profile_candidate(snap: Dictionary, opponents: Array) -> Dictionary:
 		# 엔진 설명 — 관측이지 어휘가 아니다.
 		"engine": EngineTrace.describe(merged, snap["build"]),
 		"engine_detail": merged,
+		# **관측 범위를 데이터에 적는다.** 엔진 추적은 상대 4명, 강도는 상대군
+		# 전원이다. 두 관측을 같은 범위로 읽으면 "연결 없음"이 과대 해석된다.
+		"observed": {
+			"engine_combats": int(merged.get("combats", 0)),
+			"benchmark_matches": int(with_overtime["matches"]),
+			"contribution": EngineTrace.kind_counts(merged),
+		},
 		# 강도
 		"benchmark": {
 			"win_rate": float(with_overtime["win_rate"]),
@@ -226,27 +242,34 @@ func _profile_candidate(snap: Dictionary, opponents: Array) -> Dictionary:
 			"win_rate_without": float(without["win_rate"]),
 			"unresolved_without": int(without["unresolved"]),
 			"matches": int(with_overtime["matches"]),
+			"paired": paired,
 		},
 	}
 
 func _report(candidates: Array) -> void:
 	_head("프리셋 후보")
-	_say("  %-26s %4s %7s %8s %8s %9s" % ["후보", "R", "승률", "격차",
-		"초과의존", "미해결(OFF)"])
+	_say("  %-26s %4s %7s %8s %8s %7s %7s %8s" % ["후보", "R", "승률", "격차",
+		"초과의존", "동일", "뒤집힘", "OFF미해결"])
 	for c: Dictionary in candidates:
 		var ot: Dictionary = c["overtime"]
 		var drop: float = float(ot["win_rate_with"]) - float(ot["win_rate_without"])
-		_say("  %-26s %4d %6.1f%% %+8.1f %+7.1f%%p %9d"
+		var pr: Dictionary = ot["paired"]
+		_say("  %-26s %4d %6.1f%% %+8.1f %+7.1f%%p %7d %7d %8d"
 			% [str(c["id"]), int(c["stage_round"]),
 				100.0 * float((c["benchmark"] as Dictionary)["win_rate"]),
 				float((c["benchmark"] as Dictionary)["avg_margin"]),
-				100.0 * drop, int(ot["unresolved_without"])])
+				100.0 * drop, int(pr["same"]), int(pr["flipped"]),
+				int(pr["a_only"])])
 	_say("")
 	_say("  ※ '초과의존'은 초과 피해를 껐을 때 승률이 얼마나 떨어지는가다. 값이 크면")
 	_say("     **리그 전용 규칙으로 이긴 후보**이므로 본편에 그 규칙이 없다면 그대로")
 	_say("     프리셋 강도로 쓸 수 없다 (§9.4).")
-	_say("  ※ 미해결(OFF)은 초과 피해 없이 120초 안에 끝나지 않은 판이다. 승패에")
-	_say("     섞지 않았다 — 결과가 아니라 관측 실패다 (§11.2).")
+	_say("  ※ **승률 차이만으로 판단하지 않는다** (검토 §6.3). 뒤의 세 열은 같은")
+	_say("     상대·시드·좌우의 **짝**이다: '동일'은 ON/OFF 둘 다 결판나고 승패가")
+	_say("     같은 짝, '뒤집힘'은 둘 다 결판났지만 승패가 바뀐 짝, 'OFF미해결'은")
+	_say("     ON에서는 끝났는데 OFF에서 120초 안에 끝나지 않은 짝이다.")
+	_say("  ※ 미해결을 패배로 바꾸지 않는다. 결과가 아니라 **한정 시간 안에 플레이가")
+	_say("     끝나지 않았다**는 별도의 사실이다 (§11.2).")
 
 	_say("")
 	_say("  엔진 설명 — **실제 발동한 연결**이다 (§12.2). 정적 어휘가 아니다.")
@@ -260,11 +283,19 @@ func _report(candidates: Array) -> void:
 		var weak: Array[String] = []
 		for bucket: String in (c2["weak_against"] as Dictionary):
 			weak.append("%s(%d)" % [bucket, int((c2["weak_against"] as Dictionary)[bucket])])
-		_say("    약점   %s" % ("없음 — 상대군 전원에게 우세" if weak.is_empty()
+		# **"약점 없음"이라고 적지 않는다** (검토 §6.2). 빈 값은 "이 상대군에서
+		# 열세 구조를 못 찾았다"이고, 무약점이라는 뜻이 아니다.
+		_say("    약점   %s" % ("현재 시험 상대군에서 열세 구조 미발견" if weak.is_empty()
 			else ", ".join(weak)))
+		var ob: Dictionary = c2["observed"]
+		_say("    관측   엔진 %d전투 · 강도 %d전투 — **같은 범위가 아니다**"
+			% [int(ob["engine_combats"]), int(ob["benchmark_matches"])])
 	_say("")
 	_say("  ※ 약점은 **고정 상대군 안에서**의 것이다. 상대군에 없는 구조에 대한")
 	_say("     약점은 이 표가 말하지 않는다.")
+	_say("  ※ 기여 유형은 다섯이다 (검토 §6.2): 발동 / 트리거 반응 / 조건 미충족 /")
+	_say("     기여 없음 / **판정 제외**(효과가 없는 리그 테스트 Core). 발동이 없다는")
+	_say("     것과 기여가 없다는 것은 다른 사실이므로 같은 칸에 넣지 않는다.")
 	_say("  ※ **이 리그의 승률을 실제 PvE 난이도로 해석하지 않는다** (기획서 §1.3).")
 
 # --- 보조 ---

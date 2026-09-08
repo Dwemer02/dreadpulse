@@ -66,9 +66,43 @@
           }
         }
       },
-      "engine": "주력 acid_tentacle×30 · quantum_cutting_lance×19 · luminous_regen_sac×14 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat | 전투 내내 침묵 1칸",
+      "engine": "주력 acid_tentacle×30 · quantum_cutting_lance×19 · luminous_regen_sac×14 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 14,
+            "kind": "fired",
+            "mentions": 83,
+            "outputs": 44,
+            "part": "luminous_regen_sac"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 30,
+            "kind": "fired",
+            "mentions": 31,
+            "outputs": 30,
+            "part": "acid_tentacle"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 19,
+            "kind": "fired",
+            "mentions": 21,
+            "outputs": 19,
+            "part": "quantum_cutting_lance"
+          }
+        },
         "damage": {
           "caustic": 60,
           "energy": 108,
@@ -89,15 +123,32 @@
             "part_id": "quantum_cutting_lance"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n5_p247_r2",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 3,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 3,
         "matches": 108,
+        "paired": {
+          "a_only": 2,
+          "b_only": 0,
+          "flipped": 5,
+          "neither": 0,
+          "pairs": 108,
+          "same": 101
+        },
         "unresolved_without": 2,
         "win_rate_with": 0.694444444444444,
         "win_rate_without": 0.679245283018868
@@ -164,9 +215,43 @@
           }
         }
       },
-      "engine": "주력 acid_tentacle×25 · quantum_cutting_lance×20 | 연쇄 acid_tentacle→waste_heat_recovery×4 | 피해 caustic+energy+fracture+overheat | 전투 내내 침묵 2칸",
+      "engine": "주력 acid_tentacle×25 · quantum_cutting_lance×20 | 연쇄 acid_tentacle→waste_heat_recovery×4 | 피해 caustic+energy+fracture+overheat | 발동 없이 트리거로 출력 1칸",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "flex_1": {
+            "combats_active": 2,
+            "fires": 0,
+            "kind": "reacted",
+            "mentions": 5,
+            "outputs": 4,
+            "part": "waste_heat_recovery"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 25,
+            "kind": "fired",
+            "mentions": 27,
+            "outputs": 25,
+            "part": "acid_tentacle"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 20,
+            "kind": "fired",
+            "mentions": 28,
+            "outputs": 20,
+            "part": "quantum_cutting_lance"
+          }
+        },
         "damage": {
           "caustic": 50,
           "energy": 131,
@@ -183,18 +268,34 @@
             "part_id": "quantum_cutting_lance"
           }
         },
-        "idle": [
-          "core",
-          "flex_1"
-        ],
         "links": {
           "flex_2→flex_1": 4
-        }
+        },
+        "silent": []
       },
       "id": "preset_k5-n5_p47_r2",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 2,
+          "inert": 1,
+          "reacted": 1,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 6,
         "matches": 108,
+        "paired": {
+          "a_only": 4,
+          "b_only": 0,
+          "flipped": 15,
+          "neither": 0,
+          "pairs": 108,
+          "same": 89
+        },
         "unresolved_without": 4,
         "win_rate_with": 0.62037037037037,
         "win_rate_without": 0.567307692307692
@@ -258,9 +359,35 @@
           }
         }
       },
-      "engine": "주력 helios_lance×20 · photon_lance×12 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine": "주력 helios_lance×20 · photon_lance×12 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat+thermal",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 20,
+            "kind": "fired",
+            "mentions": 67,
+            "outputs": 29,
+            "part": "helios_lance"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 12,
+            "kind": "fired",
+            "mentions": 17,
+            "outputs": 12,
+            "part": "photon_lance"
+          }
+        },
         "damage": {
           "caustic": 9,
           "energy": 88,
@@ -278,15 +405,32 @@
             "part_id": "photon_lance"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n10_p186_r2",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 2,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 16,
         "matches": 108,
+        "paired": {
+          "a_only": 17,
+          "b_only": 0,
+          "flipped": 6,
+          "neither": 0,
+          "pairs": 108,
+          "same": 85
+        },
         "unresolved_without": 17,
         "win_rate_with": 0.342592592592593,
         "win_rate_without": 0.395604395604396
@@ -361,9 +505,51 @@
           }
         }
       },
-      "engine": "주력 acid_tentacle×36 · photon_lance×22 · fracture_engraver×14 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine": "주력 acid_tentacle×36 · photon_lance×22 · fracture_engraver×14 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat+thermal",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 36,
+            "kind": "fired",
+            "mentions": 36,
+            "outputs": 36,
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 10,
+            "kind": "fired",
+            "mentions": 28,
+            "outputs": 10,
+            "part": "helios_lance"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 14,
+            "kind": "fired",
+            "mentions": 1,
+            "outputs": 0,
+            "part": "fracture_engraver"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 22,
+            "kind": "fired",
+            "mentions": 24,
+            "outputs": 22,
+            "part": "photon_lance"
+          }
+        },
         "damage": {
           "caustic": 68,
           "energy": 172,
@@ -389,15 +575,32 @@
             "part_id": "photon_lance"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n10_p86_r2",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 4,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 0,
+          "b_only": 0,
+          "flipped": 6,
+          "neither": 0,
+          "pairs": 108,
+          "same": 102
+        },
         "unresolved_without": 0,
         "win_rate_with": 0.731481481481482,
         "win_rate_without": 0.712962962962963
@@ -462,9 +665,35 @@
           }
         }
       },
-      "engine": "주력 regen_sac×116 · resonant_fiber_cluster×41 | 연쇄 없음 | 피해 caustic+fracture | 전투 내내 침묵 1칸",
+      "engine": "주력 regen_sac×116 · resonant_fiber_cluster×41 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+fracture",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 116,
+            "kind": "fired",
+            "mentions": 214,
+            "outputs": 106,
+            "part": "regen_sac"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 41,
+            "kind": "fired",
+            "mentions": 23,
+            "outputs": 20,
+            "part": "resonant_fiber_cluster"
+          }
+        },
         "damage": {
           "caustic": 9,
           "fracture": 82
@@ -479,15 +708,32 @@
             "part_id": "resonant_fiber_cluster"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n5_p55_r2",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 2,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 18,
         "matches": 108,
+        "paired": {
+          "a_only": 74,
+          "b_only": 0,
+          "flipped": 7,
+          "neither": 0,
+          "pairs": 108,
+          "same": 27
+        },
         "unresolved_without": 74,
         "win_rate_with": 0.601851851851852,
         "win_rate_without": 0.0
@@ -553,9 +799,35 @@
           }
         }
       },
-      "engine": "주력 regen_sac×100 · acid_tentacle×52 | 연쇄 없음 | 피해 caustic+energy+fracture | 전투 내내 침묵 1칸",
+      "engine": "주력 regen_sac×100 · acid_tentacle×52 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 100,
+            "kind": "fired",
+            "mentions": 82,
+            "outputs": 79,
+            "part": "regen_sac"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 52,
+            "kind": "fired",
+            "mentions": 84,
+            "outputs": 77,
+            "part": "acid_tentacle"
+          }
+        },
         "damage": {
           "caustic": 104,
           "energy": 94,
@@ -571,15 +843,32 @@
             "part_id": "regen_sac"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n5_p5_r2",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 2,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 16,
         "matches": 108,
+        "paired": {
+          "a_only": 21,
+          "b_only": 0,
+          "flipped": 1,
+          "neither": 0,
+          "pairs": 108,
+          "same": 86
+        },
         "unresolved_without": 21,
         "win_rate_with": 0.231481481481481,
         "win_rate_without": 0.241379310344828
@@ -658,9 +947,51 @@
           }
         }
       },
-      "engine": "주력 acid_tentacle×40 · regen_sac×29 · layered_regen_membrane×12 | 연쇄 없음 | 피해 caustic+fracture+overheat | 전투 내내 침묵 1칸",
+      "engine": "주력 acid_tentacle×40 · regen_sac×29 · layered_regen_membrane×12 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+fracture+overheat",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 12,
+            "kind": "fired",
+            "mentions": 7,
+            "outputs": 7,
+            "part": "layered_regen_membrane"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 40,
+            "kind": "fired",
+            "mentions": 20,
+            "outputs": 20,
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 29,
+            "kind": "fired",
+            "mentions": 13,
+            "outputs": 13,
+            "part": "regen_sac"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 40,
+            "kind": "fired",
+            "mentions": 41,
+            "outputs": 40,
+            "part": "acid_tentacle"
+          }
+        },
         "damage": {
           "caustic": 80,
           "fracture": 36,
@@ -680,15 +1011,32 @@
             "part_id": "regen_sac"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n5_p33_r5",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 4,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 2,
+          "b_only": 0,
+          "flipped": 5,
+          "neither": 0,
+          "pairs": 108,
+          "same": 101
+        },
         "unresolved_without": 2,
         "win_rate_with": 0.972222222222222,
         "win_rate_without": 0.962264150943396
@@ -756,9 +1104,51 @@
           }
         }
       },
-      "engine": "주력 acid_tentacle×23 · photon_lance×18 · quantum_cutting_lance×13 | 연쇄 acid_tentacle→waste_heat_recovery×3 | 피해 caustic+energy+fracture+overheat | 전투 내내 침묵 2칸",
+      "engine": "주력 acid_tentacle×23 · photon_lance×18 · quantum_cutting_lance×13 | 연쇄 acid_tentacle→waste_heat_recovery×3 | 피해 caustic+energy+fracture+overheat | 발동 없이 트리거로 출력 1칸",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "flex_1": {
+            "combats_active": 3,
+            "fires": 0,
+            "kind": "reacted",
+            "mentions": 3,
+            "outputs": 3,
+            "part": "waste_heat_recovery"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 23,
+            "kind": "fired",
+            "mentions": 24,
+            "outputs": 23,
+            "part": "acid_tentacle"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 18,
+            "kind": "fired",
+            "mentions": 31,
+            "outputs": 31,
+            "part": "photon_lance"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 13,
+            "kind": "fired",
+            "mentions": 18,
+            "outputs": 17,
+            "part": "quantum_cutting_lance"
+          }
+        },
         "damage": {
           "caustic": 46,
           "energy": 232,
@@ -779,18 +1169,34 @@
             "part_id": "quantum_cutting_lance"
           }
         },
-        "idle": [
-          "core",
-          "flex_1"
-        ],
         "links": {
           "flex_2→flex_1": 3
-        }
+        },
+        "silent": []
       },
       "id": "preset_k5-n5_p47_r5",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 3,
+          "inert": 1,
+          "reacted": 1,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 4,
         "matches": 108,
+        "paired": {
+          "a_only": 1,
+          "b_only": 0,
+          "flipped": 5,
+          "neither": 0,
+          "pairs": 108,
+          "same": 102
+        },
         "unresolved_without": 1,
         "win_rate_with": 0.833333333333333,
         "win_rate_without": 0.85981308411215
@@ -862,9 +1268,59 @@
           }
         }
       },
-      "engine": "주력 fracture_cilia×35 · scrap_autocannon×30 · acid_jet_cutter×18 | 연쇄 없음 | 피해 caustic+fracture+overheat+physical | 전투 내내 침묵 1칸",
+      "engine": "주력 fracture_cilia×35 · scrap_autocannon×30 · acid_jet_cutter×18 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+fracture+overheat+physical",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 14,
+            "kind": "fired",
+            "mentions": 28,
+            "outputs": 28,
+            "part": "dielectric_accumulator"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 30,
+            "kind": "fired",
+            "mentions": 30,
+            "outputs": 30,
+            "part": "scrap_autocannon"
+          },
+          "flex_2": {
+            "combats_active": 3,
+            "fires": 4,
+            "kind": "fired",
+            "mentions": 17,
+            "outputs": 0,
+            "part": "pressurized_acid_cannon"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 18,
+            "kind": "fired",
+            "mentions": 18,
+            "outputs": 18,
+            "part": "acid_jet_cutter"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 35,
+            "kind": "fired",
+            "mentions": 2,
+            "outputs": 0,
+            "part": "fracture_cilia"
+          }
+        },
         "damage": {
           "caustic": 122,
           "fracture": 35,
@@ -893,15 +1349,32 @@
             "part_id": "scrap_autocannon"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n10_p33_r5",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 1,
         "matches": 108,
+        "paired": {
+          "a_only": 1,
+          "b_only": 0,
+          "flipped": 4,
+          "neither": 0,
+          "pairs": 108,
+          "same": 103
+        },
         "unresolved_without": 1,
         "win_rate_with": 0.842592592592593,
         "win_rate_without": 0.88785046728972
@@ -972,9 +1445,59 @@
           }
         }
       },
-      "engine": "주력 growth_battery×40 · solar_reflector×32 · regen_fluid_sac×28 | 연쇄 luminous_regen_sac→growth_battery×16 · regen_fluid_sac→growth_battery×9 | 피해 fracture+overheat+physical+thermal | 전투 내내 침묵 1칸",
+      "engine": "주력 growth_battery×40 · solar_reflector×32 · regen_fluid_sac×28 | 연쇄 luminous_regen_sac→growth_battery×16 · regen_fluid_sac→growth_battery×9 | 피해 fracture+overheat+physical+thermal",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 28,
+            "kind": "fired",
+            "mentions": 146,
+            "outputs": 72,
+            "part": "regen_fluid_sac"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 40,
+            "kind": "fired",
+            "mentions": 98,
+            "outputs": 64,
+            "part": "growth_battery"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 26,
+            "kind": "fired",
+            "mentions": 22,
+            "outputs": 0,
+            "part": "adaptive_venom_gland"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 25,
+            "kind": "fired",
+            "mentions": 154,
+            "outputs": 72,
+            "part": "luminous_regen_sac"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 32,
+            "kind": "fired",
+            "mentions": 36,
+            "outputs": 32,
+            "part": "solar_reflector"
+          }
+        },
         "damage": {
           "fracture": 40,
           "overheat": 23,
@@ -1003,21 +1526,38 @@
             "part_id": "solar_reflector"
           }
         },
-        "idle": [
-          "core"
-        ],
         "links": {
           "defense_1→flex_1": 9,
           "defense_1→flex_2": 6,
           "flex_1→flex_2": 7,
           "flex_3→flex_1": 16,
           "flex_3→flex_2": 8
-        }
+        },
+        "silent": []
       },
       "id": "preset_k5-n5_p130_r5",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 9,
+          "b_only": 0,
+          "flipped": 3,
+          "neither": 0,
+          "pairs": 108,
+          "same": 96
+        },
         "unresolved_without": 9,
         "win_rate_with": 0.740740740740741,
         "win_rate_without": 0.767676767676768
@@ -1092,9 +1632,59 @@
           }
         }
       },
-      "engine": "주력 adaptive_venom_gland×54 · culture_slime_sac×43 · luminous_regen_sac×34 | 연쇄 culture_slime_sac→adaptive_venom_gland×39 · luminous_regen_sac→adaptive_venom_gland×25 | 피해 fracture+overheat+physical+thermal | 전투 내내 침묵 1칸",
+      "engine": "주력 adaptive_venom_gland×54 · culture_slime_sac×43 · luminous_regen_sac×34 | 연쇄 culture_slime_sac→adaptive_venom_gland×39 · luminous_regen_sac→adaptive_venom_gland×25 | 피해 fracture+overheat+physical+thermal",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 43,
+            "kind": "fired",
+            "mentions": 281,
+            "outputs": 168,
+            "part": "culture_slime_sac"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 54,
+            "kind": "fired",
+            "mentions": 49,
+            "outputs": 23,
+            "part": "adaptive_venom_gland"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 29,
+            "kind": "fired",
+            "mentions": 64,
+            "outputs": 29,
+            "part": "growth_battery"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 34,
+            "kind": "fired",
+            "mentions": 193,
+            "outputs": 97,
+            "part": "luminous_regen_sac"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 54,
+            "kind": "fired",
+            "mentions": 45,
+            "outputs": 0,
+            "part": "adaptive_venom_gland"
+          }
+        },
         "damage": {
           "fracture": 63,
           "overheat": 63,
@@ -1119,9 +1709,6 @@
             "part_id": "luminous_regen_sac"
           }
         },
-        "idle": [
-          "core"
-        ],
         "links": {
           "defense_1→flex_1": 15,
           "defense_1→flex_2": 20,
@@ -1129,12 +1716,32 @@
           "flex_3→flex_1": 9,
           "flex_3→flex_2": 14,
           "flex_3→weapon_1": 16
-        }
+        },
+        "silent": []
       },
       "id": "preset_k5-n5_p180_r5",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 3,
         "matches": 108,
+        "paired": {
+          "a_only": 2,
+          "b_only": 0,
+          "flipped": 7,
+          "neither": 0,
+          "pairs": 108,
+          "same": 99
+        },
         "unresolved_without": 2,
         "win_rate_with": 0.648148148148148,
         "win_rate_without": 0.726415094339623
@@ -1207,9 +1814,51 @@
           }
         }
       },
-      "engine": "주력 photon_lance×16 · acid_jet_cutter×13 · helios_lance×7 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine": "주력 photon_lance×16 · acid_jet_cutter×13 · helios_lance×7 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat+thermal",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 16,
+            "kind": "fired",
+            "mentions": 16,
+            "outputs": 16,
+            "part": "photon_lance"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 6,
+            "kind": "fired",
+            "mentions": 22,
+            "outputs": 12,
+            "part": "severance_beam"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 7,
+            "kind": "fired",
+            "mentions": 22,
+            "outputs": 7,
+            "part": "helios_lance"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 13,
+            "kind": "fired",
+            "mentions": 15,
+            "outputs": 13,
+            "part": "acid_jet_cutter"
+          }
+        },
         "damage": {
           "caustic": 91,
           "energy": 229,
@@ -1235,15 +1884,32 @@
             "part_id": "severance_beam"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n5_p239_r5",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 4,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 0,
+          "b_only": 0,
+          "flipped": 2,
+          "neither": 0,
+          "pairs": 108,
+          "same": 106
+        },
         "unresolved_without": 0,
         "win_rate_with": 0.861111111111111,
         "win_rate_without": 0.861111111111111
@@ -1317,9 +1983,59 @@
           }
         }
       },
-      "engine": "주력 acid_tentacle×32 · regen_sac×28 · growth_battery×8 | 연쇄 regen_sac→growth_battery×4 · regen_sac→layered_regen_membrane×1 | 피해 caustic+fracture+overheat+physical | 전투 내내 침묵 1칸",
+      "engine": "주력 acid_tentacle×32 · regen_sac×28 · growth_battery×8 | 연쇄 regen_sac→growth_battery×4 · regen_sac→layered_regen_membrane×1 | 피해 caustic+fracture+overheat+physical",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 8,
+            "kind": "fired",
+            "mentions": 5,
+            "outputs": 4,
+            "part": "layered_regen_membrane"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 32,
+            "kind": "fired",
+            "mentions": 16,
+            "outputs": 16,
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 28,
+            "kind": "fired",
+            "mentions": 12,
+            "outputs": 12,
+            "part": "regen_sac"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 8,
+            "kind": "fired",
+            "mentions": 20,
+            "outputs": 16,
+            "part": "growth_battery"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 32,
+            "kind": "fired",
+            "mentions": 33,
+            "outputs": 32,
+            "part": "acid_tentacle"
+          }
+        },
         "damage": {
           "caustic": 64,
           "fracture": 48,
@@ -1344,18 +2060,35 @@
             "part_id": "regen_sac"
           }
         },
-        "idle": [
-          "core"
-        ],
         "links": {
           "flex_2→defense_1": 1,
           "flex_2→flex_3": 4
-        }
+        },
+        "silent": []
       },
       "id": "preset_k5-n5_p33_r8",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 1,
         "matches": 108,
+        "paired": {
+          "a_only": 0,
+          "b_only": 0,
+          "flipped": 4,
+          "neither": 0,
+          "pairs": 108,
+          "same": 104
+        },
         "unresolved_without": 0,
         "win_rate_with": 1.0,
         "win_rate_without": 0.962962962962963
@@ -1428,9 +2161,59 @@
           }
         }
       },
-      "engine": "주력 ignition_nozzle×48 · dielectric_accumulator×8 · luminous_regen_sac×7 | 연쇄 regen_fluid_sac→dielectric_accumulator×2 | 피해 fracture+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine": "주력 ignition_nozzle×48 · dielectric_accumulator×8 · luminous_regen_sac×7 | 연쇄 regen_fluid_sac→dielectric_accumulator×2 | 피해 fracture+overheat+thermal",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 8,
+            "kind": "fired",
+            "mentions": 10,
+            "outputs": 8,
+            "part": "dielectric_accumulator"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 7,
+            "kind": "fired",
+            "mentions": 25,
+            "outputs": 14,
+            "part": "luminous_regen_sac"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 4,
+            "kind": "fired",
+            "mentions": 26,
+            "outputs": 14,
+            "part": "regen_fluid_sac"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 48,
+            "kind": "fired",
+            "mentions": 24,
+            "outputs": 24,
+            "part": "ignition_nozzle"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 48,
+            "kind": "fired",
+            "mentions": 1,
+            "outputs": 0,
+            "part": "ignition_nozzle"
+          }
+        },
         "damage": {
           "fracture": 7,
           "overheat": 382,
@@ -1454,17 +2237,34 @@
             "part_id": "regen_fluid_sac"
           }
         },
-        "idle": [
-          "core"
-        ],
         "links": {
           "flex_2→defense_1": 2
-        }
+        },
+        "silent": []
       },
       "id": "preset_k5-n5_p65_r8",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 1,
+          "b_only": 0,
+          "flipped": 0,
+          "neither": 0,
+          "pairs": 108,
+          "same": 107
+        },
         "unresolved_without": 1,
         "win_rate_with": 1.0,
         "win_rate_without": 1.0
@@ -1536,9 +2336,59 @@
           }
         }
       },
-      "engine": "주력 acid_tentacle×20 · phase_barrier×12 · photon_lance×12 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine": "주력 acid_tentacle×20 · phase_barrier×12 · photon_lance×12 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat+thermal",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 12,
+            "kind": "fired",
+            "mentions": 24,
+            "outputs": 24,
+            "part": "phase_barrier"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 20,
+            "kind": "fired",
+            "mentions": 40,
+            "outputs": 40,
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 4,
+            "kind": "fired",
+            "mentions": 16,
+            "outputs": 8,
+            "part": "helios_lance"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 8,
+            "kind": "fired",
+            "mentions": 8,
+            "outputs": 8,
+            "part": "fracture_engraver"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 12,
+            "kind": "fired",
+            "mentions": 13,
+            "outputs": 12,
+            "part": "photon_lance"
+          }
+        },
         "damage": {
           "caustic": 40,
           "energy": 233,
@@ -1568,15 +2418,32 @@
             "part_id": "photon_lance"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n10_p186_r8",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 0,
+          "b_only": 0,
+          "flipped": 1,
+          "neither": 0,
+          "pairs": 108,
+          "same": 107
+        },
         "unresolved_without": 0,
         "win_rate_with": 0.935185185185185,
         "win_rate_without": 0.944444444444444
@@ -1650,9 +2517,59 @@
           }
         }
       },
-      "engine": "주력 scrap_autocannon×40 · ignition_nozzle×28 · acid_jet_cutter×12 | 연쇄 없음 | 피해 caustic+fracture+overheat+physical+thermal | 전투 내내 침묵 1칸",
+      "engine": "주력 scrap_autocannon×40 · ignition_nozzle×28 · acid_jet_cutter×12 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+fracture+overheat+physical+thermal",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 8,
+            "kind": "fired",
+            "mentions": 30,
+            "outputs": 2,
+            "part": "emergency_retrograde_membrane"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 40,
+            "kind": "fired",
+            "mentions": 40,
+            "outputs": 40,
+            "part": "scrap_autocannon"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 12,
+            "kind": "fired",
+            "mentions": 12,
+            "outputs": 12,
+            "part": "acid_jet_cutter"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 28,
+            "kind": "fired",
+            "mentions": 4,
+            "outputs": 4,
+            "part": "ignition_nozzle"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 40,
+            "kind": "fired",
+            "mentions": 26,
+            "outputs": 25,
+            "part": "scrap_autocannon"
+          }
+        },
         "damage": {
           "caustic": 84,
           "fracture": 36,
@@ -1678,15 +2595,32 @@
             "part_id": "scrap_autocannon"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n10_p49_r8",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 0,
+          "b_only": 0,
+          "flipped": 0,
+          "neither": 0,
+          "pairs": 108,
+          "same": 108
+        },
         "unresolved_without": 0,
         "win_rate_with": 1.0,
         "win_rate_without": 1.0
@@ -1758,9 +2692,59 @@
           }
         }
       },
-      "engine": "주력 ignition_nozzle×20 · photon_lance×8 · biocurrent_emitter×4 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat | 전투 내내 침묵 1칸",
+      "engine": "주력 ignition_nozzle×20 · photon_lance×8 · biocurrent_emitter×4 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 4,
+            "kind": "fired",
+            "mentions": 20,
+            "outputs": 12,
+            "part": "luminous_regen_sac"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 8,
+            "kind": "fired",
+            "mentions": 12,
+            "outputs": 12,
+            "part": "photon_lance"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 4,
+            "kind": "fired",
+            "mentions": 4,
+            "outputs": 4,
+            "part": "biocurrent_emitter"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 20,
+            "kind": "fired",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "ignition_nozzle"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 4,
+            "kind": "fired",
+            "mentions": 5,
+            "outputs": 4,
+            "part": "quantum_cutting_lance"
+          }
+        },
         "damage": {
           "caustic": 12,
           "energy": 108,
@@ -1789,15 +2773,32 @@
             "part_id": "quantum_cutting_lance"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n5_p247_r8",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 0,
+          "b_only": 0,
+          "flipped": 0,
+          "neither": 0,
+          "pairs": 108,
+          "same": 108
+        },
         "unresolved_without": 0,
         "win_rate_with": 1.0,
         "win_rate_without": 1.0
@@ -1868,9 +2869,59 @@
           }
         }
       },
-      "engine": "주력 regen_sac×72 · acid_tentacle×40 · dielectric_accumulator×25 | 연쇄 regen_sac→dielectric_accumulator×15 · regen_sac→growth_battery×12 | 피해 caustic+energy+fracture+physical | 전투 내내 침묵 2칸",
+      "engine": "주력 regen_sac×72 · acid_tentacle×40 · dielectric_accumulator×25 | 연쇄 regen_sac→dielectric_accumulator×15 · regen_sac→growth_battery×12 | 피해 caustic+energy+fracture+physical | 발동 조건 미충족 1칸",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 72,
+            "kind": "fired",
+            "mentions": 85,
+            "outputs": 84,
+            "part": "regen_sac"
+          },
+          "flex_1": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "waiting",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "nerve_bundle"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 25,
+            "kind": "fired",
+            "mentions": 44,
+            "outputs": 25,
+            "part": "dielectric_accumulator"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 25,
+            "kind": "fired",
+            "mentions": 63,
+            "outputs": 34,
+            "part": "growth_battery"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 40,
+            "kind": "fired",
+            "mentions": 67,
+            "outputs": 60,
+            "part": "acid_tentacle"
+          }
+        },
         "damage": {
           "caustic": 126,
           "energy": 164,
@@ -1895,21 +2946,37 @@
             "part_id": "regen_sac"
           }
         },
-        "idle": [
-          "core",
-          "flex_1"
-        ],
         "links": {
           "defense_1→flex_2": 15,
           "defense_1→flex_3": 12,
           "defense_1→weapon_1": 5,
           "flex_3→flex_2": 4
-        }
+        },
+        "silent": []
       },
       "id": "preset_k5-n5_p155_r8",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 4,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 1
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 1,
         "matches": 108,
+        "paired": {
+          "a_only": 2,
+          "b_only": 0,
+          "flipped": 3,
+          "neither": 0,
+          "pairs": 108,
+          "same": 103
+        },
         "unresolved_without": 2,
         "win_rate_with": 0.805555555555556,
         "win_rate_without": 0.830188679245283
@@ -1985,9 +3052,59 @@
           }
         }
       },
-      "engine": "주력 regen_sac×40 · acid_tentacle×24 · growth_battery×8 | 연쇄 regen_sac→growth_battery×5 | 피해 caustic+fracture+overheat+physical | 전투 내내 침묵 1칸",
+      "engine": "주력 regen_sac×40 · acid_tentacle×24 · growth_battery×8 | 연쇄 regen_sac→growth_battery×5 | 피해 caustic+fracture+overheat+physical",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 40,
+            "kind": "fired",
+            "mentions": 12,
+            "outputs": 12,
+            "part": "regen_sac"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 24,
+            "kind": "fired",
+            "mentions": 12,
+            "outputs": 12,
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 40,
+            "kind": "fired",
+            "mentions": 6,
+            "outputs": 6,
+            "part": "regen_sac"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 8,
+            "kind": "fired",
+            "mentions": 13,
+            "outputs": 8,
+            "part": "growth_battery"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 24,
+            "kind": "fired",
+            "mentions": 25,
+            "outputs": 24,
+            "part": "acid_tentacle"
+          }
+        },
         "damage": {
           "caustic": 48,
           "fracture": 24,
@@ -2008,17 +3125,34 @@
             "part_id": "regen_sac"
           }
         },
-        "idle": [
-          "core"
-        ],
         "links": {
           "defense_1→flex_3": 5
-        }
+        },
+        "silent": []
       },
       "id": "preset_k5-n5_p33_r12",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 0,
+          "b_only": 0,
+          "flipped": 0,
+          "neither": 0,
+          "pairs": 108,
+          "same": 108
+        },
         "unresolved_without": 0,
         "win_rate_with": 1.0,
         "win_rate_without": 1.0
@@ -2095,9 +3229,59 @@
           }
         }
       },
-      "engine": "주력 acid_tentacle×20 · phase_barrier×12 · photon_lance×12 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine": "주력 acid_tentacle×20 · phase_barrier×12 · photon_lance×12 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat+thermal",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 12,
+            "kind": "fired",
+            "mentions": 24,
+            "outputs": 24,
+            "part": "phase_barrier"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 20,
+            "kind": "fired",
+            "mentions": 40,
+            "outputs": 40,
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 4,
+            "kind": "fired",
+            "mentions": 16,
+            "outputs": 8,
+            "part": "helios_lance"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 4,
+            "kind": "fired",
+            "mentions": 12,
+            "outputs": 4,
+            "part": "severance_beam"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 12,
+            "kind": "fired",
+            "mentions": 25,
+            "outputs": 24,
+            "part": "photon_lance"
+          }
+        },
         "damage": {
           "caustic": 38,
           "energy": 294,
@@ -2127,15 +3311,32 @@
             "part_id": "severance_beam"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n10_p386_r12",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 0,
+          "b_only": 0,
+          "flipped": 1,
+          "neither": 0,
+          "pairs": 108,
+          "same": 107
+        },
         "unresolved_without": 0,
         "win_rate_with": 0.990740740740741,
         "win_rate_without": 0.981481481481482
@@ -2212,9 +3413,59 @@
           }
         }
       },
-      "engine": "주력 acid_tentacle×20 · photon_lance×12 · acid_proof_membrane×8 | 연쇄 없음 | 피해 caustic+energy+overheat+thermal | 전투 내내 침묵 2칸",
+      "engine": "주력 acid_tentacle×20 · photon_lance×12 · acid_proof_membrane×8 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+overheat+thermal | 발동 조건 미충족 1칸",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 8,
+            "kind": "fired",
+            "mentions": 14,
+            "outputs": 14,
+            "part": "acid_proof_membrane"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 12,
+            "kind": "fired",
+            "mentions": 24,
+            "outputs": 24,
+            "part": "photon_lance"
+          },
+          "flex_2": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "waiting",
+            "mentions": 2,
+            "outputs": 0,
+            "part": "fracture_sensor_node"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 4,
+            "kind": "fired",
+            "mentions": 12,
+            "outputs": 4,
+            "part": "severance_beam"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 20,
+            "kind": "fired",
+            "mentions": 21,
+            "outputs": 20,
+            "part": "acid_tentacle"
+          }
+        },
         "damage": {
           "caustic": 40,
           "energy": 168,
@@ -2239,16 +3490,32 @@
             "part_id": "severance_beam"
           }
         },
-        "idle": [
-          "core",
-          "flex_2"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n5_p90_r12",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 4,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 1
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 0,
+          "b_only": 0,
+          "flipped": 2,
+          "neither": 0,
+          "pairs": 108,
+          "same": 106
+        },
         "unresolved_without": 0,
         "win_rate_with": 0.907407407407407,
         "win_rate_without": 0.888888888888889
@@ -2328,9 +3595,59 @@
           }
         }
       },
-      "engine": "주력 regen_sac×28 · acid_tentacle×16 · biocurrent_emitter×8 | 연쇄 없음 | 피해 caustic+energy+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine": "주력 regen_sac×28 · acid_tentacle×16 · biocurrent_emitter×8 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+overheat+thermal",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 28,
+            "kind": "fired",
+            "mentions": 40,
+            "outputs": 40,
+            "part": "regen_sac"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 8,
+            "kind": "fired",
+            "mentions": 16,
+            "outputs": 16,
+            "part": "biocurrent_emitter"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 4,
+            "kind": "fired",
+            "mentions": 12,
+            "outputs": 4,
+            "part": "helios_lance"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 8,
+            "kind": "fired",
+            "mentions": 16,
+            "outputs": 16,
+            "part": "photon_lance"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 16,
+            "kind": "fired",
+            "mentions": 17,
+            "outputs": 16,
+            "part": "acid_tentacle"
+          }
+        },
         "damage": {
           "caustic": 32,
           "energy": 115,
@@ -2359,15 +3676,32 @@
             "part_id": "regen_sac"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n5_p40_r12",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 0,
+          "b_only": 0,
+          "flipped": 1,
+          "neither": 0,
+          "pairs": 108,
+          "same": 107
+        },
         "unresolved_without": 0,
         "win_rate_with": 1.0,
         "win_rate_without": 0.990740740740741
@@ -2444,9 +3778,59 @@
           }
         }
       },
-      "engine": "주력 bipolar_discharge_sac×32 · ignition_nozzle×24 · acid_tentacle×16 | 연쇄 proliferating_heart→hemacid_ejector×1 | 피해 caustic+energy+overheat+physical+thermal | 전투 내내 침묵 1칸",
+      "engine": "주력 bipolar_discharge_sac×32 · ignition_nozzle×24 · acid_tentacle×16 | 연쇄 proliferating_heart→hemacid_ejector×1 | 피해 caustic+energy+overheat+physical+thermal",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 16,
+            "kind": "fired",
+            "mentions": 30,
+            "outputs": 15,
+            "part": "proliferating_heart"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 16,
+            "kind": "fired",
+            "mentions": 32,
+            "outputs": 32,
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 24,
+            "kind": "fired",
+            "mentions": 12,
+            "outputs": 12,
+            "part": "ignition_nozzle"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 4,
+            "kind": "fired",
+            "mentions": 9,
+            "outputs": 8,
+            "part": "hemacid_ejector"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 32,
+            "kind": "fired",
+            "mentions": 81,
+            "outputs": 64,
+            "part": "bipolar_discharge_sac"
+          }
+        },
         "damage": {
           "caustic": 48,
           "energy": 124,
@@ -2476,17 +3860,34 @@
             "part_id": "proliferating_heart"
           }
         },
-        "idle": [
-          "core"
-        ],
         "links": {
           "defense_1→flex_3": 1
-        }
+        },
+        "silent": []
       },
       "id": "preset_k5-n10_p59_r12",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 0,
+          "b_only": 0,
+          "flipped": 0,
+          "neither": 0,
+          "pairs": 108,
+          "same": 108
+        },
         "unresolved_without": 0,
         "win_rate_with": 1.0,
         "win_rate_without": 1.0
@@ -2562,9 +3963,59 @@
           }
         }
       },
-      "engine": "주력 scrap_autocannon×60 · acid_tentacle×20 · field_welder×12 | 연쇄 없음 | 피해 caustic+overheat+physical+thermal | 전투 내내 침묵 1칸",
+      "engine": "주력 scrap_autocannon×60 · acid_tentacle×20 · field_welder×12 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+overheat+physical+thermal",
       "engine_detail": {
         "combats": 4,
+        "contribution": {
+          "core": {
+            "combats_active": 0,
+            "fires": 0,
+            "kind": "inert",
+            "mentions": 0,
+            "outputs": 0,
+            "part": "league_core"
+          },
+          "defense_1": {
+            "combats_active": 4,
+            "fires": 12,
+            "kind": "fired",
+            "mentions": 18,
+            "outputs": 18,
+            "part": "field_welder"
+          },
+          "flex_1": {
+            "combats_active": 4,
+            "fires": 20,
+            "kind": "fired",
+            "mentions": 22,
+            "outputs": 22,
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "combats_active": 4,
+            "fires": 60,
+            "kind": "fired",
+            "mentions": 40,
+            "outputs": 40,
+            "part": "scrap_autocannon"
+          },
+          "flex_3": {
+            "combats_active": 4,
+            "fires": 60,
+            "kind": "fired",
+            "mentions": 40,
+            "outputs": 40,
+            "part": "scrap_autocannon"
+          },
+          "weapon_1": {
+            "combats_active": 4,
+            "fires": 60,
+            "kind": "fired",
+            "mentions": 28,
+            "outputs": 28,
+            "part": "scrap_autocannon"
+          }
+        },
         "damage": {
           "caustic": 38,
           "overheat": 14,
@@ -2585,15 +4036,32 @@
             "part_id": "scrap_autocannon"
           }
         },
-        "idle": [
-          "core"
-        ],
-        "links": {}
+        "links": {},
+        "silent": []
       },
       "id": "preset_k5-n5_p216_r12",
+      "observed": {
+        "benchmark_matches": 108,
+        "contribution": {
+          "fired": 5,
+          "inert": 1,
+          "reacted": 0,
+          "silent": 0,
+          "waiting": 0
+        },
+        "engine_combats": 4
+      },
       "overtime": {
         "decided_with": 0,
         "matches": 108,
+        "paired": {
+          "a_only": 0,
+          "b_only": 0,
+          "flipped": 0,
+          "neither": 0,
+          "pairs": 108,
+          "same": 108
+        },
         "unresolved_without": 0,
         "win_rate_with": 1.0,
         "win_rate_without": 1.0
@@ -2632,8 +4100,8 @@
       "weak_against": {}
     }
   ],
-  "git_commit": "a65ad68c2f39b06ff9f58e1e9fb8e8e800f8a039",
-  "git_dirty": false,
+  "git_commit": "0eb79318d7ac00635d361b044ffd3f5d42ec4d42",
+  "git_dirty": true,
   "league_rules": {
     "neutral_damage_types": true,
     "overtime_base_fraction": 0.001,
@@ -2642,7 +4110,7 @@
     "timeout_result": "draw"
   },
   "league_version": "league-2",
-  "run_id": "stageG-20260908T020907",
+  "run_id": "stageG-20260908T134050",
   "source_runs": [
     "tests/out/league/k5-n5-20260908T001803",
     "tests/out/league/k5-n10-20260908T011428"

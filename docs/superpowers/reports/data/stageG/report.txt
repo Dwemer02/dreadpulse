@@ -1,165 +1,196 @@
 
 ── 단계 G — PvE 프리셋 후보 ─────────────────────────────────────────────
 입력 스냅샷 1882개 (라운드 [2, 5, 8, 12]) · 목표 후보 24개
-커밋 a65ad68c2f · 상대군 archive-1
+커밋 0eb79318d7 (작업 트리 변경 있음) · 상대군 archive-1
 
 선정 24개 — 라운드 × 구조 버킷으로 고르게 나눴다.
 
 ── 프리셋 후보 ────────────────────────────────────────────────────────
-  후보                            R      승률       격차     초과의존  미해결(OFF)
-  preset_k5-n5_p247_r2          2   69.4%    +26.8    +1.5%p         2
-  preset_k5-n5_p47_r2           2   62.0%    +13.0    +5.3%p         4
-  preset_k5-n10_p186_r2         2   34.3%    -23.3    -5.3%p        17
-  preset_k5-n10_p86_r2          2   73.1%    +25.9    +1.9%p         0
-  preset_k5-n5_p55_r2           2   60.2%    +15.7   +60.2%p        74
-  preset_k5-n5_p5_r2            2   23.1%    -51.3    -1.0%p        21
-  preset_k5-n5_p33_r5           5   97.2%    +83.8    +1.0%p         2
-  preset_k5-n5_p47_r5           5   83.3%    +61.6    -2.6%p         1
-  preset_k5-n10_p33_r5          5   84.3%    +50.6    -4.5%p         1
-  preset_k5-n5_p130_r5          5   74.1%    +36.7    -2.7%p         9
-  preset_k5-n5_p180_r5          5   64.8%    +18.0    -7.8%p         2
-  preset_k5-n5_p239_r5          5   86.1%    +52.0    +0.0%p         0
-  preset_k5-n5_p33_r8           8  100.0%    +88.7    +3.7%p         0
-  preset_k5-n5_p65_r8           8  100.0%    +82.7    +0.0%p         1
-  preset_k5-n10_p186_r8         8   93.5%    +71.2    -0.9%p         0
-  preset_k5-n10_p49_r8          8  100.0%    +97.3    +0.0%p         0
-  preset_k5-n5_p247_r8          8  100.0%    +85.2    +0.0%p         0
-  preset_k5-n5_p155_r8          8   80.6%    +53.2    -2.5%p         2
-  preset_k5-n5_p33_r12         12  100.0%    +94.0    +0.0%p         0
-  preset_k5-n10_p386_r12       12   99.1%    +78.3    +0.9%p         0
-  preset_k5-n5_p90_r12         12   90.7%    +63.3    +1.9%p         0
-  preset_k5-n5_p40_r12         12  100.0%    +90.9    +0.9%p         0
-  preset_k5-n10_p59_r12        12  100.0%    +83.1    +0.0%p         0
-  preset_k5-n5_p216_r12        12  100.0%    +86.1    +0.0%p         0
+  후보                            R      승률       격차     초과의존      동일     뒤집힘   OFF미해결
+  preset_k5-n5_p247_r2          2   69.4%    +26.8    +1.5%p     101       5        2
+  preset_k5-n5_p47_r2           2   62.0%    +13.0    +5.3%p      89      15        4
+  preset_k5-n10_p186_r2         2   34.3%    -23.3    -5.3%p      85       6       17
+  preset_k5-n10_p86_r2          2   73.1%    +25.9    +1.9%p     102       6        0
+  preset_k5-n5_p55_r2           2   60.2%    +15.7   +60.2%p      27       7       74
+  preset_k5-n5_p5_r2            2   23.1%    -51.3    -1.0%p      86       1       21
+  preset_k5-n5_p33_r5           5   97.2%    +83.8    +1.0%p     101       5        2
+  preset_k5-n5_p47_r5           5   83.3%    +61.6    -2.6%p     102       5        1
+  preset_k5-n10_p33_r5          5   84.3%    +50.6    -4.5%p     103       4        1
+  preset_k5-n5_p130_r5          5   74.1%    +36.7    -2.7%p      96       3        9
+  preset_k5-n5_p180_r5          5   64.8%    +18.0    -7.8%p      99       7        2
+  preset_k5-n5_p239_r5          5   86.1%    +52.0    +0.0%p     106       2        0
+  preset_k5-n5_p33_r8           8  100.0%    +88.7    +3.7%p     104       4        0
+  preset_k5-n5_p65_r8           8  100.0%    +82.7    +0.0%p     107       0        1
+  preset_k5-n10_p186_r8         8   93.5%    +71.2    -0.9%p     107       1        0
+  preset_k5-n10_p49_r8          8  100.0%    +97.3    +0.0%p     108       0        0
+  preset_k5-n5_p247_r8          8  100.0%    +85.2    +0.0%p     108       0        0
+  preset_k5-n5_p155_r8          8   80.6%    +53.2    -2.5%p     103       3        2
+  preset_k5-n5_p33_r12         12  100.0%    +94.0    +0.0%p     108       0        0
+  preset_k5-n10_p386_r12       12   99.1%    +78.3    +0.9%p     107       1        0
+  preset_k5-n5_p90_r12         12   90.7%    +63.3    +1.9%p     106       2        0
+  preset_k5-n5_p40_r12         12  100.0%    +90.9    +0.9%p     107       1        0
+  preset_k5-n10_p59_r12        12  100.0%    +83.1    +0.0%p     108       0        0
+  preset_k5-n5_p216_r12        12  100.0%    +86.1    +0.0%p     108       0        0
 
   ※ '초과의존'은 초과 피해를 껐을 때 승률이 얼마나 떨어지는가다. 값이 크면
      **리그 전용 규칙으로 이긴 후보**이므로 본편에 그 규칙이 없다면 그대로
      프리셋 강도로 쓸 수 없다 (§9.4).
-  ※ 미해결(OFF)은 초과 피해 없이 120초 안에 끝나지 않은 판이다. 승패에
-     섞지 않았다 — 결과가 아니라 관측 실패다 (§11.2).
+  ※ **승률 차이만으로 판단하지 않는다** (검토 §6.3). 뒤의 세 열은 같은
+     상대·시드·좌우의 **짝**이다: '동일'은 ON/OFF 둘 다 결판나고 승패가
+     같은 짝, '뒤집힘'은 둘 다 결판났지만 승패가 바뀐 짝, 'OFF미해결'은
+     ON에서는 끝났는데 OFF에서 120초 안에 끝나지 않은 짝이다.
+  ※ 미해결을 패배로 바꾸지 않는다. 결과가 아니라 **한정 시간 안에 플레이가
+     끝나지 않았다**는 별도의 사실이다 (§11.2).
 
   엔진 설명 — **실제 발동한 연결**이다 (§12.2). 정적 어휘가 아니다.
 
   preset_k5-n5_p247_r2  (R2 · fixed_recipe · equal)
     보드   acid_tentacle+ephemeral_stellar_tube · luminous_regen_sac · quantum_cutting_lance
-    엔진   주력 acid_tentacle×30 · quantum_cutting_lance×19 · luminous_regen_sac×14 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat | 전투 내내 침묵 1칸
+    엔진   주력 acid_tentacle×30 · quantum_cutting_lance×19 · luminous_regen_sac×14 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat
     약점   direct+overheat|heal|gated(1), corrosion+direct+overheat|heal|gated(1), corrosion+direct+fracture|heal|gated(1), direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p47_r2  (R2 · immediate · equal)
     보드   acid_tentacle+ephemeral_stellar_tube · quantum_cutting_lance · waste_heat_recovery
-    엔진   주력 acid_tentacle×25 · quantum_cutting_lance×20 | 연쇄 acid_tentacle→waste_heat_recovery×4 | 피해 caustic+energy+fracture+overheat | 전투 내내 침묵 2칸
+    엔진   주력 acid_tentacle×25 · quantum_cutting_lance×20 | 연쇄 acid_tentacle→waste_heat_recovery×4 | 피해 caustic+energy+fracture+overheat | 발동 없이 트리거로 출력 1칸
     약점   direct+overheat|defend+time|immediate(1), direct+overheat|heal|gated(1), corrosion+direct+overheat|heal|gated(1), corrosion+direct+fracture|heal|gated(1), direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n10_p186_r2  (R2 · engine · a70_v30)
     보드   helios_lance+acid_tentacle · photon_lance+fracture_engraver
-    엔진   주력 helios_lance×20 · photon_lance×12 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸
+    엔진   주력 helios_lance×20 · photon_lance×12 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat+thermal
     약점   direct+overheat|defend+time|immediate(1), direct|time|immediate(1), corrosion+direct|heal|gated(1), direct+fracture|defend+time|gated(1), direct|heal|gated(1), direct+overheat|heal|gated(2), corrosion+direct+overheat|heal|gated(1), corrosion+direct+fracture|defend+heal+time|gated(1), corrosion+direct+fracture|heal|gated(1), direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n10_p86_r2  (R2 · immediate · a70_v30)
     보드   acid_tentacle · fracture_engraver · helios_lance · photon_lance
-    엔진   주력 acid_tentacle×36 · photon_lance×22 · fracture_engraver×14 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸
+    엔진   주력 acid_tentacle×36 · photon_lance×22 · fracture_engraver×14 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat+thermal
     약점   direct+overheat|heal|gated(1), corrosion+direct+overheat|heal|gated(1), corrosion+direct+fracture|heal|gated(1), direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p55_r2  (R2 · engine · v100)
     보드   regen_sac+proliferating_heart · resonant_fiber_cluster+acid_tentacle
-    엔진   주력 regen_sac×116 · resonant_fiber_cluster×41 | 연쇄 없음 | 피해 caustic+fracture | 전투 내내 침묵 1칸
+    엔진   주력 regen_sac×116 · resonant_fiber_cluster×41 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+fracture
     약점   direct+fracture|defend+time|gated(1), direct|heal|gated(1), direct+overheat|heal|gated(2), corrosion+direct+overheat|heal|gated(1), direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p5_r2  (R2 · immediate · v100)
     보드   acid_tentacle+bipolar_discharge_sac · regen_sac+resonant_fiber_cluster
-    엔진   주력 regen_sac×100 · acid_tentacle×52 | 연쇄 없음 | 피해 caustic+energy+fracture | 전투 내내 침묵 1칸
+    엔진   주력 regen_sac×100 · acid_tentacle×52 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture
     약점   direct+overheat|defend+time|immediate(1), direct|time|immediate(1), direct|heal|immediate(1), corrosion+direct|heal|gated(1), direct+fracture+overheat|none|gated(1), direct+fracture|defend+time|gated(1), direct|heal|gated(1), direct+overheat|heal|gated(2), corrosion+direct+overheat|heal|gated(1), corrosion+direct+fracture|defend+heal+time|gated(1), corrosion+direct+fracture|heal|gated(1), direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p33_r5  (R5 · immediate · v70_a30)
     보드   acid_tentacle · acid_tentacle+loan_shield_membrane · layered_regen_membrane+timed_fracture_needle · regen_sac+ephemeral_stellar_tube
-    엔진   주력 acid_tentacle×40 · regen_sac×29 · layered_regen_membrane×12 | 연쇄 없음 | 피해 caustic+fracture+overheat | 전투 내내 침묵 1칸
-    약점   없음 — 상대군 전원에게 우세
+    엔진   주력 acid_tentacle×40 · regen_sac×29 · layered_regen_membrane×12 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+fracture+overheat
+    약점   현재 시험 상대군에서 열세 구조 미발견
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p47_r5  (R5 · immediate · equal)
     보드   acid_tentacle+ephemeral_stellar_tube · photon_lance+emergency_retrograde_membrane · quantum_cutting_lance+eclipse_shield_plate · waste_heat_recovery
-    엔진   주력 acid_tentacle×23 · photon_lance×18 · quantum_cutting_lance×13 | 연쇄 acid_tentacle→waste_heat_recovery×3 | 피해 caustic+energy+fracture+overheat | 전투 내내 침묵 2칸
+    엔진   주력 acid_tentacle×23 · photon_lance×18 · quantum_cutting_lance×13 | 연쇄 acid_tentacle→waste_heat_recovery×3 | 피해 caustic+energy+fracture+overheat | 발동 없이 트리거로 출력 1칸
     약점   direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n10_p33_r5  (R5 · immediate · r70_v30)
     보드   acid_jet_cutter · dielectric_accumulator+scrap_compactor · fracture_cilia+ignition_nozzle · pressurized_acid_cannon · scrap_autocannon
-    엔진   주력 fracture_cilia×35 · scrap_autocannon×30 · acid_jet_cutter×18 | 연쇄 없음 | 피해 caustic+fracture+overheat+physical | 전투 내내 침묵 1칸
+    엔진   주력 fracture_cilia×35 · scrap_autocannon×30 · acid_jet_cutter×18 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+fracture+overheat+physical
     약점   direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p130_r5  (R5 · sustain · v70_a30)
     보드   adaptive_venom_gland · growth_battery+layered_regen_membrane · luminous_regen_sac+culture_slime_sac · regen_fluid_sac · solar_reflector
-    엔진   주력 growth_battery×40 · solar_reflector×32 · regen_fluid_sac×28 | 연쇄 luminous_regen_sac→growth_battery×16 · regen_fluid_sac→growth_battery×9 | 피해 fracture+overheat+physical+thermal | 전투 내내 침묵 1칸
+    엔진   주력 growth_battery×40 · solar_reflector×32 · regen_fluid_sac×28 | 연쇄 luminous_regen_sac→growth_battery×16 · regen_fluid_sac→growth_battery×9 | 피해 fracture+overheat+physical+thermal
     약점   direct+overheat|heal|gated(1), corrosion+direct+overheat|heal|gated(1), corrosion+direct+fracture|heal|gated(1), direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p180_r5  (R5 · bridge · v70_a30)
     보드   adaptive_venom_gland · adaptive_venom_gland+solar_reflector · culture_slime_sac+solar_reflector · growth_battery · luminous_regen_sac
-    엔진   주력 adaptive_venom_gland×54 · culture_slime_sac×43 · luminous_regen_sac×34 | 연쇄 culture_slime_sac→adaptive_venom_gland×39 · luminous_regen_sac→adaptive_venom_gland×25 | 피해 fracture+overheat+physical+thermal | 전투 내내 침묵 1칸
+    엔진   주력 adaptive_venom_gland×54 · culture_slime_sac×43 · luminous_regen_sac×34 | 연쇄 culture_slime_sac→adaptive_venom_gland×39 · luminous_regen_sac→adaptive_venom_gland×25 | 피해 fracture+overheat+physical+thermal
     약점   direct+overheat|defend+time|immediate(1), direct+overheat|heal|gated(1), corrosion+direct+overheat|heal|gated(1), corrosion+direct+fracture|heal|gated(1), direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p239_r5  (R5 · fixed_recipe · a70_r30)
     보드   acid_jet_cutter+corrosive_injector · helios_lance · photon_lance+fracture_engraver · severance_beam+forward_loan_beam
-    엔진   주력 photon_lance×16 · acid_jet_cutter×13 · helios_lance×7 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸
+    엔진   주력 photon_lance×16 · acid_jet_cutter×13 · helios_lance×7 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat+thermal
     약점   direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p33_r8  (R8 · immediate · v70_a30)
     보드   acid_tentacle+loan_shield_membrane · acid_tentacle+timed_fracture_needle · growth_battery+bone_spike_organ · layered_regen_membrane+adaptive_venom_gland · regen_sac+ephemeral_stellar_tube
-    엔진   주력 acid_tentacle×32 · regen_sac×28 · growth_battery×8 | 연쇄 regen_sac→growth_battery×4 · regen_sac→layered_regen_membrane×1 | 피해 caustic+fracture+overheat+physical | 전투 내내 침묵 1칸
-    약점   없음 — 상대군 전원에게 우세
+    엔진   주력 acid_tentacle×32 · regen_sac×28 · growth_battery×8 | 연쇄 regen_sac→growth_battery×4 · regen_sac→layered_regen_membrane×1 | 피해 caustic+fracture+overheat+physical
+    약점   현재 시험 상대군에서 열세 구조 미발견
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p65_r8  (R8 · engine · r70_v30)
     보드   dielectric_accumulator+ignition_nozzle · ignition_nozzle+ignition_nozzle · ignition_nozzle+rotary_incinerator · luminous_regen_sac+regen_fluid_sac · regen_fluid_sac+corrosive_injector
-    엔진   주력 ignition_nozzle×48 · dielectric_accumulator×8 · luminous_regen_sac×7 | 연쇄 regen_fluid_sac→dielectric_accumulator×2 | 피해 fracture+overheat+thermal | 전투 내내 침묵 1칸
-    약점   없음 — 상대군 전원에게 우세
+    엔진   주력 ignition_nozzle×48 · dielectric_accumulator×8 · luminous_regen_sac×7 | 연쇄 regen_fluid_sac→dielectric_accumulator×2 | 피해 fracture+overheat+thermal
+    약점   현재 시험 상대군에서 열세 구조 미발견
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n10_p186_r8  (R8 · engine · a70_v30)
     보드   acid_tentacle+forward_loan_beam · fracture_engraver+solar_reflector · helios_lance+forward_loan_beam · phase_barrier+forward_loan_beam · photon_lance+timed_fracture_needle
-    엔진   주력 acid_tentacle×20 · phase_barrier×12 · photon_lance×12 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸
+    엔진   주력 acid_tentacle×20 · phase_barrier×12 · photon_lance×12 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat+thermal
     약점   direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n10_p49_r8  (R8 · immediate · r70_a30)
     보드   acid_jet_cutter+timed_fracture_needle · emergency_retrograde_membrane+corrosive_injector · ignition_nozzle+emergency_retrograde_membrane · scrap_autocannon+emergency_retrograde_membrane · scrap_autocannon+solar_reflector
-    엔진   주력 scrap_autocannon×40 · ignition_nozzle×28 · acid_jet_cutter×12 | 연쇄 없음 | 피해 caustic+fracture+overheat+physical+thermal | 전투 내내 침묵 1칸
-    약점   없음 — 상대군 전원에게 우세
+    엔진   주력 scrap_autocannon×40 · ignition_nozzle×28 · acid_jet_cutter×12 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+fracture+overheat+physical+thermal
+    약점   현재 시험 상대군에서 열세 구조 미발견
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p247_r8  (R8 · fixed_recipe · equal)
     보드   biocurrent_emitter+acid_tentacle · ignition_nozzle+ephemeral_stellar_tube · luminous_regen_sac+emergency_retrograde_membrane · photon_lance+bipolar_stinger · quantum_cutting_lance+culture_slime_sac
-    엔진   주력 ignition_nozzle×20 · photon_lance×8 · biocurrent_emitter×4 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat | 전투 내내 침묵 1칸
-    약점   없음 — 상대군 전원에게 우세
+    엔진   주력 ignition_nozzle×20 · photon_lance×8 · biocurrent_emitter×4 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat
+    약점   현재 시험 상대군에서 열세 구조 미발견
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p155_r8  (R8 · bridge · v100)
     보드   acid_tentacle+bipolar_stinger · dielectric_accumulator+resonant_fiber_cluster · growth_battery+proliferating_heart · nerve_bundle+bipolar_discharge_sac · regen_sac+bipolar_discharge_sac
-    엔진   주력 regen_sac×72 · acid_tentacle×40 · dielectric_accumulator×25 | 연쇄 regen_sac→dielectric_accumulator×15 · regen_sac→growth_battery×12 | 피해 caustic+energy+fracture+physical | 전투 내내 침묵 2칸
+    엔진   주력 regen_sac×72 · acid_tentacle×40 · dielectric_accumulator×25 | 연쇄 regen_sac→dielectric_accumulator×15 · regen_sac→growth_battery×12 | 피해 caustic+energy+fracture+physical | 발동 조건 미충족 1칸
     약점   direct+overheat|heal|gated(1), direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p33_r12  (R12 · immediate · v70_a30)
     보드   acid_tentacle+ephemeral_stellar_tube · acid_tentacle+loan_shield_membrane · growth_battery+timed_fracture_needle · regen_sac+ephemeral_stellar_tube · regen_sac+layered_regen_membrane
-    엔진   주력 regen_sac×40 · acid_tentacle×24 · growth_battery×8 | 연쇄 regen_sac→growth_battery×5 | 피해 caustic+fracture+overheat+physical | 전투 내내 침묵 1칸
-    약점   없음 — 상대군 전원에게 우세
+    엔진   주력 regen_sac×40 · acid_tentacle×24 · growth_battery×8 | 연쇄 regen_sac→growth_battery×5 | 피해 caustic+fracture+overheat+physical
+    약점   현재 시험 상대군에서 열세 구조 미발견
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n10_p386_r12  (R12 · bridge · a70_v30)
     보드   acid_tentacle+forward_loan_beam · helios_lance+solar_reflector · phase_barrier+forward_loan_beam · photon_lance+forward_loan_beam · severance_beam+timed_fracture_needle
-    엔진   주력 acid_tentacle×20 · phase_barrier×12 · photon_lance×12 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸
-    약점   없음 — 상대군 전원에게 우세
+    엔진   주력 acid_tentacle×20 · phase_barrier×12 · photon_lance×12 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+fracture+overheat+thermal
+    약점   현재 시험 상대군에서 열세 구조 미발견
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p90_r12  (R12 · engine · a70_v30)
     보드   acid_proof_membrane+biocurrent_emitter · acid_tentacle+ephemeral_stellar_tube · fracture_sensor_node+severance_beam · photon_lance+solar_reflector · severance_beam+quantum_cutting_lance
-    엔진   주력 acid_tentacle×20 · photon_lance×12 · acid_proof_membrane×8 | 연쇄 없음 | 피해 caustic+energy+overheat+thermal | 전투 내내 침묵 2칸
+    엔진   주력 acid_tentacle×20 · photon_lance×12 · acid_proof_membrane×8 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+overheat+thermal | 발동 조건 미충족 1칸
     약점   direct+fracture+overheat|defend+time|gated(1), direct+fracture+overheat|defend+heal+time|gated(1)
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p40_r12  (R12 · immediate · a70_v30)
     보드   acid_tentacle+ephemeral_stellar_tube · biocurrent_emitter+forward_loan_beam · helios_lance+acid_proof_membrane · photon_lance+solar_reflector · regen_sac+loan_shield_membrane
-    엔진   주력 regen_sac×28 · acid_tentacle×16 · biocurrent_emitter×8 | 연쇄 없음 | 피해 caustic+energy+overheat+thermal | 전투 내내 침묵 1칸
-    약점   없음 — 상대군 전원에게 우세
+    엔진   주력 regen_sac×28 · acid_tentacle×16 · biocurrent_emitter×8 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+energy+overheat+thermal
+    약점   현재 시험 상대군에서 열세 구조 미발견
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n10_p59_r12  (R12 · immediate · v70_r30)
     보드   acid_tentacle+rotary_incinerator · bipolar_discharge_sac+rotary_incinerator · hemacid_ejector+bone_spike_organ · ignition_nozzle+bipolar_discharge_sac · proliferating_heart+acid_proof_membrane
-    엔진   주력 bipolar_discharge_sac×32 · ignition_nozzle×24 · acid_tentacle×16 | 연쇄 proliferating_heart→hemacid_ejector×1 | 피해 caustic+energy+overheat+physical+thermal | 전투 내내 침묵 1칸
-    약점   없음 — 상대군 전원에게 우세
+    엔진   주력 bipolar_discharge_sac×32 · ignition_nozzle×24 · acid_tentacle×16 | 연쇄 proliferating_heart→hemacid_ejector×1 | 피해 caustic+energy+overheat+physical+thermal
+    약점   현재 시험 상대군에서 열세 구조 미발견
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   preset_k5-n5_p216_r12  (R12 · fixed_recipe · r70_v30)
     보드   acid_tentacle+acid_digest_organ · field_welder+scrap_autocannon · scrap_autocannon+regen_sac · scrap_autocannon+rotary_incinerator · scrap_autocannon+scrap_autocannon
-    엔진   주력 scrap_autocannon×60 · acid_tentacle×20 · field_welder×12 | 연쇄 없음 | 피해 caustic+overheat+physical+thermal | 전투 내내 침묵 1칸
-    약점   없음 — 상대군 전원에게 우세
+    엔진   주력 scrap_autocannon×60 · acid_tentacle×20 · field_welder×12 | 관측 4전투에서 추적된 연결 없음 | 피해 caustic+overheat+physical+thermal
+    약점   현재 시험 상대군에서 열세 구조 미발견
+    관측   엔진 4전투 · 강도 108전투 — **같은 범위가 아니다**
 
   ※ 약점은 **고정 상대군 안에서**의 것이다. 상대군에 없는 구조에 대한
      약점은 이 표가 말하지 않는다.
+  ※ 기여 유형은 다섯이다 (검토 §6.2): 발동 / 트리거 반응 / 조건 미충족 /
+     기여 없음 / **판정 제외**(효과가 없는 리그 테스트 Core). 발동이 없다는
+     것과 기여가 없다는 것은 다른 사실이므로 같은 칸에 넣지 않는다.
   ※ **이 리그의 승률을 실제 PvE 난이도로 해석하지 않는다** (기획서 §1.3).
