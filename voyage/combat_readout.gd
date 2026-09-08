@@ -13,6 +13,11 @@ extends RefCounted
 const EngineTrace = preload("res://league/engine_trace.gd")
 const Analysis = preload("res://sim/event_analysis.gd")
 
+## 화면이 "반응한 파츠 점등"에 쓰는 판정. **기여 판정과 같은 목록을 쓴다** —
+## 화면이 따로 목록을 들면 점등한 파츠와 결과표의 판정이 어긋난다.
+static func is_output_event(type: String) -> bool:
+	return EngineTrace.OUTPUT_EVENTS.has(type)
+
 ## `part.block_reason()`과 `combat_sim`이 쓰는 사유 문자열을 사람 말로 바꾼다.
 ## **모르는 사유는 그대로 보여 준다** — 임의로 이름을 붙이면 새 사유가 생겼을 때
 ## 조용히 옛 이름으로 표시된다.

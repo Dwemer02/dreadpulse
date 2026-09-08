@@ -81,6 +81,36 @@
       }
     },
     {
+      "id": "ve_starter_light",
+      "name": "경장 사수",
+      "role": "starter",
+      "source": "authored",
+      "note": "본체 2개짜리 더 약한 첫 상대. **경로에 넣지 않았다** — 1전투이 너무 어렵다고 판단되면 ve_starter_gun 대신 바로 끼울 수 있게 미리 검수해 둔 것이다. 검수: archive-1 승률 31.5%지만 평균 44.7초에 108판 중 13판이 초과 피해 없이는 끝나지 않는다 — 약한 적은 느린 적이다",
+      "checked": {
+        "archive": "archive-1",
+        "win_rate": 0.315,
+        "avg_elapsed": 44.7,
+        "off_unresolved": 13,
+        "tool": "tests/check_starter_enemies.gd"
+      },
+      "build": {
+        "id": "ve_starter_light",
+        "frame": "pool_frame",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "weapon_1": {
+            "part": "scrap_autocannon"
+          },
+          "flex_1": {
+            "part": "recast_barrel"
+          }
+        }
+      }
+    },
+    {
       "id": "ve_scrap_lash",
       "name": "산성 채찍 정찰기",
       "role": "early",

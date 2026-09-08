@@ -30,6 +30,7 @@ const LeagueConfig = preload("res://league/league_config.gd")
 const Benchmark = preload("res://league/benchmark.gd")
 const Archive = preload("res://league/opponent_archive.gd")
 const Inventory = preload("res://run/inventory.gd")
+const AssemblyPolicy = preload("res://league/assembly_policy.gd")
 
 var _content: RefCounted
 var _roster: RefCounted
@@ -63,7 +64,7 @@ func _init() -> void:
 		_report_strength()
 	_report_lab()
 	for seed_value: int in _seeds():
-		_play(seed_value)
+		_play(seed_value, _arg("pilot", ""))
 
 	print("\n".join(_lines))
 	quit(0)
@@ -149,12 +150,22 @@ func _report_lab() -> void:
 
 # --- 3. 자동 항해 ---
 
-func _play(seed_value: int) -> void:
+## pilot이 비어 있으면 판단 없는 조작(첫 후보·첫 자리)이고, 전략 id를 주면 리그의
+## `assembly_policy`가 고른다.
+##
+## **왜 리그 AI를 태우는가**: "이 경로가 애초에 이길 수 있는가"를 알아야 한다.
+## 판단 없는 조작이 0승이면 경로가 어려운 것인지 조작이 나쁜 것인지 구별되지 않는다.
+## 리그 AI는 사람이 아니지만 **적을 보지 않고도 조립은 하는** 하한선이다.
+##
+## 그리고 이것은 일관성 점검이기도 하다: AI가 고른 조립을 **사람 명령으로 그대로
+## 재생**한다. 사람 경로로 표현할 수 없는 AI 조립이 있으면 여기서 드러난다.
+func _play(seed_value: int, pilot: String) -> void:
 	var state: RefCounted = VoyageState.new()
 	state.setup(VoyageConfig.make(seed_value), _content, _roster)
 	state.begin()
-	_head("자동 항해 시드 %d — **판단 없는 조작이다** (첫 합법 자리에 놓는다)"
-		% seed_value)
+	_head("자동 항해 시드 %d — %s" % [seed_value,
+		"리그 AI(%s)가 고른다" % pilot if pilot != ""
+			else "**판단 없는 조작이다** (첫 후보·첫 자리)"])
 
 	var guard: int = 0
 	while state.status == "active" and guard < 200:
@@ -167,10 +178,24 @@ func _play(seed_value: int) -> void:
 				if not brief.is_empty():
 					_say("    다음 상대 %s — %s" % [str(brief["id"]),
 						" · ".join(brief["threats"])])
-				var chose: Dictionary = state.choose(0)
+				var option: int = 0
+				var chain: Array = []
+				if pilot != "":
+					var picked: Dictionary = _pilot_pick(state, pilot)
+					option = int(picked["option"])
+					chain = picked["chain"]
+				var chose: Dictionary = state.choose(option)
 				if not bool(chose["ok"]):
 					_say("  선택 실패: %s" % str(chose["error"]))
 					return
+				# AI가 고른 조립을 **사람 명령으로 재생한다.**
+				for action: Variant in chain:
+					var replayed: Dictionary = state.command(action as Dictionary)
+					if not bool(replayed["ok"]):
+						_say("  AI 조립을 사람 명령으로 재생할 수 없다: %s — %s"
+							% [str(action), str(replayed["error"])])
+				if pilot != "":
+					state.pending_uid = Inventory.NONE
 			"assemble":
 				_auto_place(state)
 				if state.next_action() == "offer":
@@ -207,6 +232,41 @@ func _play(seed_value: int) -> void:
 	_say("  내보내기 %s → %s %s" % [
 		"성공" if bool(exported["ok"]) else str(exported["error"]),
 		str(exported["dir"]), str(exported["files"])])
+
+## 리그 AI에게 "이 제안 중 무엇을 어떻게 쓸까"를 묻는다. 리그와 같은 방식이다 —
+## 제안 파츠마다 복제본에 얹어 평가하고 최고점을 고른다.
+##
+## 반환: {option, chain}
+func _pilot_pick(state: RefCounted, strategy: String) -> Dictionary:
+	var policy: RefCounted = AssemblyPolicy.new()
+	policy.setup(strategy, state.config.league, "")
+	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	rng.seed = LeagueConfig.mix(["pilot", state.config.voyage_seed,
+		int(state.offer["index"])])
+	var ctx: Dictionary = state.ctx()
+	# 시작 조립 동안에는 획득한 파츠를 전부 본체로 놓아야 한다 (§7.2의 3본체).
+	ctx["min_bodies"] = (state.acquisitions + 1) if not state.start_complete() else 0
+	ctx["require_operational"] = state.acquisitions + 1 >= 3 		and not state.start_complete()
+	ctx["rng"] = rng
+	var best: Dictionary = {}
+	var best_option: int = 0
+	var best_score: float = -1.0e30
+	var final: Array = state.offer["final"]
+	for i: int in final.size():
+		var trial: RefCounted = state.inventory.clone()
+		var reward_uid: int = trial.add(str(final[i]))
+		var trial_ctx: Dictionary = ctx.duplicate()
+		trial_ctx["reward_uid"] = reward_uid
+		var decision: Dictionary = policy.decide(trial, trial_ctx)
+		if not bool(decision.get("valid", false)):
+			continue
+		if float(decision["score"]) > best_score:
+			best_score = float(decision["score"])
+			best = decision
+			best_option = i
+	if best.is_empty():
+		return {"option": 0, "chain": []}
+	return {"option": best_option, "chain": best["chain"]}
 
 ## 첫 합법 자리에 놓는다. 못 놓으면 창고에 둔다. 보관이 넘치면 가장 오래된
 ## 비Core 파츠를 버린다 — **사람 화면에서는 사람이 고른다** (§7.3).

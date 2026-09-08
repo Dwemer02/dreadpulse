@@ -64,6 +64,11 @@ var _replaying: bool = false
 var _ships: Dictionary = {}
 var _live_fires: Dictionary = {}
 var _live_broken: Dictionary = {}
+## 발동은 없었지만 실제 출력을 낸 자리. "반응한 파츠 점등"이 이것이다 (§7.4).
+var _live_reacted: Dictionary = {}
+## 초과 피해가 선체를 깎기 시작했는가. 일반 공격과 별도로 표시한다 (§7.4).
+var _overtime_started: bool = false
+var _overtime_total: int = 0
 var _combat_result: Dictionary = {}
 var _combat_build: Dictionary = {}
 
@@ -337,11 +342,16 @@ func _slot_row(slot_def: Dictionary, inv: RefCounted, live: bool) -> Control:
 		tint = WARN_COLOR
 	elif live and int(_live_fires.get(key, 0)) > 0:
 		tint = GOOD_COLOR
+	elif live and bool(_live_reacted.get(key, false)):
+		# 발동은 없지만 트리거로 무언가 했다 — 침묵과 구별한다.
+		tint = NOTE_COLOR
 	var name_label: Label = _label(name_text, 13, tint)
 	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(name_label)
 	if live and int(_live_fires.get(key, 0)) > 0:
 		head.add_child(_label("×%d" % int(_live_fires[key]), 11, GOOD_COLOR))
+	elif live and bool(_live_reacted.get(key, false)):
+		head.add_child(_label("반응", 11, NOTE_COLOR))
 	card.add_child(head)
 
 	if augment_uid != Inventory.NONE:
@@ -349,6 +359,8 @@ func _slot_row(slot_def: Dictionary, inv: RefCounted, live: bool) -> Control:
 			12, NOTE_COLOR))
 
 	if live:
+		if active_uid != Inventory.NONE:
+			_attach_tooltip(outer, inv.part_id_of(active_uid))
 		return outer
 
 	var buttons: HBoxContainer = HBoxContainer.new()
@@ -690,6 +702,9 @@ func _begin_replay(result: Dictionary, build: Dictionary,
 	_replaying = true
 	_live_fires = {}
 	_live_broken = {}
+	_live_reacted = {}
+	_overtime_started = false
+	_overtime_total = 0
 	_log_text.clear()
 	var hull: int = int((_content.catalog.frames[
 		_config().league.frame_id] as Dictionary)["hull"])
@@ -733,6 +748,10 @@ func _consume(e: Dictionary) -> void:
 		return
 	var ship: Dictionary = _ships[side]
 	var key: String = "%s/%s" % [side, str(e.get("slot", ""))]
+	if Readout.is_output_event(str(e["type"])):
+		var actor: String = str(e.get("slot", e.get("source_slot", "")))
+		if actor != "":
+			_live_reacted["%s/%s" % [side, actor]] = true
 	match str(e["type"]):
 		"hull_changed": ship["hull"] = int(e["to"])
 		"repaired", "regen_ticked":
@@ -750,6 +769,12 @@ func _consume(e: Dictionary) -> void:
 		"part_fired": _live_fires[key] = int(_live_fires.get(key, 0)) + 1
 		"part_destroyed": _live_broken[key] = true
 		"part_restored": _live_broken[key] = false
+		"overtime_damage":
+			# **리그 전용 규칙이다.** 일반 공격과 같은 줄에 섞으면 "내 빌드가 이겼다"와
+			# "규칙이 상대를 깎았다"를 구별할 수 없다.
+			_overtime_started = true
+			_overtime_total += int(e.get("amount", 0))
+			ship["hull"] = maxi(0, int(ship["hull"]) - int(e.get("amount", 0)))
 
 
 func _finish_replay() -> void:
@@ -833,7 +858,9 @@ func _refresh_readout_labels() -> void:
 				int(ship["material"]), int(ship["resonance"]),
 				"" if int(ship.get("overheat", 0)) == 0
 					else "   과열 %d" % int(ship["overheat"])]
-	(readout.get_node("clock") as Label).text = "%.2f초" % _clock
+	(readout.get_node("clock") as Label).text = "%.2f초%s" % [_clock,
+		"   [초과 피해 진행 중 · 누적 %d]" % _overtime_total if _overtime_started
+			else ""]
 
 
 # --- 결과 ---
@@ -979,6 +1006,9 @@ func _targets(uid: int) -> Dictionary:
 func _append_log_line(e: Dictionary) -> void:
 	var side: String = str(e.get("ship", ""))
 	var color: String = "#7fb3ff" if side == "player" else "#ff9b7f"
+	if str(e["type"]) == "overtime_damage":
+		# 리그 전용 규칙은 양쪽 색과 다른 색으로 적는다.
+		color = "#d6c07f"
 	_log_text.append_text("[color=%s]%6.2f  %s[/color]\n"
 		% [color, float(e.get("t", 0.0)), Analysis.describe(e)])
 

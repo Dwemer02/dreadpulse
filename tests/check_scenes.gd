@@ -27,6 +27,14 @@ func _init() -> void:
 			print("  FAIL  %s — 인스턴스화할 수 없다" % path)
 			failed += 1
 			continue
+		# **스크립트가 붙었는지 본다.** 스크립트 컴파일이 실패하면 씬은 그대로
+		# 인스턴스화되고 루트의 스크립트만 null이 된다 — 첫 판본이 그 상태를
+		# "ok"로 넘겼다.
+		if node.get_script() == null:
+			print("  FAIL  %s — 루트 스크립트가 붙지 않았다 (컴파일 실패)" % path)
+			failed += 1
+			node.queue_free()
+			continue
 		root.add_child(node)
 		# 한 프레임 돌려 _ready와 첫 _process까지 지난다.
 		await process_frame
