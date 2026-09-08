@@ -69,10 +69,24 @@ static func of_combat(log: Array, side: String, build: Dictionary,
 			if str(e.get("ship", "")) != side:
 				continue
 			var slot: String = str(e.get("slot", e.get("source_slot", "")))
-			if slot == "":
+			# **우리 보드에 없는 슬롯 이름은 우리 것이 아니다.** 상대가 우리에게
+			# 건 효과 중 일부는 **우리 진영으로** 방출되면서 `source_slot`에 상대의
+			# 슬롯 id를 담는다 (`overheat_cleansed`가 그렇다). 걸러내지 않으면
+			# 그 슬롯이 우리 연결·기여 표에 나타난다 — 실측 로그에서
+			# "league_core → flex_2"처럼 빈 자리로 이어지는 연결이 찍혔다.
+			if slot == "" or not names.has(slot):
 				continue
 			if int(e.get("chain_depth", 0)) == 0:
-				if root == "":
+				# **뿌리는 그 슬롯이 무언가 한 사건이어야 한다.** 아무 depth-0
+				# 사건이나 뿌리로 삼으면 효과가 없는 Core의 `part_fire_blocked`가
+				# 뿌리가 되어 그 뒤의 모든 사건이 "Core가 불렀다"로 세어진다 —
+				# 실측 로그에 "league_core → flex_2"가 찍혔다.
+				#
+				# 그렇다고 `part_fired`만 뿌리로 두면 **재생 틱이 부른 연쇄를
+				# 놓친다** — 재생은 발동이 아니라 지속 효과이고 자기 연쇄를 연다.
+				# 그래서 "발동 또는 실제 출력"을 뿌리로 인정한다.
+				if root == "" and (str(e["type"]) == "part_fired"
+						or OUTPUT_EVENTS.has(str(e["type"]))):
 					root = slot
 			elif root != "" and root != slot:
 				var key: String = "%s→%s" % [root, slot]
@@ -93,7 +107,7 @@ static func of_combat(log: Array, side: String, build: Dictionary,
 		if str(event3.get("ship", "")) != side:
 			continue
 		var slot3: String = str(event3.get("slot", event3.get("source_slot", "")))
-		if slot3 == "":
+		if slot3 == "" or not names.has(slot3):
 			continue
 		var etype: String = str(event3["type"])
 		if etype != "part_fired":

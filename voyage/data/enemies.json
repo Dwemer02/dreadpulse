@@ -1,0 +1,445 @@
+{
+  "_comment": "사람이 직접 플레이하는 시험 항해의 적 명부. **난이도 확정안이 아니다** — A~G 검토 §6.4가 \"수동 검수를 시작할 순서\"라고 못 박은 목록이다. starter 둘은 손으로 짰고 나머지는 단계 G 프리셋 후보의 보드를 새 id로 가져온 것이며 source에 원본 id가 남아 있다. 강도 관측값은 여기 넣지 않는다 — 그것은 고정 상대군 archive-1에서 잰 값이고 사람 플레이의 난이도가 아니다 (tests/check_voyage_enemies.gd가 따로 잰다).",
+  "version": "voyage-enemies-1",
+  "paths": {
+    "first_path": [
+      "ve_starter_gun",
+      "ve_scrap_lash",
+      "ve_heat_salvager",
+      "ve_regen_answer",
+      "ve_growth_coil",
+      "ve_swift_lance",
+      "ve_late_frame",
+      "ve_late_pressure"
+    ]
+  },
+  "opponents": [
+    {
+      "id": "ve_starter_gun",
+      "name": "고철 사수",
+      "role": "starter",
+      "source": "authored",
+      "note": "순수 피해만 낸다 — 상태이상도 회복도 없다. 첫 전투에서 \"내 피해가 통한다\"만 확인하게 한다. 검수: archive-1 승률 55.6% (초반 G 후보 58~73%보다 낮게 맞췄다). 첫 판본은 기관포 2정이라 74.1%로 더 셌다",
+      "build": {
+        "id": "ve_starter_gun",
+        "frame": "pool_frame",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "weapon_1": {
+            "part": "scrap_autocannon"
+          },
+          "flex_1": {
+            "part": "recast_barrel"
+          },
+          "flex_2": {
+            "part": "erosion_extruder"
+          }
+        }
+      },
+      "checked": {
+        "archive": "archive-1",
+        "win_rate": 0.556,
+        "avg_elapsed": 41.8,
+        "off_unresolved": 7,
+        "tool": "tests/check_starter_enemies.gd"
+      }
+    },
+    {
+      "id": "ve_starter_ward",
+      "name": "용접 방벽",
+      "role": "starter",
+      "source": "authored",
+      "note": "공격 하나 + 수리 + 보호막. 지속 출력이 없으면 굳는다 — \"회복을 앞지르는 출력\"을 배우게 한다. 검수: archive-1 승률 45.4%지만 **평균 63초에 108판 중 17판이 초과 피해 없이는 끝나지 않았다** — 오래 끄는 상대다. 그래서 첫 경로에 넣지 않고 대안·실험실용으로 둔다",
+      "build": {
+        "id": "ve_starter_ward",
+        "frame": "pool_frame",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "weapon_1": {
+            "part": "acid_jet_cutter"
+          },
+          "defense_1": {
+            "part": "field_welder"
+          },
+          "flex_1": {
+            "part": "loan_shield_membrane"
+          }
+        }
+      },
+      "checked": {
+        "archive": "archive-1",
+        "win_rate": 0.454,
+        "avg_elapsed": 63.0,
+        "off_unresolved": 17,
+        "tool": "tests/check_starter_enemies.gd"
+      }
+    },
+    {
+      "id": "ve_scrap_lash",
+      "name": "산성 채찍 정찰기",
+      "role": "early",
+      "source": "preset_k5-n5_p247_r2",
+      "note": "단순 공격 + 회복 하나. 첫 G 후보로 읽기 쉽다",
+      "stage_round": 2,
+      "acquisitions": 4,
+      "build": {
+        "frame": "pool_frame",
+        "id": "ve_scrap_lash",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "part": "luminous_regen_sac"
+          },
+          "flex_2": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "acid_tentacle"
+          },
+          "weapon_1": {
+            "part": "quantum_cutting_lance"
+          }
+        }
+      }
+    },
+    {
+      "id": "ve_heat_salvager",
+      "name": "폐열 회수정",
+      "role": "early",
+      "source": "preset_k5-n5_p47_r2",
+      "note": "자원 회수 연결을 보여 준다 (acid_tentacle→waste_heat_recovery)",
+      "stage_round": 2,
+      "acquisitions": 4,
+      "build": {
+        "frame": "pool_frame",
+        "id": "ve_heat_salvager",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "flex_1": {
+            "part": "waste_heat_recovery"
+          },
+          "flex_2": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "acid_tentacle"
+          },
+          "weapon_1": {
+            "part": "quantum_cutting_lance"
+          }
+        }
+      }
+    },
+    {
+      "id": "ve_four_barrel",
+      "name": "사연장 습격기",
+      "role": "lab",
+      "source": "preset_k5-n10_p86_r2",
+      "note": "공격 압력이 높은 초반 보드. 첫 전투보다 이후 배치 검수용",
+      "stage_round": 2,
+      "acquisitions": 4,
+      "build": {
+        "frame": "pool_frame",
+        "id": "ve_four_barrel",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "flex_1": {
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "part": "helios_lance"
+          },
+          "flex_3": {
+            "part": "fracture_engraver"
+          },
+          "weapon_1": {
+            "part": "photon_lance"
+          }
+        }
+      }
+    },
+    {
+      "id": "ve_regen_answer",
+      "name": "재생 반응체",
+      "role": "mid",
+      "source": "preset_k5-n5_p180_r5",
+      "note": "회복에 반응하는 연결을 읽는 중반 후보",
+      "stage_round": 5,
+      "acquisitions": 7,
+      "build": {
+        "frame": "pool_frame",
+        "id": "ve_regen_answer",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "solar_reflector",
+            "part": "culture_slime_sac"
+          },
+          "flex_1": {
+            "augment": "solar_reflector",
+            "part": "adaptive_venom_gland"
+          },
+          "flex_2": {
+            "part": "growth_battery"
+          },
+          "flex_3": {
+            "part": "luminous_regen_sac"
+          },
+          "weapon_1": {
+            "part": "adaptive_venom_gland"
+          }
+        }
+      }
+    },
+    {
+      "id": "ve_growth_coil",
+      "name": "성장 축전체",
+      "role": "mid",
+      "source": "preset_k5-n5_p130_r5",
+      "note": "회복→성장 연결. 장기전이 되는지 함께 본다",
+      "stage_round": 5,
+      "acquisitions": 7,
+      "build": {
+        "frame": "pool_frame",
+        "id": "ve_growth_coil",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "part": "regen_fluid_sac"
+          },
+          "flex_1": {
+            "augment": "layered_regen_membrane",
+            "part": "growth_battery"
+          },
+          "flex_2": {
+            "part": "adaptive_venom_gland"
+          },
+          "flex_3": {
+            "augment": "culture_slime_sac",
+            "part": "luminous_regen_sac"
+          },
+          "weapon_1": {
+            "part": "solar_reflector"
+          }
+        }
+      }
+    },
+    {
+      "id": "ve_swift_lance",
+      "name": "속사 창병",
+      "role": "mid",
+      "source": "preset_k5-n5_p239_r5",
+      "note": "빠른 공격형의 고난도 비교 후보",
+      "stage_round": 5,
+      "acquisitions": 7,
+      "build": {
+        "frame": "pool_frame",
+        "id": "ve_swift_lance",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "flex_1": {
+            "augment": "fracture_engraver",
+            "part": "photon_lance"
+          },
+          "flex_2": {
+            "augment": "forward_loan_beam",
+            "part": "severance_beam"
+          },
+          "flex_3": {
+            "part": "helios_lance"
+          },
+          "weapon_1": {
+            "augment": "corrosive_injector",
+            "part": "acid_jet_cutter"
+          }
+        }
+      }
+    },
+    {
+      "id": "ve_late_frame",
+      "name": "후반 골격",
+      "role": "late",
+      "source": "preset_k5-n5_p155_r8",
+      "note": "항해 후반 검수 후보. 실제 획득 예산과 대응 가능성을 본다",
+      "stage_round": 8,
+      "acquisitions": 10,
+      "build": {
+        "frame": "pool_frame",
+        "id": "ve_late_frame",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "bipolar_discharge_sac",
+            "part": "regen_sac"
+          },
+          "flex_1": {
+            "augment": "bipolar_discharge_sac",
+            "part": "nerve_bundle"
+          },
+          "flex_2": {
+            "augment": "resonant_fiber_cluster",
+            "part": "dielectric_accumulator"
+          },
+          "flex_3": {
+            "augment": "proliferating_heart",
+            "part": "growth_battery"
+          },
+          "weapon_1": {
+            "augment": "bipolar_stinger",
+            "part": "acid_tentacle"
+          }
+        }
+      }
+    },
+    {
+      "id": "ve_late_pressure",
+      "name": "후반 압박체",
+      "role": "late",
+      "source": "preset_k5-n10_p186_r8",
+      "note": "검토 표에 없던 자리 — R8에서 승률이 포화하지 않은 둘 중 하나다. archive-1 승률 94.4%로 높다: **난이도 확정이 아니라 수동 검수 대상이다** (§6.1이 말한 \"상대군이 후반 후보를 구분하지 못한다\")",
+      "stage_round": 8,
+      "acquisitions": 10,
+      "build": {
+        "frame": "pool_frame",
+        "id": "ve_late_pressure",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "forward_loan_beam",
+            "part": "phase_barrier"
+          },
+          "flex_1": {
+            "augment": "forward_loan_beam",
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "augment": "forward_loan_beam",
+            "part": "helios_lance"
+          },
+          "flex_3": {
+            "augment": "solar_reflector",
+            "part": "fracture_engraver"
+          },
+          "weapon_1": {
+            "augment": "timed_fracture_needle",
+            "part": "photon_lance"
+          }
+        }
+      }
+    },
+    {
+      "id": "ve_lab_saturated",
+      "name": "포화 시험체",
+      "role": "lab",
+      "source": "preset_k5-n5_p33_r5",
+      "note": "고난도 실험실 후보. R5라는 이유로 중반 기본 적에 넣지 않는다",
+      "stage_round": 5,
+      "acquisitions": 7,
+      "build": {
+        "frame": "pool_frame",
+        "id": "ve_lab_saturated",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "timed_fracture_needle",
+            "part": "layered_regen_membrane"
+          },
+          "flex_1": {
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "regen_sac"
+          },
+          "weapon_1": {
+            "augment": "loan_shield_membrane",
+            "part": "acid_tentacle"
+          }
+        }
+      }
+    },
+    {
+      "id": "ve_lab_overtime",
+      "name": "초과 피해 시험체",
+      "role": "lab",
+      "source": "preset_k5-n5_p55_r2",
+      "note": "초과 피해·장기전 스트레스 시험용으로 분리",
+      "stage_round": 2,
+      "acquisitions": 4,
+      "build": {
+        "frame": "pool_frame",
+        "id": "ve_lab_overtime",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "proliferating_heart",
+            "part": "regen_sac"
+          },
+          "flex_1": {
+            "augment": "acid_tentacle",
+            "part": "resonant_fiber_cluster"
+          }
+        }
+      }
+    },
+    {
+      "id": "ve_lab_lowrate",
+      "name": "저승률 시험체",
+      "role": "lab",
+      "source": "preset_k5-n5_p5_r2",
+      "note": "낮은 승률만 보고 쉬운 적으로 채택하지 않는다",
+      "stage_round": 2,
+      "acquisitions": 4,
+      "build": {
+        "frame": "pool_frame",
+        "id": "ve_lab_lowrate",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "resonant_fiber_cluster",
+            "part": "regen_sac"
+          },
+          "weapon_1": {
+            "augment": "bipolar_discharge_sac",
+            "part": "acid_tentacle"
+          }
+        }
+      }
+    }
+  ]
+}

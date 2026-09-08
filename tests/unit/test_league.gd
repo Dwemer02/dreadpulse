@@ -6,7 +6,7 @@ extends RefCounted
 ## 불가능한 조립이 통과하는가, 초과 피해가 규칙대로 들어가는가, 후보 평가가 원본을
 ## 오염시키는가, 같은 시드가 같은 결과를 내는가.
 
-const EXPECTED_CHECKS := 221
+const EXPECTED_CHECKS := 227
 
 const K = preload("res://sim/sim_const.gd")
 const Part = preload("res://sim/part.gd")
@@ -61,6 +61,8 @@ func run(t: RefCounted) -> void:
 	_test_overtime_pairs_by_match(t)
 	_test_inert_core_is_not_silent(t)
 	_test_trigger_only_contribution_is_visible(t)
+	_test_foreign_slots_are_not_ours(t)
+	_test_link_root_must_be_a_fire(t)
 	_test_merge_keeps_best_observation(t)
 	_test_rejected_recipe_is_not_assigned(t)
 	_test_candidate_legality(t)
@@ -738,6 +740,65 @@ func _test_trigger_only_contribution_is_visible(t: RefCounted) -> void:
 	t.check((trace["silent"] as Array).is_empty(), "침묵 칸은 없다")
 	t.eq(int((trace["links"] as Dictionary).get("weapon_1→flex_1", 0)), 1,
 		"연결은 뿌리 발동 뒤에 다른 슬롯이 한 일로 센다")
+
+## 우리 진영으로 방출되지만 **상대의 슬롯 id**를 담는 사건이 있다
+## (`overheat_cleansed`의 source_slot). 그것을 우리 기여로 세면 우리 보드에 없는
+## 자리가 연결 표에 나타난다 — 실측 로그에서 "league_core → flex_2"가 찍혔다.
+func _test_foreign_slots_are_not_ours(t: RefCounted) -> void:
+	var build: Dictionary = {"id": "synthetic", "frame": "pool_frame", "slots": {
+		"weapon_1": {"part": "scrap_autocannon"},
+	}}
+	var log: Array = [
+		{"type": "part_fired", "ship": "player", "slot": "weapon_1",
+			"part_id": "scrap_autocannon", "chain_depth": 0, "chain_id": 1},
+		# 상대가 우리 과열을 제거했다. 우리 진영으로 나오지만 slot은 상대 것이다.
+		{"type": "overheat_cleansed", "ship": "player", "source_slot": "flex_2",
+			"stacks": 1, "chain_depth": 1, "chain_id": 1},
+	]
+	var trace: Dictionary = EngineTrace.of_combat(log, "player", build,
+		_content.catalog)
+	t.check(not (trace["contribution"] as Dictionary).has("flex_2"),
+		"우리 보드에 없는 슬롯은 기여 표에 넣지 않는다")
+	t.eq((trace["links"] as Dictionary).size(), 0,
+		"그 사건으로 연결도 만들지 않는다")
+
+## **뿌리는 발동이어야 한다.** 아무 depth-0 사건이나 뿌리로 삼으면 효과가 없는 Core의
+## `part_fire_blocked`가 뿌리가 되어 그 뒤의 모든 사건이 "Core가 불렀다"로 세어진다.
+func _test_link_root_must_be_a_fire(t: RefCounted) -> void:
+	var build: Dictionary = {"id": "synthetic", "frame": "pool_frame", "slots": {
+		"core": {"part": "league_core"},
+		"weapon_1": {"part": "scrap_autocannon"},
+		"flex_1": {"part": "regen_sac"},
+	}}
+	var log: Array = [
+		{"type": "part_fire_blocked", "ship": "player", "slot": "core",
+			"reason": "requirement", "chain_depth": 0, "chain_id": 1},
+		{"type": "repaired", "ship": "player", "source_slot": "flex_1",
+			"amount": 3, "chain_depth": 1, "chain_id": 1},
+	]
+	var trace: Dictionary = EngineTrace.of_combat(log, "player", build,
+		_content.catalog)
+	t.eq((trace["links"] as Dictionary).size(), 0,
+		"발동이 아닌 사건은 연쇄의 뿌리가 되지 않는다")
+	t.eq(str(((trace["contribution"] as Dictionary)["core"]
+		as Dictionary)["kind"]), "inert",
+		"막힌 기록이 있어도 효과 없는 Core는 판정 제외다")
+	t.eq(str(((trace["contribution"] as Dictionary)["flex_1"]
+		as Dictionary)["kind"]), "reacted",
+		"실제 회복을 낸 자리는 반응으로 잡힌다")
+
+	# 그렇다고 **발동만** 뿌리로 두면 재생 틱이 부른 연쇄를 놓친다 — 재생은
+	# 발동이 아니라 지속 효과이고 자기 연쇄를 연다.
+	var regen_log: Array = [
+		{"type": "repaired", "ship": "player", "source_slot": "flex_1",
+			"amount": 3, "chain_depth": 0, "chain_id": 2},
+		{"type": "damage_dealt", "ship": "player", "source_slot": "weapon_1",
+			"hull_damage": 6, "chain_depth": 1, "chain_id": 2},
+	]
+	var regen_trace: Dictionary = EngineTrace.of_combat(regen_log, "player",
+		build, _content.catalog)
+	t.eq(int((regen_trace["links"] as Dictionary).get("flex_1→weapon_1", 0)), 1,
+		"실제 출력을 낸 사건은 연쇄의 뿌리가 된다")
 
 ## 한 판에서 안 돌았다고 죽은 파츠가 아니다 — 상대에 따라 조건이 안 맞았을 수 있다.
 func _test_merge_keeps_best_observation(t: RefCounted) -> void:
