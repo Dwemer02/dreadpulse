@@ -228,6 +228,10 @@ Viridia 너프·Reclaimer 버프·공급기 일괄 상향·AI 가중치 조정·
 
 ## 9. r5b 피드백 반영 — 단계 A·B·C (2026-09-07)
 
+> **A~G 전 단계의 결과는 `docs/superpowers/reports/2026-09-08-league-stages-a-to-g.md`
+> 한 곳에 있다.** 이 절은 A·B·C의 **구현 결정**만 기록한다 — 무엇을 왜 그렇게
+> 만들었는지다. 측정 결과와 그 해석은 리포트를 볼 것.
+
 `TFD_League_r5b_Analysis_and_Reward_Choice_Plan_v1.0.md`의 §12·§14가 정한 범위를
 그대로 지켰다: **A~C의 로그·평가·비교군만 구현하고, D에서 기준을 고정한 뒤 E를
 실행한다.** 파츠 수치도 AI 가중치도 이번에도 손대지 않았다.
