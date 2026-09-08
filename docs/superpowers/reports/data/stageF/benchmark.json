@@ -1,0 +1,138 @@
+{
+  "archive": {
+    "built_commit": "a6750b818b04e26ca3f24670831e0349ba89a1a1",
+    "built_from": "tests/out/league/r5-20260907T111238/snapshots.jsonl",
+    "opponent_ids": [
+      "early_p0_r0",
+      "early_p55_r2",
+      "early_p110_r0",
+      "early_p20_r0",
+      "early_p25_r0",
+      "early_p30_r0",
+      "mid_p165_r4",
+      "mid_p35_r3",
+      "mid_p40_r3",
+      "mid_p45_r3",
+      "mid_p0_r3",
+      "mid_p0_r4",
+      "late_p1_r8",
+      "late_p2_r8",
+      "late_p8_r8",
+      "late_p9_r8",
+      "late_p10_r8",
+      "late_p11_r8"
+    ],
+    "opponents": 18,
+    "selection_rule": {
+      "bucket": "공격 경로 + 방어 기능 + 시동 구조 (league/build_profile.gd)",
+      "excluded": "공격 불능 빌드, 보드 서명 중복",
+      "note": "출력 크기를 기준에 넣지 않는다 — 강한 것을 고르는 것이 아니라 작동 방식이 다른 것을 고르는 것이다 (§8.4).",
+      "order": "새로운 면(구조 버킷 4점 · 전략 2점 · 풀 1점)을 가장 많이 더하는 후보를 매번 고른다. 동점이면 참가자 id가 작은 쪽.",
+      "per_bucket": 1.0,
+      "per_stage": 6.0,
+      "stages": {
+        "early": "round<=2",
+        "late": "round>=7",
+        "mid": "round 3~6"
+      }
+    },
+    "version": "archive-1"
+  },
+  "results": {
+    "k5-n10-20260908T011428": {
+      "label": "k5-n10-20260908T011428",
+      "participants": 500,
+      "reached": 500,
+      "round": 4,
+      "rows": {
+        "bridge": {
+          "avg_margin": 5.71944444444444,
+          "of": 100,
+          "reached": 100,
+          "unresolved": 0,
+          "win_rate": 0.530277777777778
+        },
+        "engine": {
+          "avg_margin": 3.69027777777778,
+          "of": 100,
+          "reached": 100,
+          "unresolved": 0,
+          "win_rate": 0.525833333333333
+        },
+        "fixed_recipe": {
+          "avg_margin": 33.0697222222222,
+          "of": 100,
+          "reached": 100,
+          "unresolved": 0,
+          "win_rate": 0.701111111111111
+        },
+        "immediate": {
+          "avg_margin": 31.3827777777778,
+          "of": 100,
+          "reached": 100,
+          "unresolved": 0,
+          "win_rate": 0.689444444444444
+        },
+        "sustain": {
+          "avg_margin": 28.8538888888889,
+          "of": 100,
+          "reached": 100,
+          "unresolved": 0,
+          "win_rate": 0.664166666666667
+        }
+      }
+    },
+    "k6-n10-20260908T014752": {
+      "label": "k6-n10-20260908T014752",
+      "participants": 500,
+      "reached": 500,
+      "round": 4,
+      "rows": {
+        "bridge": {
+          "avg_margin": 6.79027777777778,
+          "of": 100,
+          "reached": 100,
+          "unresolved": 0,
+          "win_rate": 0.538611111111111
+        },
+        "engine": {
+          "avg_margin": 6.04861111111111,
+          "of": 100,
+          "reached": 100,
+          "unresolved": 0,
+          "win_rate": 0.539166666666667
+        },
+        "fixed_recipe": {
+          "avg_margin": 38.3033333333333,
+          "of": 100,
+          "reached": 100,
+          "unresolved": 0,
+          "win_rate": 0.73
+        },
+        "immediate": {
+          "avg_margin": 38.1183333333333,
+          "of": 100,
+          "reached": 100,
+          "unresolved": 0,
+          "win_rate": 0.723611111111111
+        },
+        "sustain": {
+          "avg_margin": 30.8758333333333,
+          "of": 100,
+          "reached": 100,
+          "unresolved": 0,
+          "win_rate": 0.674166666666667
+        }
+      }
+    }
+  },
+  "round": 4,
+  "run_id": "stageE-bench-20260908T020132",
+  "runs": [
+    "tests/out/league/k5-n10-20260908T011428",
+    "tests/out/league/k6-n10-20260908T014752"
+  ],
+  "seeds": [
+    9001
+  ]
+}

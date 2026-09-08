@@ -1,0 +1,2656 @@
+{
+  "archive": {
+    "built_commit": "a6750b818b04e26ca3f24670831e0349ba89a1a1",
+    "built_from": "tests/out/league/r5-20260907T111238/snapshots.jsonl",
+    "opponent_ids": [
+      "early_p0_r0",
+      "early_p55_r2",
+      "early_p110_r0",
+      "early_p20_r0",
+      "early_p25_r0",
+      "early_p30_r0",
+      "mid_p165_r4",
+      "mid_p35_r3",
+      "mid_p40_r3",
+      "mid_p45_r3",
+      "mid_p0_r3",
+      "mid_p0_r4",
+      "late_p1_r8",
+      "late_p2_r8",
+      "late_p8_r8",
+      "late_p9_r8",
+      "late_p10_r8",
+      "late_p11_r8"
+    ],
+    "opponents": 18,
+    "selection_rule": {
+      "bucket": "공격 경로 + 방어 기능 + 시동 구조 (league/build_profile.gd)",
+      "excluded": "공격 불능 빌드, 보드 서명 중복",
+      "note": "출력 크기를 기준에 넣지 않는다 — 강한 것을 고르는 것이 아니라 작동 방식이 다른 것을 고르는 것이다 (§8.4).",
+      "order": "새로운 면(구조 버킷 4점 · 전략 2점 · 풀 1점)을 가장 많이 더하는 후보를 매번 고른다. 동점이면 참가자 id가 작은 쪽.",
+      "per_bucket": 1.0,
+      "per_stage": 6.0,
+      "stages": {
+        "early": "round<=2",
+        "late": "round>=7",
+        "mid": "round 3~6"
+      }
+    },
+    "version": "archive-1"
+  },
+  "candidates": [
+    {
+      "acquisitions": 4,
+      "benchmark": {
+        "avg_elapsed": 33.6902777777778,
+        "avg_margin": 26.75,
+        "win_rate": 0.694444444444444
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_247_r2",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "part": "luminous_regen_sac"
+          },
+          "flex_2": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "acid_tentacle"
+          },
+          "weapon_1": {
+            "part": "quantum_cutting_lance"
+          }
+        }
+      },
+      "engine": "주력 acid_tentacle×30 · quantum_cutting_lance×19 · luminous_regen_sac×14 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 60,
+          "energy": 108,
+          "fracture": 68,
+          "overheat": 165
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 30,
+            "part_id": "acid_tentacle"
+          },
+          "luminous_regen_sac": {
+            "count": 14,
+            "part_id": "luminous_regen_sac"
+          },
+          "quantum_cutting_lance": {
+            "count": 19,
+            "part_id": "quantum_cutting_lance"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n5_p247_r2",
+      "overtime": {
+        "decided_with": 3,
+        "matches": 108,
+        "unresolved_without": 2,
+        "win_rate_with": 0.694444444444444,
+        "win_rate_without": 0.679245283018868
+      },
+      "source": {
+        "participant": 247,
+        "pool": "equal",
+        "run": "k5-n5-20260908T001803",
+        "seed": 103,
+        "snapshot_id": "p247_r2",
+        "strategy": "fixed_recipe"
+      },
+      "stage_round": 2,
+      "storage": [],
+      "structure": {
+        "active_units": 4,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "heal"
+        ],
+        "operational": true,
+        "output_60s": 4.29,
+        "startup": "gated",
+        "sustain_60s": 0.5
+      },
+      "weak_against": {
+        "corrosion+direct+fracture|heal|gated": 1,
+        "corrosion+direct+overheat|heal|gated": 1,
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1,
+        "direct+overheat|heal|gated": 1
+      }
+    },
+    {
+      "acquisitions": 4,
+      "benchmark": {
+        "avg_elapsed": 34.7143518518519,
+        "avg_margin": 12.9722222222222,
+        "win_rate": 0.62037037037037
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_47_r2",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "flex_1": {
+            "part": "waste_heat_recovery"
+          },
+          "flex_2": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "acid_tentacle"
+          },
+          "weapon_1": {
+            "part": "quantum_cutting_lance"
+          }
+        }
+      },
+      "engine": "주력 acid_tentacle×25 · quantum_cutting_lance×20 | 연쇄 acid_tentacle→waste_heat_recovery×4 | 피해 caustic+energy+fracture+overheat | 전투 내내 침묵 2칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 50,
+          "energy": 131,
+          "fracture": 40,
+          "overheat": 132
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 25,
+            "part_id": "acid_tentacle"
+          },
+          "quantum_cutting_lance": {
+            "count": 20,
+            "part_id": "quantum_cutting_lance"
+          }
+        },
+        "idle": [
+          "core",
+          "flex_1"
+        ],
+        "links": {
+          "flex_2→flex_1": 4
+        }
+      },
+      "id": "preset_k5-n5_p47_r2",
+      "overtime": {
+        "decided_with": 6,
+        "matches": 108,
+        "unresolved_without": 4,
+        "win_rate_with": 0.62037037037037,
+        "win_rate_without": 0.567307692307692
+      },
+      "source": {
+        "participant": 47,
+        "pool": "equal",
+        "run": "k5-n5-20260908T001803",
+        "seed": 103,
+        "snapshot_id": "p47_r2",
+        "strategy": "immediate"
+      },
+      "stage_round": 2,
+      "storage": [],
+      "structure": {
+        "active_units": 4,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [],
+        "operational": true,
+        "output_60s": 4.29,
+        "startup": "gated",
+        "sustain_60s": 0.0
+      },
+      "weak_against": {
+        "corrosion+direct+fracture|heal|gated": 1,
+        "corrosion+direct+overheat|heal|gated": 1,
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1,
+        "direct+overheat|defend+time|immediate": 1,
+        "direct+overheat|heal|gated": 1
+      }
+    },
+    {
+      "acquisitions": 4,
+      "benchmark": {
+        "avg_elapsed": 48.0731481481481,
+        "avg_margin": -23.2962962962963,
+        "win_rate": 0.342592592592593
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_186_r2",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "flex_2": {
+            "augment": "acid_tentacle",
+            "part": "helios_lance"
+          },
+          "weapon_1": {
+            "augment": "fracture_engraver",
+            "part": "photon_lance"
+          }
+        }
+      },
+      "engine": "주력 helios_lance×20 · photon_lance×12 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 9,
+          "energy": 88,
+          "fracture": 8,
+          "overheat": 114,
+          "thermal": 129
+        },
+        "fires": {
+          "helios_lance": {
+            "count": 20,
+            "part_id": "helios_lance"
+          },
+          "photon_lance": {
+            "count": 12,
+            "part_id": "photon_lance"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n10_p186_r2",
+      "overtime": {
+        "decided_with": 16,
+        "matches": 108,
+        "unresolved_without": 17,
+        "win_rate_with": 0.342592592592593,
+        "win_rate_without": 0.395604395604396
+      },
+      "source": {
+        "participant": 186,
+        "pool": "a70_v30",
+        "run": "k5-n10-20260908T011428",
+        "seed": 207,
+        "snapshot_id": "p186_r2",
+        "strategy": "engine"
+      },
+      "stage_round": 2,
+      "storage": [],
+      "structure": {
+        "active_units": 4,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 3.87,
+        "startup": "gated",
+        "sustain_60s": 0.0
+      },
+      "weak_against": {
+        "corrosion+direct+fracture|defend+heal+time|gated": 1,
+        "corrosion+direct+fracture|heal|gated": 1,
+        "corrosion+direct+overheat|heal|gated": 1,
+        "corrosion+direct|heal|gated": 1,
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1,
+        "direct+fracture|defend+time|gated": 1,
+        "direct+overheat|defend+time|immediate": 1,
+        "direct+overheat|heal|gated": 2,
+        "direct|heal|gated": 1,
+        "direct|time|immediate": 1
+      }
+    },
+    {
+      "acquisitions": 4,
+      "benchmark": {
+        "avg_elapsed": 29.4439814814815,
+        "avg_margin": 25.9351851851852,
+        "win_rate": 0.731481481481482
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_86_r2",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "flex_1": {
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "part": "helios_lance"
+          },
+          "flex_3": {
+            "part": "fracture_engraver"
+          },
+          "weapon_1": {
+            "part": "photon_lance"
+          }
+        }
+      },
+      "engine": "주력 acid_tentacle×36 · photon_lance×22 · fracture_engraver×14 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 68,
+          "energy": 172,
+          "fracture": 70,
+          "overheat": 54,
+          "thermal": 63
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 36,
+            "part_id": "acid_tentacle"
+          },
+          "fracture_engraver": {
+            "count": 14,
+            "part_id": "fracture_engraver"
+          },
+          "helios_lance": {
+            "count": 10,
+            "part_id": "helios_lance"
+          },
+          "photon_lance": {
+            "count": 22,
+            "part_id": "photon_lance"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n10_p86_r2",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 0,
+        "win_rate_with": 0.731481481481482,
+        "win_rate_without": 0.712962962962963
+      },
+      "source": {
+        "participant": 86,
+        "pool": "a70_v30",
+        "run": "k5-n10-20260908T011428",
+        "seed": 207,
+        "snapshot_id": "p86_r2",
+        "strategy": "immediate"
+      },
+      "stage_round": 2,
+      "storage": [],
+      "structure": {
+        "active_units": 4,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 5.29,
+        "startup": "immediate",
+        "sustain_60s": 0.0
+      },
+      "weak_against": {
+        "corrosion+direct+fracture|heal|gated": 1,
+        "corrosion+direct+overheat|heal|gated": 1,
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1,
+        "direct+overheat|heal|gated": 1
+      }
+    },
+    {
+      "acquisitions": 4,
+      "benchmark": {
+        "avg_elapsed": 77.0180555555556,
+        "avg_margin": 15.7037037037037,
+        "win_rate": 0.601851851851852
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_55_r2",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "proliferating_heart",
+            "part": "regen_sac"
+          },
+          "flex_1": {
+            "augment": "acid_tentacle",
+            "part": "resonant_fiber_cluster"
+          }
+        }
+      },
+      "engine": "주력 regen_sac×116 · resonant_fiber_cluster×41 | 연쇄 없음 | 피해 caustic+fracture | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 9,
+          "fracture": 82
+        },
+        "fires": {
+          "regen_sac": {
+            "count": 116,
+            "part_id": "regen_sac"
+          },
+          "resonant_fiber_cluster": {
+            "count": 41,
+            "part_id": "resonant_fiber_cluster"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n5_p55_r2",
+      "overtime": {
+        "decided_with": 18,
+        "matches": 108,
+        "unresolved_without": 74,
+        "win_rate_with": 0.601851851851852,
+        "win_rate_without": 0.0
+      },
+      "source": {
+        "participant": 55,
+        "pool": "v100",
+        "run": "k5-n5-20260908T001803",
+        "seed": 101,
+        "snapshot_id": "p55_r2",
+        "strategy": "engine"
+      },
+      "stage_round": 2,
+      "storage": [],
+      "structure": {
+        "active_units": 4,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "heal",
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 0.6,
+        "startup": "gated",
+        "sustain_60s": 0.75
+      },
+      "weak_against": {
+        "corrosion+direct+overheat|heal|gated": 1,
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1,
+        "direct+fracture|defend+time|gated": 1,
+        "direct+overheat|heal|gated": 2,
+        "direct|heal|gated": 1
+      }
+    },
+    {
+      "acquisitions": 4,
+      "benchmark": {
+        "avg_elapsed": 52.1731481481482,
+        "avg_margin": -51.3333333333333,
+        "win_rate": 0.231481481481481
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_5_r2",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "resonant_fiber_cluster",
+            "part": "regen_sac"
+          },
+          "weapon_1": {
+            "augment": "bipolar_discharge_sac",
+            "part": "acid_tentacle"
+          }
+        }
+      },
+      "engine": "주력 regen_sac×100 · acid_tentacle×52 | 연쇄 없음 | 피해 caustic+energy+fracture | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 104,
+          "energy": 94,
+          "fracture": 64
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 52,
+            "part_id": "acid_tentacle"
+          },
+          "regen_sac": {
+            "count": 100,
+            "part_id": "regen_sac"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n5_p5_r2",
+      "overtime": {
+        "decided_with": 16,
+        "matches": 108,
+        "unresolved_without": 21,
+        "win_rate_with": 0.231481481481481,
+        "win_rate_without": 0.241379310344828
+      },
+      "source": {
+        "participant": 5,
+        "pool": "v100",
+        "run": "k5-n5-20260908T001803",
+        "seed": 101,
+        "snapshot_id": "p5_r2",
+        "strategy": "immediate"
+      },
+      "stage_round": 2,
+      "storage": [],
+      "structure": {
+        "active_units": 4,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "heal"
+        ],
+        "operational": true,
+        "output_60s": 2.17,
+        "startup": "gated",
+        "sustain_60s": 0.5
+      },
+      "weak_against": {
+        "corrosion+direct+fracture|defend+heal+time|gated": 1,
+        "corrosion+direct+fracture|heal|gated": 1,
+        "corrosion+direct+overheat|heal|gated": 1,
+        "corrosion+direct|heal|gated": 1,
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1,
+        "direct+fracture+overheat|none|gated": 1,
+        "direct+fracture|defend+time|gated": 1,
+        "direct+overheat|defend+time|immediate": 1,
+        "direct+overheat|heal|gated": 2,
+        "direct|heal|gated": 1,
+        "direct|heal|immediate": 1,
+        "direct|time|immediate": 1
+      }
+    },
+    {
+      "acquisitions": 7,
+      "benchmark": {
+        "avg_elapsed": 17.5467592592593,
+        "avg_margin": 83.8425925925926,
+        "win_rate": 0.972222222222222
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_33_r5",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "timed_fracture_needle",
+            "part": "layered_regen_membrane"
+          },
+          "flex_1": {
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "regen_sac"
+          },
+          "weapon_1": {
+            "augment": "loan_shield_membrane",
+            "part": "acid_tentacle"
+          }
+        }
+      },
+      "engine": "주력 acid_tentacle×40 · regen_sac×29 · layered_regen_membrane×12 | 연쇄 없음 | 피해 caustic+fracture+overheat | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 80,
+          "fracture": 36,
+          "overheat": 307
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 40,
+            "part_id": "acid_tentacle"
+          },
+          "layered_regen_membrane": {
+            "count": 12,
+            "part_id": "layered_regen_membrane"
+          },
+          "regen_sac": {
+            "count": 29,
+            "part_id": "regen_sac"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n5_p33_r5",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 2,
+        "win_rate_with": 0.972222222222222,
+        "win_rate_without": 0.962264150943396
+      },
+      "source": {
+        "participant": 33,
+        "pool": "v70_a30",
+        "run": "k5-n5-20260908T001803",
+        "seed": 104,
+        "snapshot_id": "p33_r5",
+        "strategy": "immediate"
+      },
+      "stage_round": 5,
+      "storage": [],
+      "structure": {
+        "active_units": 7,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "defend",
+          "heal",
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 5.6,
+        "startup": "gated",
+        "sustain_60s": 2.57
+      },
+      "weak_against": {}
+    },
+    {
+      "acquisitions": 7,
+      "benchmark": {
+        "avg_elapsed": 25.5092592592593,
+        "avg_margin": 61.5555555555556,
+        "win_rate": 0.833333333333333
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_47_r5",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "flex_1": {
+            "part": "waste_heat_recovery"
+          },
+          "flex_2": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "acid_tentacle"
+          },
+          "flex_3": {
+            "augment": "emergency_retrograde_membrane",
+            "part": "photon_lance"
+          },
+          "weapon_1": {
+            "augment": "eclipse_shield_plate",
+            "part": "quantum_cutting_lance"
+          }
+        }
+      },
+      "engine": "주력 acid_tentacle×23 · photon_lance×18 · quantum_cutting_lance×13 | 연쇄 acid_tentacle→waste_heat_recovery×3 | 피해 caustic+energy+fracture+overheat | 전투 내내 침묵 2칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 46,
+          "energy": 232,
+          "fracture": 26,
+          "overheat": 116
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 23,
+            "part_id": "acid_tentacle"
+          },
+          "photon_lance": {
+            "count": 18,
+            "part_id": "photon_lance"
+          },
+          "quantum_cutting_lance": {
+            "count": 13,
+            "part_id": "quantum_cutting_lance"
+          }
+        },
+        "idle": [
+          "core",
+          "flex_1"
+        ],
+        "links": {
+          "flex_2→flex_1": 3
+        }
+      },
+      "id": "preset_k5-n5_p47_r5",
+      "overtime": {
+        "decided_with": 4,
+        "matches": 108,
+        "unresolved_without": 1,
+        "win_rate_with": 0.833333333333333,
+        "win_rate_without": 0.85981308411215
+      },
+      "source": {
+        "participant": 47,
+        "pool": "equal",
+        "run": "k5-n5-20260908T001803",
+        "seed": 103,
+        "snapshot_id": "p47_r5",
+        "strategy": "immediate"
+      },
+      "stage_round": 5,
+      "storage": [],
+      "structure": {
+        "active_units": 7,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "defend",
+          "heal"
+        ],
+        "operational": true,
+        "output_60s": 5.89,
+        "startup": "gated",
+        "sustain_60s": 1.53
+      },
+      "weak_against": {
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1
+      }
+    },
+    {
+      "acquisitions": 7,
+      "benchmark": {
+        "avg_elapsed": 24.3796296296296,
+        "avg_margin": 50.6388888888889,
+        "win_rate": 0.842592592592593
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_33_r5",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "scrap_compactor",
+            "part": "dielectric_accumulator"
+          },
+          "flex_1": {
+            "part": "scrap_autocannon"
+          },
+          "flex_2": {
+            "part": "pressurized_acid_cannon"
+          },
+          "flex_3": {
+            "part": "acid_jet_cutter"
+          },
+          "weapon_1": {
+            "augment": "ignition_nozzle",
+            "part": "fracture_cilia"
+          }
+        }
+      },
+      "engine": "주력 fracture_cilia×35 · scrap_autocannon×30 · acid_jet_cutter×18 | 연쇄 없음 | 피해 caustic+fracture+overheat+physical | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 122,
+          "fracture": 35,
+          "overheat": 89,
+          "physical": 176
+        },
+        "fires": {
+          "acid_jet_cutter": {
+            "count": 18,
+            "part_id": "acid_jet_cutter"
+          },
+          "dielectric_accumulator": {
+            "count": 14,
+            "part_id": "dielectric_accumulator"
+          },
+          "fracture_cilia": {
+            "count": 35,
+            "part_id": "fracture_cilia"
+          },
+          "pressurized_acid_cannon": {
+            "count": 4,
+            "part_id": "pressurized_acid_cannon"
+          },
+          "scrap_autocannon": {
+            "count": 30,
+            "part_id": "scrap_autocannon"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n10_p33_r5",
+      "overtime": {
+        "decided_with": 1,
+        "matches": 108,
+        "unresolved_without": 1,
+        "win_rate_with": 0.842592592592593,
+        "win_rate_without": 0.88785046728972
+      },
+      "source": {
+        "participant": 33,
+        "pool": "r70_v30",
+        "run": "k5-n10-20260908T011428",
+        "seed": 204,
+        "snapshot_id": "p33_r5",
+        "strategy": "immediate"
+      },
+      "stage_round": 5,
+      "storage": [],
+      "structure": {
+        "active_units": 7,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "defend"
+        ],
+        "operational": true,
+        "output_60s": 5.57,
+        "startup": "gated",
+        "sustain_60s": 0.5
+      },
+      "weak_against": {
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1
+      }
+    },
+    {
+      "acquisitions": 7,
+      "benchmark": {
+        "avg_elapsed": 46.1361111111111,
+        "avg_margin": 36.712962962963,
+        "win_rate": 0.740740740740741
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_130_r5",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "part": "regen_fluid_sac"
+          },
+          "flex_1": {
+            "augment": "layered_regen_membrane",
+            "part": "growth_battery"
+          },
+          "flex_2": {
+            "part": "adaptive_venom_gland"
+          },
+          "flex_3": {
+            "augment": "culture_slime_sac",
+            "part": "luminous_regen_sac"
+          },
+          "weapon_1": {
+            "part": "solar_reflector"
+          }
+        }
+      },
+      "engine": "주력 growth_battery×40 · solar_reflector×32 · regen_fluid_sac×28 | 연쇄 luminous_regen_sac→growth_battery×16 · regen_fluid_sac→growth_battery×9 | 피해 fracture+overheat+physical+thermal | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "fracture": 40,
+          "overheat": 23,
+          "physical": 272,
+          "thermal": 90
+        },
+        "fires": {
+          "adaptive_venom_gland": {
+            "count": 26,
+            "part_id": "adaptive_venom_gland"
+          },
+          "growth_battery": {
+            "count": 40,
+            "part_id": "growth_battery"
+          },
+          "luminous_regen_sac": {
+            "count": 25,
+            "part_id": "luminous_regen_sac"
+          },
+          "regen_fluid_sac": {
+            "count": 28,
+            "part_id": "regen_fluid_sac"
+          },
+          "solar_reflector": {
+            "count": 32,
+            "part_id": "solar_reflector"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {
+          "defense_1→flex_1": 9,
+          "defense_1→flex_2": 6,
+          "flex_1→flex_2": 7,
+          "flex_3→flex_1": 16,
+          "flex_3→flex_2": 8
+        }
+      },
+      "id": "preset_k5-n5_p130_r5",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 9,
+        "win_rate_with": 0.740740740740741,
+        "win_rate_without": 0.767676767676768
+      },
+      "source": {
+        "participant": 130,
+        "pool": "v70_a30",
+        "run": "k5-n5-20260908T001803",
+        "seed": 101,
+        "snapshot_id": "p130_r5",
+        "strategy": "sustain"
+      },
+      "stage_round": 5,
+      "storage": [],
+      "structure": {
+        "active_units": 7,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "heal",
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 1.6,
+        "startup": "gated",
+        "sustain_60s": 1.67
+      },
+      "weak_against": {
+        "corrosion+direct+fracture|heal|gated": 1,
+        "corrosion+direct+overheat|heal|gated": 1,
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1,
+        "direct+overheat|heal|gated": 1
+      }
+    },
+    {
+      "acquisitions": 7,
+      "benchmark": {
+        "avg_elapsed": 46.5125,
+        "avg_margin": 18.0185185185185,
+        "win_rate": 0.648148148148148
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_180_r5",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "solar_reflector",
+            "part": "culture_slime_sac"
+          },
+          "flex_1": {
+            "augment": "solar_reflector",
+            "part": "adaptive_venom_gland"
+          },
+          "flex_2": {
+            "part": "growth_battery"
+          },
+          "flex_3": {
+            "part": "luminous_regen_sac"
+          },
+          "weapon_1": {
+            "part": "adaptive_venom_gland"
+          }
+        }
+      },
+      "engine": "주력 adaptive_venom_gland×54 · culture_slime_sac×43 · luminous_regen_sac×34 | 연쇄 culture_slime_sac→adaptive_venom_gland×39 · luminous_regen_sac→adaptive_venom_gland×25 | 피해 fracture+overheat+physical+thermal | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "fracture": 63,
+          "overheat": 63,
+          "physical": 218,
+          "thermal": 60
+        },
+        "fires": {
+          "adaptive_venom_gland": {
+            "count": 54,
+            "part_id": "adaptive_venom_gland"
+          },
+          "culture_slime_sac": {
+            "count": 43,
+            "part_id": "culture_slime_sac"
+          },
+          "growth_battery": {
+            "count": 29,
+            "part_id": "growth_battery"
+          },
+          "luminous_regen_sac": {
+            "count": 34,
+            "part_id": "luminous_regen_sac"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {
+          "defense_1→flex_1": 15,
+          "defense_1→flex_2": 20,
+          "defense_1→weapon_1": 24,
+          "flex_3→flex_1": 9,
+          "flex_3→flex_2": 14,
+          "flex_3→weapon_1": 16
+        }
+      },
+      "id": "preset_k5-n5_p180_r5",
+      "overtime": {
+        "decided_with": 3,
+        "matches": 108,
+        "unresolved_without": 2,
+        "win_rate_with": 0.648148148148148,
+        "win_rate_without": 0.726415094339623
+      },
+      "source": {
+        "participant": 180,
+        "pool": "v70_a30",
+        "run": "k5-n5-20260908T001803",
+        "seed": 101,
+        "snapshot_id": "p180_r5",
+        "strategy": "bridge"
+      },
+      "stage_round": 5,
+      "storage": [],
+      "structure": {
+        "active_units": 7,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "heal"
+        ],
+        "operational": true,
+        "output_60s": 2.03,
+        "startup": "gated",
+        "sustain_60s": 1.1
+      },
+      "weak_against": {
+        "corrosion+direct+fracture|heal|gated": 1,
+        "corrosion+direct+overheat|heal|gated": 1,
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1,
+        "direct+overheat|defend+time|immediate": 1,
+        "direct+overheat|heal|gated": 1
+      }
+    },
+    {
+      "acquisitions": 7,
+      "benchmark": {
+        "avg_elapsed": 22.1296296296296,
+        "avg_margin": 52.0185185185185,
+        "win_rate": 0.861111111111111
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_239_r5",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "flex_1": {
+            "augment": "fracture_engraver",
+            "part": "photon_lance"
+          },
+          "flex_2": {
+            "augment": "forward_loan_beam",
+            "part": "severance_beam"
+          },
+          "flex_3": {
+            "part": "helios_lance"
+          },
+          "weapon_1": {
+            "augment": "corrosive_injector",
+            "part": "acid_jet_cutter"
+          }
+        }
+      },
+      "engine": "주력 photon_lance×16 · acid_jet_cutter×13 · helios_lance×7 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 91,
+          "energy": 229,
+          "fracture": 16,
+          "overheat": 42,
+          "thermal": 42
+        },
+        "fires": {
+          "acid_jet_cutter": {
+            "count": 13,
+            "part_id": "acid_jet_cutter"
+          },
+          "helios_lance": {
+            "count": 7,
+            "part_id": "helios_lance"
+          },
+          "photon_lance": {
+            "count": 16,
+            "part_id": "photon_lance"
+          },
+          "severance_beam": {
+            "count": 6,
+            "part_id": "severance_beam"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n5_p239_r5",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 0,
+        "win_rate_with": 0.861111111111111,
+        "win_rate_without": 0.861111111111111
+      },
+      "source": {
+        "participant": 239,
+        "pool": "a70_r30",
+        "run": "k5-n5-20260908T001803",
+        "seed": 105,
+        "snapshot_id": "p239_r5",
+        "strategy": "fixed_recipe"
+      },
+      "stage_round": 5,
+      "storage": [],
+      "structure": {
+        "active_units": 7,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 7.46,
+        "startup": "gated",
+        "sustain_60s": 0.0
+      },
+      "weak_against": {
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1
+      }
+    },
+    {
+      "acquisitions": 10,
+      "benchmark": {
+        "avg_elapsed": 15.3888888888889,
+        "avg_margin": 88.6851851851852,
+        "win_rate": 1.0
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_33_r8",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "adaptive_venom_gland",
+            "part": "layered_regen_membrane"
+          },
+          "flex_1": {
+            "augment": "timed_fracture_needle",
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "regen_sac"
+          },
+          "flex_3": {
+            "augment": "bone_spike_organ",
+            "part": "growth_battery"
+          },
+          "weapon_1": {
+            "augment": "loan_shield_membrane",
+            "part": "acid_tentacle"
+          }
+        }
+      },
+      "engine": "주력 acid_tentacle×32 · regen_sac×28 · growth_battery×8 | 연쇄 regen_sac→growth_battery×4 · regen_sac→layered_regen_membrane×1 | 피해 caustic+fracture+overheat+physical | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 64,
+          "fracture": 48,
+          "overheat": 269,
+          "physical": 33
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 32,
+            "part_id": "acid_tentacle"
+          },
+          "growth_battery": {
+            "count": 8,
+            "part_id": "growth_battery"
+          },
+          "layered_regen_membrane": {
+            "count": 8,
+            "part_id": "layered_regen_membrane"
+          },
+          "regen_sac": {
+            "count": 28,
+            "part_id": "regen_sac"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {
+          "flex_2→defense_1": 1,
+          "flex_2→flex_3": 4
+        }
+      },
+      "id": "preset_k5-n5_p33_r8",
+      "overtime": {
+        "decided_with": 1,
+        "matches": 108,
+        "unresolved_without": 0,
+        "win_rate_with": 1.0,
+        "win_rate_without": 0.962962962962963
+      },
+      "source": {
+        "participant": 33,
+        "pool": "v70_a30",
+        "run": "k5-n5-20260908T001803",
+        "seed": 104,
+        "snapshot_id": "p33_r8",
+        "strategy": "immediate"
+      },
+      "stage_round": 8,
+      "storage": [],
+      "structure": {
+        "active_units": 10,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "defend",
+          "heal",
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 6.8,
+        "startup": "gated",
+        "sustain_60s": 2.57
+      },
+      "weak_against": {}
+    },
+    {
+      "acquisitions": 10,
+      "benchmark": {
+        "avg_elapsed": 14.2412037037037,
+        "avg_margin": 82.6944444444444,
+        "win_rate": 1.0
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_65_r8",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "ignition_nozzle",
+            "part": "dielectric_accumulator"
+          },
+          "flex_1": {
+            "augment": "regen_fluid_sac",
+            "part": "luminous_regen_sac"
+          },
+          "flex_2": {
+            "augment": "corrosive_injector",
+            "part": "regen_fluid_sac"
+          },
+          "flex_3": {
+            "augment": "rotary_incinerator",
+            "part": "ignition_nozzle"
+          },
+          "weapon_1": {
+            "augment": "ignition_nozzle",
+            "part": "ignition_nozzle"
+          }
+        }
+      },
+      "engine": "주력 ignition_nozzle×48 · dielectric_accumulator×8 · luminous_regen_sac×7 | 연쇄 regen_fluid_sac→dielectric_accumulator×2 | 피해 fracture+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "fracture": 7,
+          "overheat": 382,
+          "thermal": 22
+        },
+        "fires": {
+          "dielectric_accumulator": {
+            "count": 8,
+            "part_id": "dielectric_accumulator"
+          },
+          "ignition_nozzle": {
+            "count": 48,
+            "part_id": "ignition_nozzle"
+          },
+          "luminous_regen_sac": {
+            "count": 7,
+            "part_id": "luminous_regen_sac"
+          },
+          "regen_fluid_sac": {
+            "count": 4,
+            "part_id": "regen_fluid_sac"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {
+          "flex_2→defense_1": 2
+        }
+      },
+      "id": "preset_k5-n5_p65_r8",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 1,
+        "win_rate_with": 1.0,
+        "win_rate_without": 1.0
+      },
+      "source": {
+        "participant": 65,
+        "pool": "r70_v30",
+        "run": "k5-n5-20260908T001803",
+        "seed": 101,
+        "snapshot_id": "p65_r8",
+        "strategy": "engine"
+      },
+      "stage_round": 8,
+      "storage": [],
+      "structure": {
+        "active_units": 10,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "defend",
+          "heal"
+        ],
+        "operational": true,
+        "output_60s": 5.37,
+        "startup": "gated",
+        "sustain_60s": 2.02
+      },
+      "weak_against": {}
+    },
+    {
+      "acquisitions": 10,
+      "benchmark": {
+        "avg_elapsed": 16.6759259259259,
+        "avg_margin": 71.1574074074074,
+        "win_rate": 0.935185185185185
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_186_r8",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "forward_loan_beam",
+            "part": "phase_barrier"
+          },
+          "flex_1": {
+            "augment": "forward_loan_beam",
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "augment": "forward_loan_beam",
+            "part": "helios_lance"
+          },
+          "flex_3": {
+            "augment": "solar_reflector",
+            "part": "fracture_engraver"
+          },
+          "weapon_1": {
+            "augment": "timed_fracture_needle",
+            "part": "photon_lance"
+          }
+        }
+      },
+      "engine": "주력 acid_tentacle×20 · phase_barrier×12 · photon_lance×12 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 40,
+          "energy": 233,
+          "fracture": 76,
+          "overheat": 32,
+          "thermal": 36
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 20,
+            "part_id": "acid_tentacle"
+          },
+          "fracture_engraver": {
+            "count": 8,
+            "part_id": "fracture_engraver"
+          },
+          "helios_lance": {
+            "count": 4,
+            "part_id": "helios_lance"
+          },
+          "phase_barrier": {
+            "count": 12,
+            "part_id": "phase_barrier"
+          },
+          "photon_lance": {
+            "count": 12,
+            "part_id": "photon_lance"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n10_p186_r8",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 0,
+        "win_rate_with": 0.935185185185185,
+        "win_rate_without": 0.944444444444444
+      },
+      "source": {
+        "participant": 186,
+        "pool": "a70_v30",
+        "run": "k5-n10-20260908T011428",
+        "seed": 207,
+        "snapshot_id": "p186_r8",
+        "strategy": "engine"
+      },
+      "stage_round": 8,
+      "storage": [],
+      "structure": {
+        "active_units": 10,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "defend",
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 9.1,
+        "startup": "gated",
+        "sustain_60s": 1.4
+      },
+      "weak_against": {
+        "direct+fracture+overheat|defend+heal+time|gated": 1
+      }
+    },
+    {
+      "acquisitions": 10,
+      "benchmark": {
+        "avg_elapsed": 16.6851851851852,
+        "avg_margin": 97.3240740740741,
+        "win_rate": 1.0
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_49_r8",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "corrosive_injector",
+            "part": "emergency_retrograde_membrane"
+          },
+          "flex_1": {
+            "augment": "solar_reflector",
+            "part": "scrap_autocannon"
+          },
+          "flex_2": {
+            "augment": "timed_fracture_needle",
+            "part": "acid_jet_cutter"
+          },
+          "flex_3": {
+            "augment": "emergency_retrograde_membrane",
+            "part": "ignition_nozzle"
+          },
+          "weapon_1": {
+            "augment": "emergency_retrograde_membrane",
+            "part": "scrap_autocannon"
+          }
+        }
+      },
+      "engine": "주력 scrap_autocannon×40 · ignition_nozzle×28 · acid_jet_cutter×12 | 연쇄 없음 | 피해 caustic+fracture+overheat+physical+thermal | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 84,
+          "fracture": 36,
+          "overheat": 51,
+          "physical": 240,
+          "thermal": 18
+        },
+        "fires": {
+          "acid_jet_cutter": {
+            "count": 12,
+            "part_id": "acid_jet_cutter"
+          },
+          "emergency_retrograde_membrane": {
+            "count": 8,
+            "part_id": "emergency_retrograde_membrane"
+          },
+          "ignition_nozzle": {
+            "count": 28,
+            "part_id": "ignition_nozzle"
+          },
+          "scrap_autocannon": {
+            "count": 40,
+            "part_id": "scrap_autocannon"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n10_p49_r8",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 0,
+        "win_rate_with": 1.0,
+        "win_rate_without": 1.0
+      },
+      "source": {
+        "participant": 49,
+        "pool": "r70_a30",
+        "run": "k5-n10-20260908T011428",
+        "seed": 210,
+        "snapshot_id": "p49_r8",
+        "strategy": "immediate"
+      },
+      "stage_round": 8,
+      "storage": [],
+      "structure": {
+        "active_units": 10,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "heal",
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 8.02,
+        "startup": "gated",
+        "sustain_60s": 5.4
+      },
+      "weak_against": {}
+    },
+    {
+      "acquisitions": 10,
+      "benchmark": {
+        "avg_elapsed": 11.4055555555556,
+        "avg_margin": 85.1759259259259,
+        "win_rate": 1.0
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_247_r8",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "emergency_retrograde_membrane",
+            "part": "luminous_regen_sac"
+          },
+          "flex_1": {
+            "augment": "bipolar_stinger",
+            "part": "photon_lance"
+          },
+          "flex_2": {
+            "augment": "acid_tentacle",
+            "part": "biocurrent_emitter"
+          },
+          "flex_3": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "ignition_nozzle"
+          },
+          "weapon_1": {
+            "augment": "culture_slime_sac",
+            "part": "quantum_cutting_lance"
+          }
+        }
+      },
+      "engine": "주력 ignition_nozzle×20 · photon_lance×8 · biocurrent_emitter×4 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 12,
+          "energy": 108,
+          "fracture": 14,
+          "overheat": 284
+        },
+        "fires": {
+          "biocurrent_emitter": {
+            "count": 4,
+            "part_id": "biocurrent_emitter"
+          },
+          "ignition_nozzle": {
+            "count": 20,
+            "part_id": "ignition_nozzle"
+          },
+          "luminous_regen_sac": {
+            "count": 4,
+            "part_id": "luminous_regen_sac"
+          },
+          "photon_lance": {
+            "count": 8,
+            "part_id": "photon_lance"
+          },
+          "quantum_cutting_lance": {
+            "count": 4,
+            "part_id": "quantum_cutting_lance"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n5_p247_r8",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 0,
+        "win_rate_with": 1.0,
+        "win_rate_without": 1.0
+      },
+      "source": {
+        "participant": 247,
+        "pool": "equal",
+        "run": "k5-n5-20260908T001803",
+        "seed": 103,
+        "snapshot_id": "p247_r8",
+        "strategy": "fixed_recipe"
+      },
+      "stage_round": 8,
+      "storage": [],
+      "structure": {
+        "active_units": 10,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "heal"
+        ],
+        "operational": true,
+        "output_60s": 7.9,
+        "startup": "gated",
+        "sustain_60s": 1.6
+      },
+      "weak_against": {}
+    },
+    {
+      "acquisitions": 10,
+      "benchmark": {
+        "avg_elapsed": 34.6435185185185,
+        "avg_margin": 53.1666666666667,
+        "win_rate": 0.805555555555556
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_155_r8",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "bipolar_discharge_sac",
+            "part": "regen_sac"
+          },
+          "flex_1": {
+            "augment": "bipolar_discharge_sac",
+            "part": "nerve_bundle"
+          },
+          "flex_2": {
+            "augment": "resonant_fiber_cluster",
+            "part": "dielectric_accumulator"
+          },
+          "flex_3": {
+            "augment": "proliferating_heart",
+            "part": "growth_battery"
+          },
+          "weapon_1": {
+            "augment": "bipolar_stinger",
+            "part": "acid_tentacle"
+          }
+        }
+      },
+      "engine": "주력 regen_sac×72 · acid_tentacle×40 · dielectric_accumulator×25 | 연쇄 regen_sac→dielectric_accumulator×15 · regen_sac→growth_battery×12 | 피해 caustic+energy+fracture+physical | 전투 내내 침묵 2칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 126,
+          "energy": 164,
+          "fracture": 14,
+          "physical": 117
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 40,
+            "part_id": "acid_tentacle"
+          },
+          "dielectric_accumulator": {
+            "count": 25,
+            "part_id": "dielectric_accumulator"
+          },
+          "growth_battery": {
+            "count": 25,
+            "part_id": "growth_battery"
+          },
+          "regen_sac": {
+            "count": 72,
+            "part_id": "regen_sac"
+          }
+        },
+        "idle": [
+          "core",
+          "flex_1"
+        ],
+        "links": {
+          "defense_1→flex_2": 15,
+          "defense_1→flex_3": 12,
+          "defense_1→weapon_1": 5,
+          "flex_3→flex_2": 4
+        }
+      },
+      "id": "preset_k5-n5_p155_r8",
+      "overtime": {
+        "decided_with": 1,
+        "matches": 108,
+        "unresolved_without": 2,
+        "win_rate_with": 0.805555555555556,
+        "win_rate_without": 0.830188679245283
+      },
+      "source": {
+        "participant": 155,
+        "pool": "v100",
+        "run": "k5-n5-20260908T001803",
+        "seed": 101,
+        "snapshot_id": "p155_r8",
+        "strategy": "bridge"
+      },
+      "stage_round": 8,
+      "storage": [],
+      "structure": {
+        "active_units": 10,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "defend",
+          "heal",
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 4.13,
+        "startup": "gated",
+        "sustain_60s": 1.1
+      },
+      "weak_against": {
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1,
+        "direct+overheat|heal|gated": 1
+      }
+    },
+    {
+      "acquisitions": 14,
+      "benchmark": {
+        "avg_elapsed": 10.1666666666667,
+        "avg_margin": 93.9814814814815,
+        "win_rate": 1.0
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_33_r12",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "layered_regen_membrane",
+            "part": "regen_sac"
+          },
+          "flex_1": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "regen_sac"
+          },
+          "flex_3": {
+            "augment": "timed_fracture_needle",
+            "part": "growth_battery"
+          },
+          "weapon_1": {
+            "augment": "loan_shield_membrane",
+            "part": "acid_tentacle"
+          }
+        }
+      },
+      "engine": "주력 regen_sac×40 · acid_tentacle×24 · growth_battery×8 | 연쇄 regen_sac→growth_battery×5 | 피해 caustic+fracture+overheat+physical | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 48,
+          "fracture": 24,
+          "overheat": 323,
+          "physical": 29
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 24,
+            "part_id": "acid_tentacle"
+          },
+          "growth_battery": {
+            "count": 8,
+            "part_id": "growth_battery"
+          },
+          "regen_sac": {
+            "count": 40,
+            "part_id": "regen_sac"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {
+          "defense_1→flex_3": 5
+        }
+      },
+      "id": "preset_k5-n5_p33_r12",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 0,
+        "win_rate_with": 1.0,
+        "win_rate_without": 1.0
+      },
+      "source": {
+        "participant": 33,
+        "pool": "v70_a30",
+        "run": "k5-n5-20260908T001803",
+        "seed": 104,
+        "snapshot_id": "p33_r12",
+        "strategy": "immediate"
+      },
+      "stage_round": 12,
+      "storage": [
+        "adaptive_venom_gland",
+        "bone_spike_organ",
+        "phase_suture",
+        "ion_ganglion"
+      ],
+      "structure": {
+        "active_units": 10,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "defend",
+          "heal"
+        ],
+        "operational": true,
+        "output_60s": 8.2,
+        "startup": "gated",
+        "sustain_60s": 3.17
+      },
+      "weak_against": {}
+    },
+    {
+      "acquisitions": 14,
+      "benchmark": {
+        "avg_elapsed": 15.787037037037,
+        "avg_margin": 78.3425925925926,
+        "win_rate": 0.990740740740741
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_386_r12",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "forward_loan_beam",
+            "part": "phase_barrier"
+          },
+          "flex_1": {
+            "augment": "forward_loan_beam",
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "augment": "solar_reflector",
+            "part": "helios_lance"
+          },
+          "flex_3": {
+            "augment": "timed_fracture_needle",
+            "part": "severance_beam"
+          },
+          "weapon_1": {
+            "augment": "forward_loan_beam",
+            "part": "photon_lance"
+          }
+        }
+      },
+      "engine": "주력 acid_tentacle×20 · phase_barrier×12 · photon_lance×12 | 연쇄 없음 | 피해 caustic+energy+fracture+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 38,
+          "energy": 294,
+          "fracture": 12,
+          "overheat": 40,
+          "thermal": 32
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 20,
+            "part_id": "acid_tentacle"
+          },
+          "helios_lance": {
+            "count": 4,
+            "part_id": "helios_lance"
+          },
+          "phase_barrier": {
+            "count": 12,
+            "part_id": "phase_barrier"
+          },
+          "photon_lance": {
+            "count": 12,
+            "part_id": "photon_lance"
+          },
+          "severance_beam": {
+            "count": 4,
+            "part_id": "severance_beam"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n10_p386_r12",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 0,
+        "win_rate_with": 0.990740740740741,
+        "win_rate_without": 0.981481481481482
+      },
+      "source": {
+        "participant": 386,
+        "pool": "a70_v30",
+        "run": "k5-n10-20260908T011428",
+        "seed": 207,
+        "snapshot_id": "p386_r12",
+        "strategy": "bridge"
+      },
+      "stage_round": 12,
+      "storage": [
+        "fracture_engraver",
+        "fracture_engraver",
+        "proliferating_heart",
+        "stellar_withdrawal_furnace"
+      ],
+      "structure": {
+        "active_units": 10,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "defend",
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 9.92,
+        "startup": "gated",
+        "sustain_60s": 1.4
+      },
+      "weak_against": {}
+    },
+    {
+      "acquisitions": 14,
+      "benchmark": {
+        "avg_elapsed": 18.7037037037037,
+        "avg_margin": 63.2962962962963,
+        "win_rate": 0.907407407407407
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_90_r12",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "biocurrent_emitter",
+            "part": "acid_proof_membrane"
+          },
+          "flex_1": {
+            "augment": "solar_reflector",
+            "part": "photon_lance"
+          },
+          "flex_2": {
+            "augment": "severance_beam",
+            "part": "fracture_sensor_node"
+          },
+          "flex_3": {
+            "augment": "quantum_cutting_lance",
+            "part": "severance_beam"
+          },
+          "weapon_1": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "acid_tentacle"
+          }
+        }
+      },
+      "engine": "주력 acid_tentacle×20 · photon_lance×12 · acid_proof_membrane×8 | 연쇄 없음 | 피해 caustic+energy+overheat+thermal | 전투 내내 침묵 2칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 40,
+          "energy": 168,
+          "overheat": 184,
+          "thermal": 12
+        },
+        "fires": {
+          "acid_proof_membrane": {
+            "count": 8,
+            "part_id": "acid_proof_membrane"
+          },
+          "acid_tentacle": {
+            "count": 20,
+            "part_id": "acid_tentacle"
+          },
+          "photon_lance": {
+            "count": 12,
+            "part_id": "photon_lance"
+          },
+          "severance_beam": {
+            "count": 4,
+            "part_id": "severance_beam"
+          }
+        },
+        "idle": [
+          "core",
+          "flex_2"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n5_p90_r12",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 0,
+        "win_rate_with": 0.907407407407407,
+        "win_rate_without": 0.888888888888889
+      },
+      "source": {
+        "participant": 90,
+        "pool": "a70_v30",
+        "run": "k5-n5-20260908T001803",
+        "seed": 101,
+        "snapshot_id": "p90_r12",
+        "strategy": "engine"
+      },
+      "stage_round": 12,
+      "storage": [
+        "helios_lance",
+        "fracture_focus_lance",
+        "loan_shield_membrane",
+        "regen_sac"
+      ],
+      "structure": {
+        "active_units": 9,
+        "attack": [
+          "corrosion",
+          "direct",
+          "fracture",
+          "overheat"
+        ],
+        "dead_units": 1,
+        "defense": [
+          "heal",
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 7.1,
+        "startup": "gated",
+        "sustain_60s": 0.33
+      },
+      "weak_against": {
+        "direct+fracture+overheat|defend+heal+time|gated": 1,
+        "direct+fracture+overheat|defend+time|gated": 1
+      }
+    },
+    {
+      "acquisitions": 14,
+      "benchmark": {
+        "avg_elapsed": 14.2407407407407,
+        "avg_margin": 90.9351851851852,
+        "win_rate": 1.0
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_40_r12",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "loan_shield_membrane",
+            "part": "regen_sac"
+          },
+          "flex_1": {
+            "augment": "forward_loan_beam",
+            "part": "biocurrent_emitter"
+          },
+          "flex_2": {
+            "augment": "acid_proof_membrane",
+            "part": "helios_lance"
+          },
+          "flex_3": {
+            "augment": "solar_reflector",
+            "part": "photon_lance"
+          },
+          "weapon_1": {
+            "augment": "ephemeral_stellar_tube",
+            "part": "acid_tentacle"
+          }
+        }
+      },
+      "engine": "주력 regen_sac×28 · acid_tentacle×16 · biocurrent_emitter×8 | 연쇄 없음 | 피해 caustic+energy+overheat+thermal | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 32,
+          "energy": 115,
+          "overheat": 221,
+          "thermal": 36
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 16,
+            "part_id": "acid_tentacle"
+          },
+          "biocurrent_emitter": {
+            "count": 8,
+            "part_id": "biocurrent_emitter"
+          },
+          "helios_lance": {
+            "count": 4,
+            "part_id": "helios_lance"
+          },
+          "photon_lance": {
+            "count": 8,
+            "part_id": "photon_lance"
+          },
+          "regen_sac": {
+            "count": 28,
+            "part_id": "regen_sac"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n5_p40_r12",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 0,
+        "win_rate_with": 1.0,
+        "win_rate_without": 0.990740740740741
+      },
+      "source": {
+        "participant": 40,
+        "pool": "a70_v30",
+        "run": "k5-n5-20260908T001803",
+        "seed": 101,
+        "snapshot_id": "p40_r12",
+        "strategy": "immediate"
+      },
+      "stage_round": 12,
+      "storage": [
+        "severance_beam",
+        "stellar_withdrawal_furnace",
+        "reverse_accelerator",
+        "quantum_cutting_lance"
+      ],
+      "structure": {
+        "active_units": 10,
+        "attack": [
+          "corrosion",
+          "direct",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "defend",
+          "heal",
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 8.2,
+        "startup": "gated",
+        "sustain_60s": 3.07
+      },
+      "weak_against": {}
+    },
+    {
+      "acquisitions": 14,
+      "benchmark": {
+        "avg_elapsed": 13.85,
+        "avg_margin": 83.0648148148148,
+        "win_rate": 1.0
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_59_r12",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "acid_proof_membrane",
+            "part": "proliferating_heart"
+          },
+          "flex_1": {
+            "augment": "rotary_incinerator",
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "augment": "bipolar_discharge_sac",
+            "part": "ignition_nozzle"
+          },
+          "flex_3": {
+            "augment": "bone_spike_organ",
+            "part": "hemacid_ejector"
+          },
+          "weapon_1": {
+            "augment": "rotary_incinerator",
+            "part": "bipolar_discharge_sac"
+          }
+        }
+      },
+      "engine": "주력 bipolar_discharge_sac×32 · ignition_nozzle×24 · acid_tentacle×16 | 연쇄 proliferating_heart→hemacid_ejector×1 | 피해 caustic+energy+overheat+physical+thermal | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 48,
+          "energy": 124,
+          "overheat": 184,
+          "physical": 4,
+          "thermal": 44
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 16,
+            "part_id": "acid_tentacle"
+          },
+          "bipolar_discharge_sac": {
+            "count": 32,
+            "part_id": "bipolar_discharge_sac"
+          },
+          "hemacid_ejector": {
+            "count": 4,
+            "part_id": "hemacid_ejector"
+          },
+          "ignition_nozzle": {
+            "count": 24,
+            "part_id": "ignition_nozzle"
+          },
+          "proliferating_heart": {
+            "count": 16,
+            "part_id": "proliferating_heart"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {
+          "defense_1→flex_3": 1
+        }
+      },
+      "id": "preset_k5-n10_p59_r12",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 0,
+        "win_rate_with": 1.0,
+        "win_rate_without": 1.0
+      },
+      "source": {
+        "participant": 59,
+        "pool": "v70_r30",
+        "run": "k5-n10-20260908T011428",
+        "seed": 210,
+        "snapshot_id": "p59_r12",
+        "strategy": "immediate"
+      },
+      "stage_round": 12,
+      "storage": [
+        "nerve_accelerant",
+        "resonant_fiber_cluster",
+        "flash_contraction_cannon",
+        "rejoining_stalk"
+      ],
+      "structure": {
+        "active_units": 10,
+        "attack": [
+          "corrosion",
+          "direct",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "heal",
+          "time"
+        ],
+        "operational": true,
+        "output_60s": 6.63,
+        "startup": "gated",
+        "sustain_60s": 0.5
+      },
+      "weak_against": {}
+    },
+    {
+      "acquisitions": 14,
+      "benchmark": {
+        "avg_elapsed": 16.0555555555556,
+        "avg_margin": 86.1111111111111,
+        "win_rate": 1.0
+      },
+      "build": {
+        "frame": "pool_frame",
+        "id": "league_216_r12",
+        "relic": null,
+        "slots": {
+          "core": {
+            "part": "league_core"
+          },
+          "defense_1": {
+            "augment": "scrap_autocannon",
+            "part": "field_welder"
+          },
+          "flex_1": {
+            "augment": "acid_digest_organ",
+            "part": "acid_tentacle"
+          },
+          "flex_2": {
+            "augment": "scrap_autocannon",
+            "part": "scrap_autocannon"
+          },
+          "flex_3": {
+            "augment": "rotary_incinerator",
+            "part": "scrap_autocannon"
+          },
+          "weapon_1": {
+            "augment": "regen_sac",
+            "part": "scrap_autocannon"
+          }
+        }
+      },
+      "engine": "주력 scrap_autocannon×60 · acid_tentacle×20 · field_welder×12 | 연쇄 없음 | 피해 caustic+overheat+physical+thermal | 전투 내내 침묵 1칸",
+      "engine_detail": {
+        "combats": 4,
+        "damage": {
+          "caustic": 38,
+          "overheat": 14,
+          "physical": 338,
+          "thermal": 14
+        },
+        "fires": {
+          "acid_tentacle": {
+            "count": 20,
+            "part_id": "acid_tentacle"
+          },
+          "field_welder": {
+            "count": 12,
+            "part_id": "field_welder"
+          },
+          "scrap_autocannon": {
+            "count": 60,
+            "part_id": "scrap_autocannon"
+          }
+        },
+        "idle": [
+          "core"
+        ],
+        "links": {}
+      },
+      "id": "preset_k5-n5_p216_r12",
+      "overtime": {
+        "decided_with": 0,
+        "matches": 108,
+        "unresolved_without": 0,
+        "win_rate_with": 1.0,
+        "win_rate_without": 1.0
+      },
+      "source": {
+        "participant": 216,
+        "pool": "r70_v30",
+        "run": "k5-n5-20260908T001803",
+        "seed": 102,
+        "snapshot_id": "p216_r12",
+        "strategy": "fixed_recipe"
+      },
+      "stage_round": 12,
+      "storage": [
+        "emergency_weld_drum",
+        "corrosive_injector",
+        "scrap_autocannon",
+        "insulating_slime_membrane"
+      ],
+      "structure": {
+        "active_units": 10,
+        "attack": [
+          "corrosion",
+          "direct",
+          "overheat"
+        ],
+        "dead_units": 0,
+        "defense": [
+          "heal"
+        ],
+        "operational": true,
+        "output_60s": 8.58,
+        "startup": "gated",
+        "sustain_60s": 1.81
+      },
+      "weak_against": {}
+    }
+  ],
+  "git_commit": "a65ad68c2f39b06ff9f58e1e9fb8e8e800f8a039",
+  "git_dirty": false,
+  "league_rules": {
+    "neutral_damage_types": true,
+    "overtime_base_fraction": 0.001,
+    "overtime_reference_hull": 100,
+    "overtime_start_seconds": 60.0,
+    "timeout_result": "draw"
+  },
+  "league_version": "league-2",
+  "run_id": "stageG-20260908T020907",
+  "source_runs": [
+    "tests/out/league/k5-n5-20260908T001803",
+    "tests/out/league/k5-n10-20260908T011428"
+  ],
+  "stages": [
+    2,
+    5,
+    8,
+    12
+  ]
+}

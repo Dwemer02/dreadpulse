@@ -1,0 +1,375 @@
+{
+  "ai_version": "league-ai-1",
+  "batch_id": "k5-n10",
+  "beam_width": 8,
+  "candidate_depth": 2,
+  "combat": {
+    "neutral_damage_types": true,
+    "overtime_base_fraction": 0.001,
+    "overtime_reference_hull": 100,
+    "overtime_start_seconds": 60.0,
+    "timeout_result": "draw"
+  },
+  "content_hash": "3901c3db",
+  "core_id": "league_core",
+  "evaluator_version": "eval-3-host-aware",
+  "fixed_recipes": {
+    "pool_recipe": {
+      "a100": "aeonic_photon_trio",
+      "a70_r30": "a70_r30_photon_engine",
+      "a70_v30": "aeonic_photon_trio",
+      "equal": "a70_r30_photon_engine",
+      "r100": "r100_autocannon_trio",
+      "r70_a30": "r100_autocannon_trio",
+      "r70_v30": "r100_autocannon_trio",
+      "v100": "",
+      "v70_a30": "aeonic_photon_trio",
+      "v70_r30": "r100_autocannon_trio"
+    },
+    "recipes": {
+      "a70_r30_photon_engine": {
+        "core_engine": [
+          {
+            "count": 1,
+            "part": "helios_lance",
+            "role": "body"
+          },
+          {
+            "count": 1,
+            "part": "photon_lance",
+            "role": "body"
+          },
+          {
+            "count": 1,
+            "part": "returning_photon_shell",
+            "role": "body"
+          },
+          {
+            "count": 1,
+            "part": "scrap_autocannon",
+            "role": "body"
+          },
+          {
+            "count": 1,
+            "host": "photon_lance",
+            "part": "fracture_engraver",
+            "role": "augment"
+          },
+          {
+            "count": 1,
+            "host": "returning_photon_shell",
+            "part": "depletion_recovery_plate",
+            "role": "augment"
+          }
+        ],
+        "evidence": "r5b a70_r30·시드3에서 상한 생존한 참가자 87(엔진형)·187(교차형)의 최종 보드 교집합. 본체 4종(helios_lance·photon_lance·returning_photon_shell·scrap_autocannon)이 같고, 증강 2개는 숙주까지 같았다 — photon_lance+fracture_engraver, returning_photon_shell+depletion_recovery_plate.",
+        "full_build": {
+          "board": [
+            [
+              "helios_lance",
+              "ephemeral_stellar_tube"
+            ],
+            [
+              "loan_shield_membrane",
+              "eclipse_shield_plate"
+            ],
+            [
+              "photon_lance",
+              "fracture_engraver"
+            ],
+            [
+              "returning_photon_shell",
+              "depletion_recovery_plate"
+            ],
+            [
+              "scrap_autocannon",
+              "ephemeral_stellar_tube"
+            ]
+          ],
+          "participant": 87
+        },
+        "note": "광자 계열 본체 4종 + 숙주 관계가 고정된 증강 2종."
+      },
+      "aeonic_photon_trio": {
+        "core_engine": [
+          {
+            "count": 1,
+            "part": "helios_lance",
+            "role": "body"
+          },
+          {
+            "count": 1,
+            "part": "photon_lance",
+            "role": "body"
+          },
+          {
+            "count": 1,
+            "part": "returning_photon_shell",
+            "role": "body"
+          },
+          {
+            "count": 1,
+            "host": "photon_lance",
+            "part": "fracture_engraver",
+            "role": "augment"
+          },
+          {
+            "count": 1,
+            "host": "returning_photon_shell",
+            "part": "depletion_recovery_plate",
+            "role": "augment"
+          }
+        ],
+        "evidence": "a70_r30_photon_engine에서 유일한 Reclaimer 파츠(scrap_autocannon)를 뺀 것이다. **새 관측이 아니라 같은 관측의 부분집합**이고, 뺀 이유는 도달성이다 — Aeonic만 있는 풀(a100·v70_a30·a70_v30)에서는 원본을 완성할 수 없다. 벤치마크 결과를 보고 고른 구성이 아니라, 관측에서 유도한 뒤 검증했다.",
+        "full_build": {},
+        "note": "광자 계열 본체 3종 + 숙주 고정 증강 2종. Aeonic만으로 구성된다."
+      },
+      "equal_helios_pair": {
+        "core_engine": [
+          {
+            "count": 2,
+            "part": "helios_lance",
+            "role": "body"
+          }
+        ],
+        "evidence": "r5b equal·시드4에서 상한 생존한 참가자 148(안정형) 한 명. 교집합을 만들 상대가 없으므로 **반복 적재된 부분만** 취했다 — helios_lance 본체 2개. 나머지 본체(dielectric_accumulator·phase_barrier·regen_sac)는 근거가 한 명뿐이라 핵심에 넣지 않았다.",
+        "full_build": {
+          "board": [
+            [
+              "dielectric_accumulator",
+              "acid_proof_membrane"
+            ],
+            [
+              "helios_lance",
+              "layered_regen_membrane"
+            ],
+            [
+              "helios_lance",
+              "loan_shield_membrane"
+            ],
+            [
+              "phase_barrier",
+              "acid_digest_organ"
+            ],
+            [
+              "regen_sac",
+              "ephemeral_stellar_tube"
+            ]
+          ],
+          "participant": 148
+        },
+        "note": "헬리오스 창을 본체로 2개 적재. **기각됐다** — 아래 rejected 참조.",
+        "rejected": {
+          "at": "단계 D (2026-09-08)",
+          "core_margin": -19.5,
+          "core_win_rate": 0.343,
+          "full_margin": 92.6,
+          "full_win_rate": 1.0,
+          "reason": "핵심 엔진과 완성 보드의 강도 차이가 너무 크다. 근거가 참가자 한 명뿐이라 교집합을 만들 수 없었던 것이 원인이다.",
+          "replaced_by": "aeonic_photon_trio"
+        }
+      },
+      "r100_autocannon_trio": {
+        "core_engine": [
+          {
+            "count": 3,
+            "part": "scrap_autocannon",
+            "role": "body"
+          }
+        ],
+        "evidence": "r5b r100·시드4에서 상한 생존한 참가자 3(즉시형)·103(안정형)의 최종 본체 교집합. 두 참가자 모두 scrap_autocannon 본체 3개였고 나머지 본체는 서로 달랐다 (3은 acid_jet_cutter·neutralizing_washer, 103은 field_welder 2개).",
+        "full_build": {
+          "board": [
+            [
+              "acid_jet_cutter",
+              "field_welder"
+            ],
+            [
+              "neutralizing_washer",
+              "rotary_incinerator"
+            ],
+            [
+              "scrap_autocannon",
+              "field_welder"
+            ],
+            [
+              "scrap_autocannon",
+              "field_welder"
+            ],
+            [
+              "scrap_autocannon",
+              "recast_barrel"
+            ]
+          ],
+          "participant": 3
+        },
+        "note": "고철 기관포를 본체로 3개 적재."
+      }
+    },
+    "stored_credit": 0.4
+  },
+  "frame_id": "pool_frame",
+  "game_version": "parts-90",
+  "git_commit": "f114d2cf4599cf24334ebee661cc0b049271a604",
+  "git_dirty": false,
+  "godot_version": "4.7.1-stable (official)",
+  "league_version": "league-2",
+  "loss_limit": 4,
+  "normalizers": {
+    "connection_full": 8.0,
+    "dead_full": 4.0,
+    "output_full": 8.0,
+    "resolved_full": 2.0,
+    "surplus_full": 8.0,
+    "sustain_full": 6.0,
+    "unlock_full": 2.0
+  },
+  "offer_column": 6,
+  "out_dir": "res://tests/out/league/k5-n10-20260908T011428",
+  "output_rows": {
+    "choices.jsonl": 4428,
+    "investments.jsonl": 275,
+    "matches.csv": 1968,
+    "participants.csv": 501,
+    "report.txt": 256,
+    "snapshots.jsonl": 4428
+  },
+  "pools": {
+    "a100": {
+      "aeonic": 100,
+      "reclaimer": 0,
+      "viridia": 0
+    },
+    "a70_r30": {
+      "aeonic": 70,
+      "reclaimer": 30,
+      "viridia": 0
+    },
+    "a70_v30": {
+      "aeonic": 70,
+      "reclaimer": 0,
+      "viridia": 30
+    },
+    "equal": {
+      "aeonic": 33,
+      "reclaimer": 34,
+      "viridia": 33
+    },
+    "r100": {
+      "aeonic": 0,
+      "reclaimer": 100,
+      "viridia": 0
+    },
+    "r70_a30": {
+      "aeonic": 30,
+      "reclaimer": 70,
+      "viridia": 0
+    },
+    "r70_v30": {
+      "aeonic": 0,
+      "reclaimer": 70,
+      "viridia": 30
+    },
+    "v100": {
+      "aeonic": 0,
+      "reclaimer": 0,
+      "viridia": 100
+    },
+    "v70_a30": {
+      "aeonic": 30,
+      "reclaimer": 0,
+      "viridia": 70
+    },
+    "v70_r30": {
+      "aeonic": 0,
+      "reclaimer": 30,
+      "viridia": 70
+    }
+  },
+  "protected_rounds": 0,
+  "repeat_seeds": [
+    201,
+    202,
+    203,
+    204,
+    205,
+    206,
+    207,
+    208,
+    209,
+    210
+  ],
+  "repeats_per_condition": 10,
+  "resolved_config": {
+    "augment_detachable": true,
+    "augment_slots_per_host": 1,
+    "core_in_decision_space": false,
+    "draw_loss_cost": 1,
+    "duplicate_ids_across_offers": true,
+    "duplicate_ids_within_offer": false,
+    "later_random_fraction": 0.2,
+    "offers_at_start": 2,
+    "offers_per_choice": 5,
+    "random_opening_rounds": 2,
+    "require_bodies_at_start": 3,
+    "rewards_taken_per_choice": 1,
+    "start_allow_augment": false,
+    "start_random_parts": 1,
+    "storage_limit": 6,
+    "tie_break": "동점 그룹 내 균등 선택"
+  },
+  "round_cap": 15,
+  "run_id": "k5-n10-20260908T011428",
+  "seed_rule": "fnv1a-mix-v1",
+  "shortlist_score_gap": 1.0,
+  "shortlist_size": 3,
+  "storage_limit": 6,
+  "strategy_weights": {
+    "bridge": {
+      "connection": 5,
+      "current": 2,
+      "loss": 3,
+      "potential": 3,
+      "relief": 3,
+      "sustain_bias": 0.4,
+      "waste": 2
+    },
+    "engine": {
+      "connection": 4,
+      "current": 2,
+      "loss": 4,
+      "potential": 4,
+      "relief": 4,
+      "sustain_bias": 0.4,
+      "waste": 2
+    },
+    "fixed_recipe": {
+      "connection": 2,
+      "current": 5,
+      "loss": 3,
+      "potential": 0,
+      "recipe": 4,
+      "relief": 3,
+      "sustain_bias": 0.35,
+      "waste": 2
+    },
+    "immediate": {
+      "connection": 2,
+      "current": 5,
+      "loss": 3,
+      "potential": 0,
+      "relief": 3,
+      "sustain_bias": 0.35,
+      "waste": 2
+    },
+    "sustain": {
+      "connection": 2,
+      "current": 3,
+      "loss": 4,
+      "potential": 1,
+      "relief": 5,
+      "sustain_bias": 0.7,
+      "waste": 4
+    }
+  }
+}

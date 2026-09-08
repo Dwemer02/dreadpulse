@@ -99,42 +99,62 @@ func _init() -> void:
 ## 라운드 × 구조로 고르게 뽑는다. **강한 것만 뽑으면 프리셋이 전부 상위 난이도가 된다.**
 ## §12의 "단계별"은 난이도 스펙트럼을 요구하는 것이지 최강 목록이 아니다.
 func _select(pool: Array, want: int) -> Array:
-	var buckets: Dictionary = {}
+	# 라운드별로 먼저 나누고, 그 안에서 구조 버킷으로 나눈다.
+	#
+	# 첫 판본은 "라운드|버킷" 키 하나로 묶고 키를 정렬했는데, **문자열 정렬이라
+	# "12"가 "2"보다 앞에 왔다.** 그래서 24개 중 21개가 12라운드에서 나오고
+	# 5·8라운드는 하나도 못 들어왔다 — §12가 요구한 "단계별"이 무너진 것이다.
+	# 난이도 스펙트럼이 목적이므로 **라운드 배분을 먼저 고정한다.**
+	var by_stage: Dictionary = {}
+	for stage_round: int in STAGES:
+		by_stage[stage_round] = {}
 	for snap: Dictionary in pool:
 		var analysis: Dictionary = _analyze(snap["build"])
 		if not bool(analysis["operational"]):
 			continue   # 공격 불능은 프리셋 후보가 아니다
 		var profile: Dictionary = Profile.of(analysis)
-		var key: String = "%d|%s" % [int(snap["round"]), Profile.bucket_of(profile)]
-		if not buckets.has(key):
-			buckets[key] = []
 		snap["profile"] = profile
 		snap["signature"] = _signature(snap["build"])
-		(buckets[key] as Array).append(snap)
+		var stage: Dictionary = by_stage[int(snap["round"])]
+		var bucket: String = Profile.bucket_of(profile)
+		if not stage.has(bucket):
+			stage[bucket] = []
+		(stage[bucket] as Array).append(snap)
 
-	# 버킷마다 하나씩, 라운드가 골고루 섞이도록 돌아가며 뽑는다.
-	var keys: Array = buckets.keys()
-	keys.sort()
+	# 라운드마다 같은 몫을 준다. 어떤 라운드에 후보가 모자라면 남은 몫은
+	# 다음 라운드가 가져간다 — 비우고 끝내지 않는다.
+	var quota: int = maxi(1, want / maxi(1, STAGES.size()))
 	var out: Array = []
 	var seen_sig: Dictionary = {}
-	var depth: int = 0
-	while out.size() < want and depth < 8:
-		var added: int = 0
-		for key2: String in keys:
-			if out.size() >= want:
-				break
-			var group: Array = buckets[key2]
-			if depth >= group.size():
-				continue
-			var snap2: Dictionary = group[depth]
-			if seen_sig.has(str(snap2["signature"])):
-				continue
-			seen_sig[str(snap2["signature"])] = true
-			out.append(snap2)
-			added += 1
-		if added == 0:
-			break
-		depth += 1
+	for pass_index: int in 2:
+		for stage_round2: int in STAGES:
+			var target: int = quota if pass_index == 0 else want
+			var taken: int = 0
+			for o: Variant in out:
+				if int((o as Dictionary)["round"]) == stage_round2:
+					taken += 1
+			var buckets: Dictionary = by_stage[stage_round2]
+			var keys: Array = buckets.keys()
+			keys.sort()
+			var depth: int = 0
+			while taken < target and out.size() < want and depth < 8:
+				var added: int = 0
+				for key: String in keys:
+					if taken >= target or out.size() >= want:
+						break
+					var group: Array = buckets[key]
+					if depth >= group.size():
+						continue
+					var snap2: Dictionary = group[depth]
+					if seen_sig.has(str(snap2["signature"])):
+						continue
+					seen_sig[str(snap2["signature"])] = true
+					out.append(snap2)
+					taken += 1
+					added += 1
+				if added == 0:
+					break
+				depth += 1
 	return out
 
 ## 후보 하나의 프리셋 데이터. 넷을 모두 채운다.
@@ -171,7 +191,11 @@ func _profile_candidate(snap: Dictionary, opponents: Array) -> Dictionary:
 		else {"fires": {}, "links": {}, "damage": {}, "idle": [], "combats": 0}
 
 	return {
-		"id": "preset_%s_%s" % [str(snap["run"]).get_slice("-", 0),
+		# **배치 이름을 두 마디까지 쓴다.** 한 마디(k5)만 쓰면 시드 수가 다른 두
+		# 배치의 같은 참가자 번호가 같은 id가 된다 — 실제로 preset_k5_p33_r5가
+		# 두 번 나왔다.
+		"id": "preset_%s-%s_%s" % [str(snap["run"]).get_slice("-", 0),
+			str(snap["run"]).get_slice("-", 1),
 			str(snap["snapshot_id"])],
 		"source": {
 			"run": str(snap["run"]), "snapshot_id": str(snap["snapshot_id"]),
