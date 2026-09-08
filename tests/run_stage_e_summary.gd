@@ -36,7 +36,11 @@ func _init() -> void:
 		return
 
 	_head("단계 E 종합 — K=3/5/6")
-	_say("리그 %d개를 나란히 읽는다. 각 리그는 전략 5 × 풀 10 × 시드 5 = 250명." % data.size())
+	var sizes: Array[String] = []
+	for run: Dictionary in data:
+		sizes.append("%s %d명" % [str(run["label"]).get_slice("-", 0),
+			(run["participants"] as Array).size()])
+	_say("리그 %d개를 나란히 읽는다 — %s." % [data.size(), ", ".join(sizes)])
 	_say("**K별 리그는 분리돼 있다** — 같은 상대를 만난 짝 비교가 아니다 (§8.2 마지막).")
 
 	_progress(data)
