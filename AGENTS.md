@@ -151,8 +151,10 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 
 이 프로젝트는 PvE 엔진빌딩 로그라이트 **THE FIRST DIVERGENCE**다. 기준 문서:
 
+- **처음 왔다면: `docs/HANDOVER.md`** — 폴더 지도·실행 명령·현재 상태·다음 할 일
 - 기획서(북극성): `docs/THE_FIRST_DIVERGENCE_GDD.md`
 - Phase 0 설계: `docs/superpowers/specs/2026-08-29-first-divergence-phase0-design.md`
+- 리포트가 인용하는 외부 피드백 문서: `docs/external/`
 
 > 리포지토리 폴더 이름은 역사적 이유로 `dreadpulse`다. DREADPULSE는 폐기된 선행
 > 프로젝트이며, 그 코드는 브랜치 `phase0-combat-sim`에만 남아 있다. 현재 작업과 무관하다.
@@ -210,9 +212,15 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 
 ## 아키텍처 규칙
 
-- **계층은 다섯이고 의존은 한 방향이다**: `sim/`(전투 1판) ← `run/`(런 1회) ·
-  `league/`(자동 조립 리그 배치) ← `debug/`·`tests/`.
+- **계층은 여섯이고 의존은 한 방향이다**: `sim/`(전투 1판) ← `run/`(런 1회) ·
+  `league/`(자동 조립 리그 배치) · `voyage/`(사람이 직접 하는 시험 항해) ←
+  `debug/`·`tests/`.
   `league/`는 `run/`의 형제다 — `sim/`과 `run/inventory.gd`(순수 컨테이너)만 쓴다.
+  `voyage/`는 그 위에 얹힌다 — `sim/`·`run/inventory.gd`·`league/`를 읽고,
+  **`league/`와 `run/`은 `voyage/`를 모른다.** 사람 플레이도 리그 규칙과 리그의
+  제안·전투 어댑터를 그대로 쓴다. 규칙이 두 벌이 되면 "화면에서 본 게임"과
+  "배치가 검증한 게임"이 갈린다 (설계:
+  `docs/superpowers/specs/2026-09-08-voyage-prototype.md` §2).
   리그 규칙(초과 피해·손실 상한·보관 한도)은 **본편 규칙이 아니다**.
   전투 규칙이 필요하면 리그 안에 새로 구현하지 말고 `combat_sim.rules`로 주입한다 —
   전투 구현이 두 벌이 되면 반드시 어긋난다. `sim/`은 런이 존재하는지 모른다. 런 계층이 sim에 **데이터를
@@ -319,8 +327,17 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 - 자동 조립 리그: `godot --headless --path . --script res://tests/run_league.gd -- --repeats=5`
   (전략 4 × 풀 10 × 시드 N. 5면 200명. 출력은 `tests/out/league/`)
   (오토파일럿 60런. 완주율·노드별 벽·Tune 지표·파츠 선택률)
+- 시험 항해 점검: `godot --headless --path . --script res://tests/run_voyage_check.gd -- --seeds=1,2,3`
+  (`--bench=1`이면 적 명부 강도까지 잰다 — 느리다)
+- 씬이 실제로 열리는지: `godot --headless --path . --script res://tests/check_scenes.gd`
+  **단위 테스트는 씬을 로드하지 않는다** — 화면 스크립트의 문법 오류는 이것만 잡는다.
+  화면 조작(조립→전투→보상→종료→내보내기)까지 한 번 돌린다.
 - **직접 플레이: Godot 에디터에서 F5** (메인 씬 = `res://debug/run_view.tscn`)
   팩션·시드를 고르고 적 선택 → 보드 Tune → 전투 → Salvage 3택1을 6노드 반복한다.
+- **시험 항해: `res://debug/voyage_view.tscn`을 열고 F6.** K=5 보상 선택과 8전투
+  항해, 그리고 조립 실험실(아무 보드 × 아무 상대 1전투)이 여기 있다.
+  **리그 규칙으로 도는 실험 장치이지 본편 규칙이 아니다** — 초과 피해·중립 배율·
+  보관 한도가 전부 리그 것이다.
 - 전투 1판만 관전: `res://debug/combat_view.tscn`을 에디터에서 열고 F6.
   실시간 재생·속도 조절이 있다. 런 화면은 전투를 즉시 해소하고 로그만 보여준다.
 - 밸런스 수치는 전부 플레이스홀더다. 수치 변경은 자유롭되, 배치 리포트의 검증 지표

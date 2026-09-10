@@ -151,8 +151,10 @@ Always start by running `--help` to discover available commands. Use the CLI whe
 
 이 프로젝트는 PvE 엔진빌딩 로그라이트 **THE FIRST DIVERGENCE**다. 기준 문서:
 
+- **처음 왔다면: `docs/HANDOVER.md`** — 폴더 지도·실행 명령·현재 상태·다음 할 일
 - 기획서(북극성): `docs/THE_FIRST_DIVERGENCE_GDD.md`
 - Phase 0 설계: `docs/superpowers/specs/2026-08-29-first-divergence-phase0-design.md`
+- 리포트가 인용하는 외부 피드백 문서: `docs/external/`
 
 > 리포지토리 폴더 이름은 역사적 이유로 `dreadpulse`다. DREADPULSE는 폐기된 선행
 > 프로젝트이며, 그 코드는 브랜치 `phase0-combat-sim`에만 남아 있다. 현재 작업과 무관하다.
