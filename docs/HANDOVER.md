@@ -1,6 +1,6 @@
 # THE FIRST DIVERGENCE — 인수인계 문서
 
-> 작성 2026-09-10 · 브랜치 `phase0b-reclaimer-content` (91커밋, **미머지**)
+> 작성 2026-09-10 · 브랜치 `main` = `phase0b-reclaimer-content` (같은 커밋, **미푸시**)
 > Godot 4.7.1 · GDScript · 코드 22,585줄(.gd 81개) · 단위 검증 1,416 checks
 
 이 문서 하나로 프로젝트를 이어받을 수 있게 쓴다. **무엇을 만드는 게임인지 → 코드가
@@ -494,10 +494,23 @@ G="C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_w
 다만 그 조종사는 다음 적을 보지 않고 사람은 본다. **사람이 앞쪽 셋을 뒤집는지가
 첫 플레이의 관측 대상**이고, 못 뒤집으면 `ve_starter_light`(이미 검수됨)로 낮춘다.
 
-**③ 브랜치가 미머지다**
+**③ 원격에 아무것도 올라가 있지 않다**
 
-`phase0b-reclaimer-content` (91커밋). PR 기준 브랜치는 `phase0-combat-sim`.
-`gh` CLI가 이 환경에 없다.
+브랜치가 셋인데 **계보가 둘**이다.
+
+| 브랜치 | 계보 | 상태 |
+|---|---|---|
+| `main` | **TFD (현재 작업)** | 로컬에서 작업 브랜치를 fast-forward 병합했다. **origin보다 48커밋 앞선다** |
+| `phase0b-reclaimer-content` | 같음 | `main`과 **같은 커밋**. 원격에 없다 |
+| `phase0-combat-sim` | **DREADPULSE (폐기)** | 2026-07-04에 갈라졌다. `run/`·`league/`·`voyage/`가 없다. origin보다 1커밋 앞 |
+
+> ⚠ **`origin/HEAD`가 `phase0-combat-sim`을 가리킨다.** 그래서 도구가 그것을
+> "PR 기준 브랜치"로 안내하는데, **거기 병합하면 폐기된 DREADPULSE 코드와 섞인다.**
+> TFD 작업의 기준 브랜치는 `main`이다 — `phase0b`는 `main`에서 갈라져 나왔고
+> `main`은 그 조상이므로 충돌 없이 fast-forward된다.
+> GitHub에서 기본 브랜치를 `main`으로 바꾸는 것을 권한다.
+
+푸시는 하지 않았다. `gh` CLI도 이 환경에 없다.
 
 **④ `tests/out/`이 110MB이고 git 추적 밖이다**
 
