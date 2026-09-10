@@ -1,6 +1,6 @@
 # THE FIRST DIVERGENCE — 인수인계 문서
 
-> 작성 2026-09-10 · 브랜치 `main` = `phase0b-reclaimer-content` (같은 커밋, **미푸시**)
+> 작성 2026-09-10 · 기본 브랜치 `main` (origin과 동기)
 > Godot 4.7.1 · GDScript · 코드 22,585줄(.gd 81개) · 단위 검증 1,416 checks
 
 이 문서 하나로 프로젝트를 이어받을 수 있게 쓴다. **무엇을 만드는 게임인지 → 코드가
@@ -73,6 +73,21 @@ dreadpulse/
 ├── CLAUDE.md    AI 어시스턴트용 규약 = 이 프로젝트의 코딩 규칙
 └── AGENTS.md    CLAUDE.md와 같은 내용 (다른 도구용 사본)
 ```
+
+### 브랜치 — 계보가 둘이다
+
+| 브랜치 | 계보 | 무엇 |
+|---|---|---|
+| **`main`** | **TFD (현재 작업)** | 기본 브랜치. origin과 동기 |
+| `phase0b-reclaimer-content` | 같음 | `main`과 같은 커밋인 로컬 별칭. 지워도 된다 |
+| `phase0-combat-sim` | **DREADPULSE (폐기)** | 2026-07-04에 갈라진 선행 프로젝트 |
+
+> ⚠ **`phase0-combat-sim`에 병합하지 마라.** `run/`·`league/`·`voyage/`가 없는
+> 다른 프로젝트이고, 섞으면 폐기된 코드가 되살아난다. 그 브랜치는 DREADPULSE 코드의
+> **유일한 보관처**이므로 지우지도 않는다 — 그냥 건드리지 않는다.
+>
+> 2026-09-10에 기본 브랜치를 `phase0-combat-sim`에서 `main`으로 바꿨다. 옛 클론이
+> 남아 있다면 `git remote set-head origin -a`로 로컬 포인터를 맞춰라.
 
 ### 계층과 의존 방향 — **한 방향이다**
 
@@ -494,25 +509,7 @@ G="C:/Users/Laenap/Downloads/Godot_v4.7.1-stable_win64.exe/Godot_v4.7.1-stable_w
 다만 그 조종사는 다음 적을 보지 않고 사람은 본다. **사람이 앞쪽 셋을 뒤집는지가
 첫 플레이의 관측 대상**이고, 못 뒤집으면 `ve_starter_light`(이미 검수됨)로 낮춘다.
 
-**③ 원격에 아무것도 올라가 있지 않다**
-
-브랜치가 셋인데 **계보가 둘**이다.
-
-| 브랜치 | 계보 | 상태 |
-|---|---|---|
-| `main` | **TFD (현재 작업)** | 로컬에서 작업 브랜치를 fast-forward 병합했다. **origin보다 48커밋 앞선다** |
-| `phase0b-reclaimer-content` | 같음 | `main`과 **같은 커밋**. 원격에 없다 |
-| `phase0-combat-sim` | **DREADPULSE (폐기)** | 2026-07-04에 갈라졌다. `run/`·`league/`·`voyage/`가 없다. origin보다 1커밋 앞 |
-
-> ⚠ **`origin/HEAD`가 `phase0-combat-sim`을 가리킨다.** 그래서 도구가 그것을
-> "PR 기준 브랜치"로 안내하는데, **거기 병합하면 폐기된 DREADPULSE 코드와 섞인다.**
-> TFD 작업의 기준 브랜치는 `main`이다 — `phase0b`는 `main`에서 갈라져 나왔고
-> `main`은 그 조상이므로 충돌 없이 fast-forward된다.
-> GitHub에서 기본 브랜치를 `main`으로 바꾸는 것을 권한다.
-
-푸시는 하지 않았다. `gh` CLI도 이 환경에 없다.
-
-**④ `tests/out/`이 110MB이고 git 추적 밖이다**
+**③ `tests/out/`이 110MB이고 git 추적 밖이다**
 
 리그 배치 출력이 쌓인 것이다. 단계 G를 다시 돌리려면 그 안의 `k5-n5-*`,
 `k5-n10-*` 폴더가 필요하다 — **지우면 A~G를 재현하려고 배치부터 다시 돌려야 한다.**
